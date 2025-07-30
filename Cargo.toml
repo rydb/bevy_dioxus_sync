@@ -1,0 +1,33 @@
+[package]
+name = "dioxus_bevy_panel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "97947b169b48ebc30957ce7e3e1ca9c32ec65389"}
+bevy_ecs = {version = "0.16"}
+bevy_render = {version = "0.16"}
+bevy_app = {version = "0.16"}
+bevy_transform = {version = "0.16"}
+bevy_mesh = {version = "0.16"}
+bevy_utils = {version = "0.16"}
+bevy_window = {version = "0.16"}
+bevy_math = {version = "0.16"}
+bevy_winit = {version = "0.16"}
+bevy_asset = {version = "0.16"}
+bevy_log = {version = "0.16"}
+bevy_input = {version = "0.16"}
+bevy_internal = {version = "0.16"}
+bevy_time = {version = "0.16"}
+bevy_image = {version = "0.16"}
+bevy_reflect = {version = "0.16"}
+bevy_picking = {version = "0.16"}
+bevy_platform = {version = "0.16"}
+bevy_derive = {version = "0.16"}
+bevy_color = {version = "0.16"}
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "97947b169b48ebc30957ce7e3e1ca9c32ec65389"}
+wgpu = "24"
+wgpu-types = "24"
+
+[dev-dependencies]
+bevy = {version = "0.16", features = ["dynamic_linking"]}
