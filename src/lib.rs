@@ -1,0 +1,1 @@
+pub mod dioxus_in_bevy_plugin;

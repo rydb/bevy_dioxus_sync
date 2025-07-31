@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "97947b169b48ebc30957ce7e3e1ca9c32ec65389"}
+dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "7fcdee0266e6dbf58e75d0c2db41ae458043c761"}
+dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "7fcdee0266e6dbf58e75d0c2db41ae458043c761"}
+
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
 bevy_app = {version = "0.16"}
@@ -17,7 +19,6 @@ bevy_winit = {version = "0.16"}
 bevy_asset = {version = "0.16"}
 bevy_log = {version = "0.16"}
 bevy_input = {version = "0.16"}
-bevy_internal = {version = "0.16"}
 bevy_time = {version = "0.16"}
 bevy_image = {version = "0.16"}
 bevy_reflect = {version = "0.16"}
@@ -25,9 +26,23 @@ bevy_picking = {version = "0.16"}
 bevy_platform = {version = "0.16"}
 bevy_derive = {version = "0.16"}
 bevy_color = {version = "0.16"}
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "97947b169b48ebc30957ce7e3e1ca9c32ec65389"}
+bevy_sprite = {version = "0.16"}
+bevy_core_pipeline = {version = "0.16"}
+vello = {version = "0.5"}
+rustc-hash = "1"
+anyrender_vello = {version = "0.5"}
+blitz-net = { version = "=0.1.0-rc.2" }
+blitz-paint = { version = "=0.1.0-rc.2" }
+blitz-traits = { version = "=0.1.0-rc.2" }
+blitz-dom = { version = "=0.1.0-rc.2", default-features = false }
+blitz-shell = { version = "=0.1.0-rc.2", default-features = false }
+
+async-std = "1.13"
+crossbeam-channel = "0.5"
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "7fcdee0266e6dbf58e75d0c2db41ae458043c761"}
 wgpu = "24"
 wgpu-types = "24"
 
 [dev-dependencies]
 bevy = {version = "0.16", features = ["dynamic_linking"]}
+paste = "1.0"
