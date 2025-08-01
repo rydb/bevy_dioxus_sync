@@ -1,14 +1,20 @@
+use std::any::{type_name, TypeId};
+
 use async_std::task::sleep;
+use bevy_log::warn;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::UiProps, UiMessageRegistry};
 use paste::paste;
+
+use crate::bevy_scene_plugin::CubeRotationSpeed;
 
 macro_rules! define_ui_state {
     (
         $($field:ident : $type:ty = $default:expr),* $(,)?
     ) => { paste! {
         #[allow(dead_code)]
-        #[derive(Clone, Copy)]
+        #[derive(Clone, Copy, Debug)]
         pub struct UiState {
             $($field: Signal<$type>,)*
         }
@@ -25,6 +31,7 @@ macro_rules! define_ui_state {
         }
 
         #[allow(dead_code)]
+        #[derive(Debug)]
         pub enum UIMessage {
             $([<$field:camel>]($type),)*
         }
@@ -34,70 +41,115 @@ macro_rules! define_ui_state {
 define_ui_state! {
     cube_color: [f32; 4] = [0.0, 0.0, 1.0, 1.0],
     cube_translation_speed: f32 = 2.0,
-    cube_rotation_speed: f32 = 1.0,
+    //cube_rotation_speed: f32 = 1.0,
     fps: f32 = 0.0,
 }
 
-#[derive(Clone)]
-pub struct UIProps {
-    pub ui_sender: Sender<UIMessage>,
-    pub app_receiver: Receiver<UIMessage>,
+#[derive(Default, Clone)]
+pub struct UiRegisters {
+    pub ui_messages_registry: Signal<UiMessageRegistry>
 }
 
-pub fn ui(props: UIProps) -> Element {
+pub fn dioxus_app(props: UiProps) -> Element {
     let mut state = use_context_provider(UiState::default);
+    let mut registers = use_context_provider(UiRegisters::default);
 
-    use_effect({
-        let ui_sender = props.ui_sender.clone();
-        move || {
-            println!("Color changed to {:?}", state.cube_color);
-            ui_sender
-                .send(UIMessage::CubeColor((state.cube_color)()))
-                .unwrap();
-        }
-    });
+    let register_updates = use_context_provider(||props);
 
-    use_effect({
-        let ui_sender = props.ui_sender.clone();
-        move || {
-            println!("Rotation speed changed to {:?}", state.cube_rotation_speed);
-            ui_sender
-                .send(UIMessage::CubeRotationSpeed((state.cube_rotation_speed)()))
-                .unwrap();
-        }
-    });
-
-    use_effect({
-        let ui_sender = props.ui_sender.clone();
-        move || {
-            println!(
-                "Translation speed changed to {:?}",
-                state.cube_translation_speed
-            );
-            ui_sender
-                .send(UIMessage::CubeTranslationSpeed((state
-                    .cube_translation_speed)(
-                )))
-                .unwrap();
-        }
-    });
 
     use_future(move || {
-        let app_receiver = props.app_receiver.clone();
+        {
+        let value = register_updates.ui_messages_registry_receiver.clone();
         async move {
             loop {
                 // Update UI every 1s in this demo.
                 sleep(std::time::Duration::from_millis(1000)).await;
 
+                while let Ok(message) = value.try_recv() {
+                    warn!("updating registry to {:#?}", message);
+                    let mut current_registrations = registers.ui_messages_registry.write();
+                    current_registrations.extend(message);
+                }
+            }
+        }
+        }
+    });
+
+
+    let cube_rotation_speed = use_context_provider(|| CubeRotationSpeed::default());
+    rsx! {
+        app_ui {}
+    }
+}
+
+pub fn app_ui() -> Element {
+
+    let mut registers = use_context::<UiRegisters>();
+    let mut state = use_context::<UiState>();
+
+    let mut rotation_speed = use_context::<CubeRotationSpeed>();
+
+    // use_effect({
+    //     let ui_sender = props.ui_sender.clone();
+    //     move || {
+    //         println!("Color changed to {:?}", state.cube_color);
+    //         ui_sender
+    //             .send(UIMessage::CubeColor((state.cube_color)()))
+    //             .unwrap();
+    //     }
+    // });
+
+    // use_effect({
+    //     let ui_sender = props.ui_sender.clone();
+    //     move || {
+    //         println!("Rotation speed changed to {:?}", state.cube_rotation_speed);
+    //         ui_sender
+    //             .send(UIMessage::CubeRotationSpeed((state.cube_rotation_speed)()))
+    //             .unwrap();
+    //     }
+    // });
+
+    // use_effect({
+    //     let ui_sender = props.ui_sender.clone();
+    //     move || {
+    //         println!(
+    //             "Translation speed changed to {:?}",
+    //             state.cube_translation_speed
+    //         );
+    //         ui_sender
+    //             .send(UIMessage::CubeTranslationSpeed((state
+    //                 .cube_translation_speed)(
+    //             )))
+    //             .unwrap();
+    //     }
+    // });
+
+    use_future(move || {
+        async move {
+            loop {
+                let app_receiver = registers.ui_messages_registry.write().get::<UIMessage>().clone();
+
+                // // Update UI every 1s in this demo.
+                // sleep(std::time::Duration::from_millis(1000)).await;
+                sleep(std::time::Duration::from_millis(100)).await;
+
                 let mut fps = Option::<f32>::None;
 
-                while let Ok(message) = app_receiver.try_recv() {
+                let Some(ref app_receiver) = app_receiver else {
+                    warn!("no app receiver");
+                    sleep(std::time::Duration::from_millis(1000)).await;
+                    continue;
+                };
+                warn!("attempting to recieve message");
+                while let Ok(message) = app_receiver.receiver.try_recv().inspect_err(|err| warn!("couldn't recieve, reason: {:#}", err)) {
                     if let UIMessage::Fps(v) = message {
+                        warn!("fps set to {:#}", v);
                         fps = Some(v)
                     }
-                }
+                } 
 
                 if let Some(fps) = fps {
+                    println!("fps set to {:#}", fps);
                     state.fps.set(fps);
                 }
             }
@@ -106,6 +158,10 @@ pub fn ui(props: UIProps) -> Element {
 
     rsx! {
         style { {include_str!("./ui.css")} }
+        // div {
+        //     id: "panel",
+        //     p {"success!" }
+        // }
         div {
             id: "panel",
             class: "catch-events",
@@ -147,22 +203,23 @@ pub fn ui(props: UIProps) -> Element {
                     }
                 }
             }
-            div {
-                id: "rotation-speed-control",
-                label { "Rotation Speed:" }
-                input {
-                    r#type: "number",
-                    min: "0.0",
-                    max: "10.0",
-                    step: "0.1",
-                    value: "{state.cube_rotation_speed}",
-                    oninput: move |event| {
-                        if let Ok(speed) = event.value().parse::<f32>() {
-                            state.cube_rotation_speed.set(speed);
-                        }
+        div {
+            id: "rotation-speed-control",
+            label { "Rotation Speed:" }
+            input {
+                r#type: "number",
+                min: "0.0",
+                max: "10.0",
+                step: "0.1",
+                value: "{rotation_speed.0}",
+                oninput: move |event| {
+                    if let Ok(speed) = event.value().parse::<f32>() {
+                        //state.cube_rotation_speed.set(speed);
+                        rotation_speed.0 = speed
                     }
                 }
             }
+        }
             div {
                 id: "footer",
                 p { "Bevy framerate: {state.fps}" }

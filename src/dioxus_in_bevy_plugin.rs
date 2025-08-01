@@ -29,23 +29,41 @@ use vello::{
 };
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
+use crate::UiMessageRegistry;
+
 // Constant scale factor and color scheme for example purposes
 const SCALE_FACTOR: f32 = 1.0;
 const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 const CATCH_EVENTS_CLASS: &str = "catch-events";
 
-pub struct DioxusInBevyPlugin<UIProps> {
-    pub ui: fn(props: UIProps) -> Element,
-    pub props: UIProps,
+/// sends updated ui message types to registryy. Merging any existed registered message kinds into the previous registry.
+#[derive(Resource)]
+pub struct UiMessageRegistrySender(pub Sender<UiMessageRegistry>);
+
+pub struct DioxusInBevyPlugin {
+    pub ui: fn(props: UiProps) -> Element,
 }
 
-impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'static> Plugin
-    for DioxusInBevyPlugin<UIProps>
+#[derive(Clone)]
+pub struct UiProps {
+    //pub ui_messages: UiMessageRegistry
+    /// receiver of ui messages registry.
+    pub ui_messages_registry_receiver: Receiver<UiMessageRegistry>
+}
+
+impl Plugin for DioxusInBevyPlugin
 {
     fn build(&self, app: &mut App) {
+        let (sender, receiver) = crossbeam_channel::unbounded::<UiMessageRegistry>();        
+        
+        let props = UiProps {
+            ui_messages_registry_receiver: receiver,
+        };
+        app.insert_resource(UiMessageRegistrySender(sender));
+        
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size
-        let vdom = VirtualDom::new_with_props(self.ui, self.props.clone());
+        let vdom = VirtualDom::new_with_props(self.ui, props);
         // FIXME add a NetProvider
         let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig::default());
         dioxus_doc.initial_build();

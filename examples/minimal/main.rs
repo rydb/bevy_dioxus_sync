@@ -1,26 +1,24 @@
+use bevy::gizmos::cross;
 use bevy::prelude::*;
 use dioxus_bevy_panel::dioxus_in_bevy_plugin::DioxusInBevyPlugin;
+use dioxus_bevy_panel::{UiMessageRegistration, UiMessageRegistry};
 
-use crate::{bevy_scene_plugin::BevyScenePlugin, ui::UIProps};
-use crate::ui::ui;
+use crate::bevy_scene_plugin::CubeRotationSpeed;
+use crate::ui::{dioxus_app, UIMessage};
+use crate::{bevy_scene_plugin::BevyScenePlugin};
 
 mod bevy_scene_plugin;
 mod ui;
 
 fn main() {
-    let (ui_sender, ui_receiver) = crossbeam_channel::unbounded();
-    let (app_sender, app_receiver) = crossbeam_channel::unbounded();
-    let props = UIProps {
-        ui_sender,
-        app_receiver,
-    };
+    // ui_messages.register::<UIMessage>();
+    // let props = UIProps {
+    //     ui_messages
+    // };
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(DioxusInBevyPlugin::<UIProps> { ui, props })
-        .add_plugins(BevyScenePlugin {
-            app_sender,
-            ui_receiver,
-        })
+        .add_plugins(DioxusInBevyPlugin { ui: dioxus_app })
+        .add_plugins(BevyScenePlugin)
         .run();
 }

@@ -1,6 +1,8 @@
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use crossbeam_channel::{Receiver, Sender};
+use dioxus::signals::{Readable, Signal, SyncSignal, Writable};
+use dioxus_bevy_panel::{BevyReceiver, BevySender, UiMessageRegistration, UiMessageRegistry};
 
 use crate::ui::{UIMessage, UiState};
 
@@ -41,25 +43,23 @@ impl Default for CubeTranslationSpeed {
     }
 }
 
-#[derive(Resource)]
-struct CubeRotationSpeed(f32);
+#[derive(Resource, Clone)]
+pub struct CubeRotationSpeed(pub f32);
 
 impl Default for CubeRotationSpeed {
     fn default() -> Self {
-        Self(UiState::DEFAULT_CUBE_ROTATION_SPEED)
+        Self(2.0)
+        //Self(SyncSignal::new_maybe_sync(2.0))
+        //Self(UiState::DEFAULT_CUBE_ROTATION_SPEED)
     }
 }
 
-pub struct BevyScenePlugin {
-    pub app_sender: Sender<UIMessage>,
-    pub ui_receiver: Receiver<UIMessage>,
-}
+pub struct BevyScenePlugin;
 
 impl Plugin for BevyScenePlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(UiMessageRegistration::<UIMessage>::default());
         app.insert_resource(ClearColor(bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0)));
-        app.insert_resource(UIMessageSender(self.app_sender.clone()));
-        app.insert_resource(UIMessageReceiver(self.ui_receiver.clone()));
         app.insert_resource(CubeTranslationSpeed::default());
         app.insert_resource(CubeRotationSpeed::default());
         app.add_systems(Startup, setup);
@@ -111,8 +111,8 @@ fn setup(
 }
 
 fn sync_with_ui(
-    sender: Res<UIMessageSender>,
-    receiver: Res<UIMessageReceiver>,
+    sender: Res<BevySender<UIMessage>>,
+    receiver: Res<BevyReceiver<UIMessage>>,
     cube_query: Query<&MeshMaterial3d<StandardMaterial>, With<DynamicCube>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut translation_speed: ResMut<CubeTranslationSpeed>,
@@ -120,26 +120,28 @@ fn sync_with_ui(
     time: Res<Time>,
 ) {
     let fps = 1000.0 / time.delta().as_millis() as f32;
-    sender.send(UIMessage::Fps(fps)).unwrap();
+    sender.0.send(UIMessage::Fps(fps)).unwrap();
 
-    while let Ok(message) = receiver.try_recv() {
-        match message {
-            UIMessage::CubeColor(c) => {
-                for cube_material in cube_query.iter() {
-                    if let Some(material) = materials.get_mut(&cube_material.0) {
-                        material.base_color = Color::Srgba(bevy::color::Srgba::from_f32_array(c));
-                    }
-                }
-            }
-            UIMessage::CubeTranslationSpeed(speed) => {
-                translation_speed.0 = speed;
-            }
-            UIMessage::CubeRotationSpeed(speed) => {
-                rotation_speed.0 = speed;
-            }
-            _ => {}
-        }
-    }
+    // while let Ok(message) = receiver.0.try_recv() {
+    //     warn!("recieved message: {:#?}", message);
+    //     match message {
+    //         UIMessage::CubeColor(c) => {
+    //             for cube_material in cube_query.iter() {
+    //                 if let Some(material) = materials.get_mut(&cube_material.0) {
+    //                     material.base_color = Color::Srgba(bevy::color::Srgba::from_f32_array(c));
+    //                 }
+    //             }
+    //         }
+    //         UIMessage::CubeTranslationSpeed(speed) => {
+    //             translation_speed.0 = speed;
+    //         }
+    //         //rotation_speed.
+    //         // UIMessage::CubeRotationSpeed(speed) => {
+    //         //     rotation_speed.0 = speed;
+    //         // }
+    //         _ => {}
+    //     }
+    // }
 }
 
 fn animate(
