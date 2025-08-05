@@ -30,6 +30,7 @@ bevy_sprite = {version = "0.16"}
 bevy_core_pipeline = {version = "0.16"}
 vello = {version = "0.5"}
 rustc-hash = "1"
+bytemuck = "1.23"
 anyrender_vello = {version = "0.5"}
 blitz-net = { version = "=0.1.0-rc.2" }
 blitz-paint = { version = "=0.1.0-rc.2" }

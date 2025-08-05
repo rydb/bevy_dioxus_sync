@@ -1,7 +1,7 @@
 use bevy::gizmos::cross;
 use bevy::prelude::*;
 use dioxus_bevy_panel::dioxus_in_bevy_plugin::DioxusInBevyPlugin;
-use dioxus_bevy_panel::{UiMessageRegistration, UiMessageRegistry};
+use dioxus_bevy_panel::{UiMessageRegistration};
 
 use crate::bevy_scene_plugin::CubeRotationSpeed;
 use crate::ui::{dioxus_app, UIMessage};

@@ -2,9 +2,10 @@ use std::any::{type_name, TypeId};
 
 use async_std::task::sleep;
 use bevy_log::warn;
+use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::UiProps, UiMessageRegistry};
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::UiProps, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 use paste::paste;
 
 use crate::bevy_scene_plugin::CubeRotationSpeed;
@@ -45,9 +46,17 @@ define_ui_state! {
     fps: f32 = 0.0,
 }
 
+
+// pub struct ReceiveChannelRegistry(HashMap<>);
+
+pub struct SendChannelRegistry;
+
 #[derive(Default, Clone)]
 pub struct UiRegisters {
-    pub ui_messages_registry: Signal<UiMessageRegistry>
+    // pub bevy_io_registry: Signal<BevyIOChannels>,
+    // pub dioxus_io_registry: Signal<DioxusIOChannels>
+    pub dioxus_tx_registry: Signal<DioxusTxChannelsUntyped>,
+    pub dioxus_rx_registry: Signal<DioxusRxChannelsUntyped>,
 }
 
 pub fn dioxus_app(props: UiProps) -> Element {
@@ -59,7 +68,7 @@ pub fn dioxus_app(props: UiProps) -> Element {
 
     use_future(move || {
         {
-        let value = register_updates.ui_messages_registry_receiver.clone();
+        let value = register_updates.dioxus_tx.clone();
         async move {
             loop {
                 // Update UI every 1s in this demo.
@@ -67,8 +76,25 @@ pub fn dioxus_app(props: UiProps) -> Element {
 
                 while let Ok(message) = value.try_recv() {
                     warn!("updating registry to {:#?}", message);
-                    let mut current_registrations = registers.ui_messages_registry.write();
-                    current_registrations.extend(message);
+                    let mut current_registrations = registers.dioxus_tx_registry.write();
+                    current_registrations.0.extend(message.0);
+                }
+            }
+        }
+        }
+    });
+    use_future(move || {
+        {
+        let value = register_updates.dioxus_rx.clone();
+        async move {
+            loop {
+                // Update UI every 1s in this demo.
+                sleep(std::time::Duration::from_millis(1000)).await;
+
+                while let Ok(message) = value.try_recv() {
+                    warn!("updating registry to {:#?}", message);
+                    let mut current_registrations = registers.dioxus_rx_registry.write();
+                    current_registrations.0.extend(message.0);
                 }
             }
         }
@@ -127,7 +153,7 @@ pub fn app_ui() -> Element {
     use_future(move || {
         async move {
             loop {
-                let app_receiver = registers.ui_messages_registry.write().get::<UIMessage>().clone();
+                let bevy_receiver = registers.dioxus_rx_registry.write().0.get::<UIMessage>().clone();
 
                 // // Update UI every 1s in this demo.
                 // sleep(std::time::Duration::from_millis(1000)).await;
@@ -135,13 +161,13 @@ pub fn app_ui() -> Element {
 
                 let mut fps = Option::<f32>::None;
 
-                let Some(ref app_receiver) = app_receiver else {
+                let Some(ref app_receiver) = bevy_receiver else {
                     warn!("no app receiver");
                     sleep(std::time::Duration::from_millis(1000)).await;
                     continue;
                 };
                 warn!("attempting to recieve message");
-                while let Ok(message) = app_receiver.receiver.try_recv().inspect_err(|err| warn!("couldn't recieve, reason: {:#}", err)) {
+                while let Ok(message) = app_receiver.clone().try_recv().inspect_err(|err| warn!("couldn't recieve, reason: {:#}", err)) {
                     if let UIMessage::Fps(v) = message {
                         warn!("fps set to {:#}", v);
                         fps = Some(v)

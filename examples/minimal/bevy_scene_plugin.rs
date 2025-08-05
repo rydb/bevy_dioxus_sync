@@ -2,7 +2,7 @@ use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::signals::{Readable, Signal, SyncSignal, Writable};
-use dioxus_bevy_panel::{BevyReceiver, BevySender, UiMessageRegistration, UiMessageRegistry};
+use dioxus_bevy_panel::{BevyRxChannel, BevyTxChannel, DioxusRxChannel, UiMessageRegistration};
 
 use crate::ui::{UIMessage, UiState};
 
@@ -111,8 +111,8 @@ fn setup(
 }
 
 fn sync_with_ui(
-    sender: Res<BevySender<UIMessage>>,
-    receiver: Res<BevyReceiver<UIMessage>>,
+    sender: Res<BevyTxChannel<UIMessage>>,
+    receiver: Res<BevyRxChannel<UIMessage>>,
     cube_query: Query<&MeshMaterial3d<StandardMaterial>, With<DynamicCube>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut translation_speed: ResMut<CubeTranslationSpeed>,

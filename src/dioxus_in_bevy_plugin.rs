@@ -1,9 +1,12 @@
+use std::{any::{type_name, Any, TypeId}, collections::HashMap, sync::Arc};
+
 use bevy_core_pipeline::core_2d::Camera2d;
 use bevy_asset::{prelude::*, RenderAssetUsages};
 use bevy_derive::Deref;
 use bevy_image::Image;
 use bevy_input::{keyboard::{Key as BevyKey, KeyCode as BevyKeyCode, KeyboardInput}, mouse::MouseButtonInput, prelude::*, ButtonState, InputSystem};
-use bevy_log::debug;
+use bevy_log::{debug, warn};
+use bevy_platform::collections::HashSet;
 use bevy_render::{prelude::*, render_asset::RenderAssets, render_graph::{self, *}, renderer::{RenderContext, RenderDevice, RenderQueue}, texture::GpuImage, Extract, RenderApp};
 use bevy_sprite::prelude::*;
 use bevy_transform::components::Transform;
@@ -29,16 +32,57 @@ use vello::{
 };
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::UiMessageRegistry;
+use crate::{BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped};
 
 // Constant scale factor and color scheme for example purposes
 const SCALE_FACTOR: f32 = 1.0;
 const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 const CATCH_EVENTS_CLASS: &str = "catch-events";
 
-/// sends updated ui message types to registryy. Merging any existed registered message kinds into the previous registry.
+// /// sends updated ui message types to registryy. Merging any existed registered message kinds into the previous registry.
+// #[derive(Resource)]
+// pub struct BevyChannelsSender(pub Sender<BevyIOChannels>);
+
+// #[derive(Resource)]
+// pub struct BevyTxChannelChannelsUntypedSender(pub Sender<BevyTxChannelChannelsUntyped>);
+
+
+// #[derive(Resource)]
+// pub struct BevyRxChannelChannelsUntypedSender(pub Sender<BevyRxChannelChannelsUntyped>);
+
 #[derive(Resource)]
-pub struct UiMessageRegistrySender(pub Sender<UiMessageRegistry>);
+pub struct DioxusTxChannelsUntypedRegistry(pub Sender<DioxusTxChannelsUntyped>);
+
+#[derive(Resource)]
+pub struct DioxusRxChannelsUntypedRegistry(pub Sender<DioxusRxChannelsUntyped>);
+
+// pub struct DioxusStateChannelsSender(pub Sender<DioxusStateReceivers>);
+
+#[derive(Default)]
+pub struct RecieverChannels(HashMap<TypeId, Arc<dyn Any + Send + Sync>>);
+
+impl RecieverChannels {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn insert<T: Send + Sync + 'static>(&mut self, receiver: Receiver<T>) {
+        let erased: Arc<dyn Any + Send + Sync> = Arc::new(receiver);
+        self.0.insert(TypeId::of::<T>(), erased);
+    }
+
+    pub fn get<T: Send + Sync + 'static>(&mut self) -> Option<Arc<Receiver<T>>> {
+        let value = self.0.get(&TypeId::of::<T>())?.clone();
+        value.downcast::<Receiver<T>>().inspect_err(|err| warn!("could not downcast: {:#}", type_name::<T>())).ok()
+    }
+    pub fn extend(&mut self, value: Self) {
+        self.0.extend(value.0);
+    }
+}
+
+// /// registry of dioxus reciever channels. Typecasted down into actual reciever resources in polling system.
+// #[derive(Resource)]
+// pub struct DioxusStateChannelReceiver(pub Receiver<RecieverChannels>);
 
 pub struct DioxusInBevyPlugin {
     pub ui: fn(props: UiProps) -> Element,
@@ -46,21 +90,34 @@ pub struct DioxusInBevyPlugin {
 
 #[derive(Clone)]
 pub struct UiProps {
-    //pub ui_messages: UiMessageRegistry
+    //pub ui_messages: BevyIOChannels
     /// receiver of ui messages registry.
-    pub ui_messages_registry_receiver: Receiver<UiMessageRegistry>
+    pub dioxus_tx: Receiver<DioxusTxChannelsUntyped>,
+    pub dioxus_rx: Receiver<DioxusRxChannelsUntyped>,
+    // pub bevy_io_registry_receiver: Receiver<BevyIOChannels>,
+    // pub dioxus_io_registry_receiver: Receiver<DioxusIOChannels>
 }
 
 impl Plugin for DioxusInBevyPlugin
 {
     fn build(&self, app: &mut App) {
-        let (sender, receiver) = crossbeam_channel::unbounded::<UiMessageRegistry>();        
+        let (dioxus_tx_channels_tx, dioxus_tx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxChannelsUntyped>();
+        let (dioxus_rx_channels_tx, dioxus_rx_channels_rx) = crossbeam_channel::unbounded::<DioxusRxChannelsUntyped>();
+        // let (bevy_sender, bevy_receiver) = crossbeam_channel::unbounded::<BevyIOChannels>();        
+        // let (dioxus_sender, dioxus_receiver) = crossbeam_channel::unbounded::<DioxusIOChannels>();                
         
+        // let props = UiProps {
+        //     dioxus_tx: bevy_receiver,
+        //     dioxus_rx: dioxus_sender
+        // };
+
         let props = UiProps {
-            ui_messages_registry_receiver: receiver,
+            dioxus_tx: dioxus_tx_channels_rx,
+            dioxus_rx: dioxus_rx_channels_rx
         };
-        app.insert_resource(UiMessageRegistrySender(sender));
-        
+        app.insert_resource(DioxusTxChannelsUntypedRegistry(dioxus_tx_channels_tx));
+        app.insert_resource(DioxusRxChannelsUntypedRegistry(dioxus_rx_channels_tx));
+
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size
         let vdom = VirtualDom::new_with_props(self.ui, props);
