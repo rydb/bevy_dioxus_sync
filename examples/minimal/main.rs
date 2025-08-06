@@ -12,13 +12,13 @@ mod ui;
 
 fn main() {
     // ui_messages.register::<UIMessage>();
-    // let props = UIProps {
+    // let props = DioxusProps {
     //     ui_messages
     // };
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(DioxusInBevyPlugin { ui: dioxus_app })
+        .add_plugins(DioxusInBevyPlugin)
         .add_plugins(BevyScenePlugin)
         .run();
 }

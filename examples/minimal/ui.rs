@@ -5,8 +5,7 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::UiProps, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
-use paste::paste;
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 use crate::bevy_scene_plugin::CubeRotationSpeed;
 
@@ -47,73 +46,13 @@ define_ui_state! {
 }
 
 
-// pub struct ReceiveChannelRegistry(HashMap<>);
-
-pub struct SendChannelRegistry;
-
-#[derive(Default, Clone)]
-pub struct UiRegisters {
-    // pub bevy_io_registry: Signal<BevyIOChannels>,
-    // pub dioxus_io_registry: Signal<DioxusIOChannels>
-    pub dioxus_tx_registry: Signal<DioxusTxChannelsUntyped>,
-    pub dioxus_rx_registry: Signal<DioxusRxChannelsUntyped>,
-}
-
-pub fn dioxus_app(props: UiProps) -> Element {
-    let mut state = use_context_provider(UiState::default);
-    let mut registers = use_context_provider(UiRegisters::default);
-
-    let register_updates = use_context_provider(||props);
-
-
-    use_future(move || {
-        {
-        let value = register_updates.dioxus_tx.clone();
-        async move {
-            loop {
-                // Update UI every 1s in this demo.
-                sleep(std::time::Duration::from_millis(1000)).await;
-
-                while let Ok(message) = value.try_recv() {
-                    warn!("updating registry to {:#?}", message);
-                    let mut current_registrations = registers.dioxus_tx_registry.write();
-                    current_registrations.0.extend(message.0);
-                }
-            }
-        }
-        }
-    });
-    use_future(move || {
-        {
-        let value = register_updates.dioxus_rx.clone();
-        async move {
-            loop {
-                // Update UI every 1s in this demo.
-                sleep(std::time::Duration::from_millis(1000)).await;
-
-                while let Ok(message) = value.try_recv() {
-                    warn!("updating registry to {:#?}", message);
-                    let mut current_registrations = registers.dioxus_rx_registry.write();
-                    current_registrations.0.extend(message.0);
-                }
-            }
-        }
-        }
-    });
-
-
-    let cube_rotation_speed = use_context_provider(|| CubeRotationSpeed::default());
-    rsx! {
-        app_ui {}
-    }
-}
 
 pub fn app_ui() -> Element {
 
     let mut registers = use_context::<UiRegisters>();
     let mut state = use_context::<UiState>();
 
-    let mut rotation_speed = use_context::<CubeRotationSpeed>();
+    //let mut rotation_speed = use_context::<CubeRotationSpeed>();
 
     // use_effect({
     //     let ui_sender = props.ui_sender.clone();
@@ -229,23 +168,23 @@ pub fn app_ui() -> Element {
                     }
                 }
             }
-        div {
-            id: "rotation-speed-control",
-            label { "Rotation Speed:" }
-            input {
-                r#type: "number",
-                min: "0.0",
-                max: "10.0",
-                step: "0.1",
-                value: "{rotation_speed.0}",
-                oninput: move |event| {
-                    if let Ok(speed) = event.value().parse::<f32>() {
-                        //state.cube_rotation_speed.set(speed);
-                        rotation_speed.0 = speed
-                    }
-                }
-            }
-        }
+        // div {
+        //     id: "rotation-speed-control",
+        //     label { "Rotation Speed:" }
+        //     input {
+        //         r#type: "number",
+        //         min: "0.0",
+        //         max: "10.0",
+        //         step: "0.1",
+        //         value: "{rotation_speed.0}",
+        //         oninput: move |event| {
+        //             if let Ok(speed) = event.value().parse::<f32>() {
+        //                 //state.cube_rotation_speed.set(speed);
+        //                 rotation_speed.0 = speed
+        //             }
+        //         }
+        //     }
+        // }
             div {
                 id: "footer",
                 p { "Bevy framerate: {state.fps}" }

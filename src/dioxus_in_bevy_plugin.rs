@@ -1,4 +1,4 @@
-use std::{any::{type_name, Any, TypeId}, collections::HashMap, sync::Arc};
+use std::{any::{type_name, Any, TypeId}, collections::HashMap, marker::PhantomData, sync::Arc};
 
 use bevy_core_pipeline::core_2d::Camera2d;
 use bevy_asset::{prelude::*, RenderAssetUsages};
@@ -32,95 +32,71 @@ use vello::{
 };
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::{BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped};
+use crate::{ui::dioxus_app, AnytypeMap, BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 // Constant scale factor and color scheme for example purposes
 const SCALE_FACTOR: f32 = 1.0;
 const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 const CATCH_EVENTS_CLASS: &str = "catch-events";
 
-// /// sends updated ui message types to registryy. Merging any existed registered message kinds into the previous registry.
-// #[derive(Resource)]
-// pub struct BevyChannelsSender(pub Sender<BevyIOChannels>);
-
-// #[derive(Resource)]
-// pub struct BevyTxChannelChannelsUntypedSender(pub Sender<BevyTxChannelChannelsUntyped>);
-
-
-// #[derive(Resource)]
-// pub struct BevyRxChannelChannelsUntypedSender(pub Sender<BevyRxChannelChannelsUntyped>);
-
+/// sender of channels for input/output from and to bevy on the Dioxus side of the app.
 #[derive(Resource)]
-pub struct DioxusTxChannelsUntypedRegistry(pub Sender<DioxusTxChannelsUntyped>);
-
-#[derive(Resource)]
-pub struct DioxusRxChannelsUntypedRegistry(pub Sender<DioxusRxChannelsUntyped>);
-
-// pub struct DioxusStateChannelsSender(pub Sender<DioxusStateReceivers>);
-
-#[derive(Default)]
-pub struct RecieverChannels(HashMap<TypeId, Arc<dyn Any + Send + Sync>>);
-
-impl RecieverChannels {
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-
-    pub fn insert<T: Send + Sync + 'static>(&mut self, receiver: Receiver<T>) {
-        let erased: Arc<dyn Any + Send + Sync> = Arc::new(receiver);
-        self.0.insert(TypeId::of::<T>(), erased);
-    }
-
-    pub fn get<T: Send + Sync + 'static>(&mut self) -> Option<Arc<Receiver<T>>> {
-        let value = self.0.get(&TypeId::of::<T>())?.clone();
-        value.downcast::<Receiver<T>>().inspect_err(|err| warn!("could not downcast: {:#}", type_name::<T>())).ok()
-    }
-    pub fn extend(&mut self, value: Self) {
-        self.0.extend(value.0);
-    }
+pub struct DioxusTxRxChannelsUntypedRegistry {
+    pub txrx: Sender<DioxusTxRxChannelsUntyped>,
 }
 
-// /// registry of dioxus reciever channels. Typecasted down into actual reciever resources in polling system.
-// #[derive(Resource)]
-// pub struct DioxusStateChannelReceiver(pub Receiver<RecieverChannels>);
+#[derive(Debug)]
+pub struct DioxusTxRxChannelsUntyped {
+    pub tx: DioxusTxChannelsUntyped,
+    pub rx: DioxusRxChannelsUntyped,
+}
 
 pub struct DioxusInBevyPlugin {
-    pub ui: fn(props: UiProps) -> Element,
+    //pub ui: fn(props: DioxusProps) -> Element,
 }
 
+/// marks a struct as a Dioxus element. 
+/// used to statically typed dioxus [`Element`]s
+pub trait DioxusElementMarker {
+    fn element(component: fn() -> Element) -> Element {
+        component()
+    }
+}
+
+/// Component that marks an entity as a dioxus panel
+#[derive(Component)]
+pub struct DioxusPanel<T> {
+    _phantom: PhantomData<T>
+}
+
+// impl<V: Send + Sync + 'static> ErasedSubGenericMap for DioxusPanel<V> {
+//     type Generic<T: Send + Sync + 'static> = DioxusPanel<V>;
+// }
+
+pub struct DioxusTypedElementsUntyped(AnytypeMap);
+
+/// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
-pub struct UiProps {
-    //pub ui_messages: BevyIOChannels
-    /// receiver of ui messages registry.
-    pub dioxus_tx: Receiver<DioxusTxChannelsUntyped>,
-    pub dioxus_rx: Receiver<DioxusRxChannelsUntyped>,
-    // pub bevy_io_registry_receiver: Receiver<BevyIOChannels>,
-    // pub dioxus_io_registry_receiver: Receiver<DioxusIOChannels>
+pub struct DioxusProps {
+    pub dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
+    //pub elements_register: Receiver<>
 }
 
 impl Plugin for DioxusInBevyPlugin
 {
     fn build(&self, app: &mut App) {
-        let (dioxus_tx_channels_tx, dioxus_tx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxChannelsUntyped>();
-        let (dioxus_rx_channels_tx, dioxus_rx_channels_rx) = crossbeam_channel::unbounded::<DioxusRxChannelsUntyped>();
-        // let (bevy_sender, bevy_receiver) = crossbeam_channel::unbounded::<BevyIOChannels>();        
-        // let (dioxus_sender, dioxus_receiver) = crossbeam_channel::unbounded::<DioxusIOChannels>();                
-        
-        // let props = UiProps {
-        //     dioxus_tx: bevy_receiver,
-        //     dioxus_rx: dioxus_sender
-        // };
+        let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) =crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
 
-        let props = UiProps {
-            dioxus_tx: dioxus_tx_channels_rx,
-            dioxus_rx: dioxus_rx_channels_rx
+        let props = DioxusProps {
+            dioxus_txrx: dioxus_txrx_channels_rx
         };
-        app.insert_resource(DioxusTxChannelsUntypedRegistry(dioxus_tx_channels_tx));
-        app.insert_resource(DioxusRxChannelsUntypedRegistry(dioxus_rx_channels_tx));
+        app.insert_resource(DioxusTxRxChannelsUntypedRegistry {
+            txrx: dioxus_txrx_channels_tx
+        });
 
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size
-        let vdom = VirtualDom::new_with_props(self.ui, props);
+        let vdom = VirtualDom::new_with_props(dioxus_app, props);
         // FIXME add a NetProvider
         let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig::default());
         dioxus_doc.initial_build();
