@@ -1,17 +1,18 @@
 use std::any::{type_name, TypeId};
 
 use async_std::task::sleep;
+use bevy_ecs::entity::Entity;
 use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use crate::{dioxus_in_bevy_plugin::DioxusProps, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use crate::{dioxus_in_bevy_plugin::DioxusProps, systems::{DioxusPanel, PanelUpdateKind}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 
 #[derive(Default, Clone)]
 pub struct UiRegisters {
     // pub bevy_io_registry: Signal<BevyIOChannels>,
-    // pub dioxus_io_registry: Signal<DioxusIOChannels>
+    pub dioxus_panels: Signal<HashMap<Entity, DioxusPanel>>,
     pub dioxus_tx_registry: Signal<DioxusTxChannelsUntyped>,
     pub dioxus_rx_registry: Signal<DioxusRxChannelsUntyped>,
 }
@@ -27,13 +28,14 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     let register_updates = use_context_provider(||props);
 
 
+    let update_frequency = 1000;
     use_future(move || {
         {
         let value = register_updates.dioxus_txrx.clone();
         async move {
             loop {
                 // Update UI every 1s in this demo.
-                sleep(std::time::Duration::from_millis(1000)).await;
+                sleep(std::time::Duration::from_millis(update_frequency)).await;
 
                 while let Ok(message) = value.try_recv() {
                     warn!("updating registry to {:#?}", message);
@@ -47,6 +49,31 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
         }
     });
 
+    use_future(move || {
+        {
+        let value = register_updates.dioxus_panel_updates.clone();
+        async move {
+            loop {
+                // Update UI every 1s in this demo.
+                sleep(std::time::Duration::from_millis(update_frequency)).await;
+
+                while let Ok(messages) = value.try_recv() {
+                    let mut dioxus_panels = registers.dioxus_panels.write();
+                    for update in messages.0 {
+                        match update.value {
+                            PanelUpdateKind::Add(dioxus_panel) => {
+                                dioxus_panels.insert(update.key, dioxus_panel);
+                            },
+                            PanelUpdateKind::Remove => {
+                               dioxus_panels.remove(&update.key);
+                            },
+                        }
+                    }
+                }
+            }
+        }
+        }
+    });
 
     let p = [0, 1, 2, 3, 4, 5];
     rsx! {

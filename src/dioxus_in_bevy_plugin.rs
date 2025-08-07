@@ -32,7 +32,7 @@ use vello::{
 };
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::{ui::dioxus_app, AnytypeMap, BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use crate::{systems::DioxusPanelUpdates, ui::dioxus_app, AnytypeMap, BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 // Constant scale factor and color scheme for example purposes
 const SCALE_FACTOR: f32 = 1.0;
@@ -55,44 +55,33 @@ pub struct DioxusInBevyPlugin {
     //pub ui: fn(props: DioxusProps) -> Element,
 }
 
-/// marks a struct as a Dioxus element. 
-/// used to statically typed dioxus [`Element`]s
-pub trait DioxusElementMarker {
-    fn element(component: fn() -> Element) -> Element {
-        component()
-    }
-}
-
-/// Component that marks an entity as a dioxus panel
-#[derive(Component)]
-pub struct DioxusPanel<T> {
-    _phantom: PhantomData<T>
-}
-
-// impl<V: Send + Sync + 'static> ErasedSubGenericMap for DioxusPanel<V> {
-//     type Generic<T: Send + Sync + 'static> = DioxusPanel<V>;
-// }
-
-pub struct DioxusTypedElementsUntyped(AnytypeMap);
 
 /// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
 pub struct DioxusProps {
-    pub dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
+    pub(crate) dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
+    pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>
     //pub elements_register: Receiver<>
 }
+
+#[derive(Resource)]
+pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
+
 
 impl Plugin for DioxusInBevyPlugin
 {
     fn build(&self, app: &mut App) {
-        let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) =crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
+        let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
 
+        let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) = crossbeam_channel::unbounded::<DioxusPanelUpdates>();
         let props = DioxusProps {
-            dioxus_txrx: dioxus_txrx_channels_rx
+            dioxus_txrx: dioxus_txrx_channels_rx,
+            dioxus_panel_updates: dioxus_panel_updates_rx,
         };
         app.insert_resource(DioxusTxRxChannelsUntypedRegistry {
             txrx: dioxus_txrx_channels_tx
         });
+        app.insert_resource(DioxusPanelUpdatesSender(dioxus_panel_updates_tx));
 
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size

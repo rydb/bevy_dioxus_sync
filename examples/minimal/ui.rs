@@ -5,46 +5,54 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::DioxusElementMarker, ui::{UiRegisters, UiState}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 use crate::bevy_scene_plugin::CubeRotationSpeed;
 
-macro_rules! define_ui_state {
-    (
-        $($field:ident : $type:ty = $default:expr),* $(,)?
-    ) => { paste! {
-        #[allow(dead_code)]
-        #[derive(Clone, Copy, Debug)]
-        pub struct UiState {
-            $($field: Signal<$type>,)*
-        }
+// macro_rules! define_ui_state {
+//     (
+//         $($field:ident : $type:ty = $default:expr),* $(,)?
+//     ) => { paste! {
+//         #[allow(dead_code)]
+//         #[derive(Clone, Copy, Debug)]
+//         pub struct UiState {
+//             $($field: Signal<$type>,)*
+//         }
 
-        #[allow(dead_code)]
-        impl UiState {
-            fn default() -> Self {
-                Self {
-                    $($field: Signal::new($default),)*
-                }
-            }
+//         #[allow(dead_code)]
+//         impl UiState {
+//             fn default() -> Self {
+//                 Self {
+//                     $($field: Signal::new($default),)*
+//                 }
+//             }
 
-            $(pub const [<DEFAULT_ $field:upper>]: $type = $default;)*
-        }
+//             $(pub const [<DEFAULT_ $field:upper>]: $type = $default;)*
+//         }
 
-        #[allow(dead_code)]
-        #[derive(Debug)]
-        pub enum UIMessage {
-            $([<$field:camel>]($type),)*
-        }
-    }};
+//         #[allow(dead_code)]
+//         #[derive(Debug)]
+//         pub enum UIMessage {
+//             $([<$field:camel>]($type),)*
+//         }
+//     }};
+// }
+
+// define_ui_state! {
+//     cube_color: [f32; 4] = [0.0, 0.0, 1.0, 1.0],
+//     cube_translation_speed: f32 = 2.0,
+//     //cube_rotation_speed: f32 = 1.0,
+//     fps: f32 = 0.0,
+// }
+
+#[derive(Debug)]
+pub struct AppUi;
+
+impl DioxusElementMarker for AppUi {
+    fn element(&self) -> fn() -> Element {
+        app_ui
+    }
 }
-
-define_ui_state! {
-    cube_color: [f32; 4] = [0.0, 0.0, 1.0, 1.0],
-    cube_translation_speed: f32 = 2.0,
-    //cube_rotation_speed: f32 = 1.0,
-    fps: f32 = 0.0,
-}
-
 
 
 pub fn app_ui() -> Element {

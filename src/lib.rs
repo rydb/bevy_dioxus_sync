@@ -15,7 +15,8 @@ use crate::dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannels
 
 pub mod dioxus_in_bevy_plugin;
 pub mod ui;
-
+pub mod traits;
+mod systems;
 
 /// A more restricted anymap for storing erased generics with sub generics, and indexing them via their sub-generic. 
 pub trait ErasedSubGenericMap
@@ -53,10 +54,6 @@ pub struct SenderReceiver<T: Send + Sync + 'static> {
 /// An untyped hashmap that resolved typed entries by their type id.
 pub type AnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
 
-// #[derive(Clone, Default, Debug, TransparentWrapper)]
-// #[repr(transparent)]
-// pub struct ChannelRegistry(HashMap<TypeId, Arc<dyn Any + Send + Sync>>);
-
 #[derive(Clone, Default, Debug, TransparentWrapper)]
 #[repr(transparent)]
 pub struct TxChannelRegistry(AnytypeMap);
@@ -73,19 +70,7 @@ impl ErasedSubGenericMap for RxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Receiver::<T>;
 }
 
-// impl ErasedSubGenericMap for ChannelRegistry {
-//     type Generic<T: Send + Sync + 'static> = SenderReceiver::<T>;
-// }
-
 pub struct BevyRxChannelTypeId(TypeId);
-
-// #[derive(Clone, Resource, Default, Debug)]
-// /// A registry of Bevy state channels to be recieved by and interacted with through Dioxus.
-// pub struct DioxusIOChannels(pub ChannelRegistry);
-
-// /// A registry of Dioxus state channels to be recieved by and interacted with through Bevy.
-// #[derive(Clone, Resource, Default, Debug)]
-// pub struct BevyIOChannels(pub ChannelRegistry);
 
 
 #[derive(Clone, Resource, Default)]
