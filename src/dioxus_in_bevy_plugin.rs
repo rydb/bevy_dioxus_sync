@@ -78,6 +78,8 @@ impl Plugin for DioxusInBevyPlugin
             dioxus_txrx: dioxus_txrx_channels_rx,
             dioxus_panel_updates: dioxus_panel_updates_rx,
         };
+        app.init_resource::<DioxusPanelUpdates>();
+
         app.insert_resource(DioxusTxRxChannelsUntypedRegistry {
             txrx: dioxus_txrx_channels_tx
         });
@@ -111,6 +113,7 @@ impl Plugin for DioxusInBevyPlugin
                 .chain(),
         );
         app.add_systems(Update, update_ui);
+        app.add_systems(PreUpdate, push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>));
     }
 
     fn finish(&self, app: &mut App) {
@@ -134,6 +137,17 @@ impl Plugin for DioxusInBevyPlugin
         graph.add_node(TextureGetterNode, TextureGetterNodeDriver);
         graph.add_node_edge(bevy_render::graph::CameraDriverLabel, TextureGetterNode);
     }
+}
+
+pub fn push_panel_updates(
+    mut panel_updates: ResMut<DioxusPanelUpdates>,
+    panel_update_sender: ResMut<DioxusPanelUpdatesSender>
+) {
+    let mut updates = Vec::new();
+
+    updates.extend(panel_updates.0.drain(..));
+
+    panel_update_sender.0.send(DioxusPanelUpdates(updates));
 }
 
 struct RenderTexture {

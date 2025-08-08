@@ -5,9 +5,9 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::DioxusElementMarker, ui::{UiRegisters, UiState}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::DioxusElementMarker, ui::{UiRegisters}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
-use crate::bevy_scene_plugin::CubeRotationSpeed;
+use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
 
 // macro_rules! define_ui_state {
 //     (
@@ -49,17 +49,30 @@ use crate::bevy_scene_plugin::CubeRotationSpeed;
 pub struct AppUi;
 
 impl DioxusElementMarker for AppUi {
-    fn element(&self) -> fn() -> Element {
-        app_ui
+    fn element(&self) -> Element {
+        app_ui()
     }
 }
 
+#[derive(Default, Clone)]
+pub struct UiState {
+    cube_color: Signal<[f32; 4]>,
+    cube_translation_speed: Signal<f32>,
+    fps: Signal<f32>,
+}
 
 pub fn app_ui() -> Element {
 
     let mut registers = use_context::<UiRegisters>();
-    let mut state = use_context::<UiState>();
+    let mut state = use_context_provider(|| UiState::default());
 
+    
+    //let ui_state = use_signal(|| UiState::default());
+
+    // let cube_color = use_signal(|| None);
+    // let cube_translation_speed = use_signal(|| None);
+    // let cube_rotation_speed = use_signal(||None);
+    // let fps = use_signal(||None);
     //let mut rotation_speed = use_context::<CubeRotationSpeed>();
 
     // use_effect({
@@ -100,13 +113,13 @@ pub fn app_ui() -> Element {
     use_future(move || {
         async move {
             loop {
-                let bevy_receiver = registers.dioxus_rx_registry.write().0.get::<UIMessage>().clone();
+                let bevy_receiver = registers.dioxus_rx_registry.write().0.get::<FPS>().clone();
 
                 // // Update UI every 1s in this demo.
                 // sleep(std::time::Duration::from_millis(1000)).await;
                 sleep(std::time::Duration::from_millis(100)).await;
 
-                let mut fps = Option::<f32>::None;
+                //let mut fps = Option::<f32>::None;
 
                 let Some(ref app_receiver) = bevy_receiver else {
                     warn!("no app receiver");
@@ -114,17 +127,20 @@ pub fn app_ui() -> Element {
                     continue;
                 };
                 warn!("attempting to recieve message");
-                while let Ok(message) = app_receiver.clone().try_recv().inspect_err(|err| warn!("couldn't recieve, reason: {:#}", err)) {
-                    if let UIMessage::Fps(v) = message {
-                        warn!("fps set to {:#}", v);
-                        fps = Some(v)
-                    }
-                } 
-
-                if let Some(fps) = fps {
-                    println!("fps set to {:#}", fps);
-                    state.fps.set(fps);
+                while let Ok(fps) = app_receiver.try_recv() {
+                    state.fps.set(fps.0);
                 }
+                // while let Ok(message) = app_receiver.clone().try_recv().inspect_err(|err| warn!("couldn't recieve, reason: {:#}", err)) {
+                //     if let UIMessage::Fps(v) = message {
+                //         warn!("fps set to {:#}", v);
+                //         fps = Some(v)
+                //     }
+                // } 
+
+                // if let Some(fps) = fps {
+                //     println!("fps set to {:#}", fps);
+                //     state.fps.set(fps);
+                // }
             }
         }
     });

@@ -6,7 +6,7 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use crate::{dioxus_in_bevy_plugin::DioxusProps, systems::{DioxusPanel, PanelUpdateKind}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use crate::{dioxus_in_bevy_plugin::DioxusProps, systems::PanelUpdateKind, DioxusPanel, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 
 #[derive(Default, Clone)]
@@ -15,10 +15,6 @@ pub struct UiRegisters {
     pub dioxus_panels: Signal<HashMap<Entity, DioxusPanel>>,
     pub dioxus_tx_registry: Signal<DioxusTxChannelsUntyped>,
     pub dioxus_rx_registry: Signal<DioxusRxChannelsUntyped>,
-}
-
-pub struct UiState {
-    
 }
 
 pub fn dioxus_app(props: DioxusProps) -> Element {
@@ -74,12 +70,19 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
         }
         }
     });
-
-    let p = [0, 1, 2, 3, 4, 5];
+    //let panels = registers.dioxus_panels
+    //for panel in registers.dioxus_panels
+    // for (e, panel_kind) in registers.dioxus_panels.read().clone() {
+    //       let x =  panel_kind.element_marker.as_ref().element();
+    // }
+    //let p = [0, 1, 2, 3, 4, 5];
     rsx! {
-        for i in p {
-            {println!("i is {:#}", i);}
+        for (_, panel_kind) in registers.dioxus_panels.read().clone() {
+            {panel_kind.element_marker.as_ref().element()}
         }
+        // for i in p {
+        //     {println!("i is {:#}", i);}
+        // }
         //app_ui {}
     }
 }

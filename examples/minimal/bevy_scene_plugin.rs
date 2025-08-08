@@ -2,9 +2,9 @@ use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::signals::{Readable, Signal, SyncSignal, Writable};
-use dioxus_bevy_panel::{BevyRxChannel, BevyTxChannel, DioxusRxChannel, UiMessageRegistration};
+use dioxus_bevy_panel::{DioxusPanel, DioxusRxChannel, UiResourceRegistration};
 
-use crate::ui::{UIMessage, UiState};
+use crate::ui::{AppUi, UiState};
 
 #[derive(Component)]
 pub struct DynamicCube;
@@ -28,18 +28,18 @@ impl Default for OrbitCamera {
     }
 }
 
-#[derive(Resource, Deref)]
-struct UIMessageSender(Sender<UIMessage>);
+// #[derive(Resource, Deref)]
+// struct UIMessageSender(Sender<UIMessage>);
 
-#[derive(Resource, Deref)]
-struct UIMessageReceiver(Receiver<UIMessage>);
+// #[derive(Resource, Deref)]
+// struct UIMessageReceiver(Receiver<UIMessage>);
 
 #[derive(Resource)]
 struct CubeTranslationSpeed(f32);
 
 impl Default for CubeTranslationSpeed {
     fn default() -> Self {
-        Self(UiState::DEFAULT_CUBE_TRANSLATION_SPEED)
+        Self(1.0)
     }
 }
 
@@ -58,9 +58,11 @@ pub struct BevyScenePlugin;
 
 impl Plugin for BevyScenePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(UiMessageRegistration::<UIMessage>::default());
+        // app.add_plugins(UiMessageRegistration::<UiState>::default());
+        app.add_plugins(UiResourceRegistration::<FPS>::default());
         app.insert_resource(ClearColor(bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0)));
         app.insert_resource(CubeTranslationSpeed::default());
+        app.insert_resource(FPS(0.0));
         app.insert_resource(CubeRotationSpeed::default());
         app.add_systems(Startup, setup);
         app.add_systems(Update, (sync_with_ui, animate, orbit_camera_system));
@@ -75,9 +77,7 @@ fn setup(
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::Srgba(bevy::color::Srgba::from_f32_array(
-                UiState::DEFAULT_CUBE_COLOR,
-            )),
+            base_color: Color::Srgba(bevy::color::Srgba::BLUE),
             metallic: 0.0,
             perceptual_roughness: 0.5,
             ..default()
@@ -101,7 +101,9 @@ fn setup(
         brightness: 100.0,
         affects_lightmapped_meshes: true,
     });
-
+    commands.spawn(
+        DioxusPanel::new( AppUi {} )
+    );
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 0.0, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
@@ -110,17 +112,22 @@ fn setup(
     ));
 }
 
+#[derive(Resource, Clone)]
+pub struct FPS(pub f32);
+
 fn sync_with_ui(
-    sender: Res<BevyTxChannel<UIMessage>>,
-    receiver: Res<BevyRxChannel<UIMessage>>,
     cube_query: Query<&MeshMaterial3d<StandardMaterial>, With<DynamicCube>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut translation_speed: ResMut<CubeTranslationSpeed>,
     mut rotation_speed: ResMut<CubeRotationSpeed>,
+    mut fps: ResMut<FPS>,
     time: Res<Time>,
 ) {
-    let fps = 1000.0 / time.delta().as_millis() as f32;
-    sender.0.send(UIMessage::Fps(fps)).unwrap();
+    let new_fps = 1000.0 / time.delta().as_millis() as f32;
+    // sender.0.send(UiState {
+
+    *fps = FPS(new_fps);
+    // })
 
     // while let Ok(message) = receiver.0.try_recv() {
     //     warn!("recieved message: {:#?}", message);
