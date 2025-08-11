@@ -56,13 +56,22 @@ pub struct DioxusInBevyPlugin {
 }
 
 
+pub enum SyncMessage {
+    RequestResourceChannel(Box<dyn bevy_ecs::prelude::Resource>)
+}
+
+
 /// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
 pub struct DioxusProps {
     pub(crate) dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
-    pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>
+    pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
+    pub(crate) sync_tx: Sender<SyncMessage>
     //pub elements_register: Receiver<>
 }
+
+#[derive(Resource)]
+pub struct DioxusSyncReceiver(Receiver<SyncMessage>);
 
 #[derive(Resource)]
 pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
@@ -72,17 +81,20 @@ impl Plugin for DioxusInBevyPlugin
 {
     fn build(&self, app: &mut App) {
         let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
-
         let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) = crossbeam_channel::unbounded::<DioxusPanelUpdates>();
+        let (sync_tx, sync_rx) = crossbeam_channel::unbounded::<SyncMessage>();
         let props = DioxusProps {
             dioxus_txrx: dioxus_txrx_channels_rx,
             dioxus_panel_updates: dioxus_panel_updates_rx,
+            sync_tx: sync_tx
         };
         app.init_resource::<DioxusPanelUpdates>();
 
         app.insert_resource(DioxusTxRxChannelsUntypedRegistry {
             txrx: dioxus_txrx_channels_tx
         });
+
+        app.insert_resource(DioxusSyncReceiver(sync_rx));
         app.insert_resource(DioxusPanelUpdatesSender(dioxus_panel_updates_tx));
 
         // Create the dioxus virtual dom and the dioxus-native document

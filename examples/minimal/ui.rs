@@ -5,7 +5,7 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::DioxusElementMarker, ui::{UiRegisters}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::{DioxusElementMarker, ErasedSubGenericMap}, ui::UiRegisters, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
 

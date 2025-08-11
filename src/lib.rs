@@ -1,12 +1,12 @@
 use std::{any::{type_name, Any, TypeId}, collections::HashMap, marker::PhantomData, rc::Rc, sync::Arc};
 use bevy_app::prelude::*;
 use bevy_derive::{Deref, DerefMut};
-use bevy_ecs::{component::{ComponentHooks, Immutable, StorageType}, prelude::*};
+use bevy_ecs::{component::{ComponentHooks, Components, Immutable, StorageType}, prelude::*, storage::Resources};
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use bevy_log::{tracing_subscriber::registry, warn};
 
-use crate::{dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannelsUntypedRegistry}, systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind}, traits::DioxusElementMarker};
+use crate::{dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannelsUntypedRegistry}, systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind}, traits::{DioxusElementMarker, ErasedSubGenericMap}};
 
 // use crate::dioxus_in_bevy_plugin::DioxusChannelsUntypedRegistry;
 
@@ -18,33 +18,6 @@ pub mod ui;
 pub mod traits;
 mod systems;
 
-/// A more restricted anymap for storing erased generics with sub generics, and indexing them via their sub-generic. 
-pub trait ErasedSubGenericMap
-    where
-        Self: TransparentWrapper<AnytypeMap> + Sized,
-{
-    type Generic<T: Send + Sync + 'static>: Send + Sync + 'static;
-    fn insert<T: Send + Sync + 'static>(&mut self, value: Self::Generic<T>)
-        where
-            // Self::Generic<T>: From<T>,
-    {   
-        let map = TransparentWrapper::peel_mut(self);
-        let erased: Arc<dyn Any + Send + Sync> = Arc::new(value);
-        map.insert(TypeId::of::<T>(), erased);
-    }
-
-    fn get<T: Send + Sync + 'static>(&mut self) -> Option<Arc<Self::Generic<T>>> {
-        let map = TransparentWrapper::peel_mut(self);
-
-        let value = map.get(&TypeId::of::<T>())?.clone();
-        value.downcast::<Self::Generic<T>>().inspect_err(|err| warn!("could not downcast: {:#}", type_name::<T>())).ok()
-    }
-    fn extend(&mut self, value: Self) {
-        let map = TransparentWrapper::peel_mut(self);
-        let value = TransparentWrapper::peel(value);
-        map.extend(value);
-    }
-}
 
 pub struct SenderReceiver<T: Send + Sync + 'static> {
     pub sender: Sender<T>,
@@ -275,3 +248,13 @@ fn receive_resource_update<T: Resource + Clone>(
     };
     *resource = new_res;
 }
+
+// pub struct ResourceRequestTx
+
+// pub struct ResourceRequestRx
+
+// fn send_resource_update_erased(
+//     resources: Resources
+// ) {
+
+// }
