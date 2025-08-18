@@ -29,7 +29,7 @@ pub struct SenderReceiver<T: Send + Sync + 'static> {
 /// An untyped hashmap that resolved typed entries by their type id.
 pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
 
-pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync + 'static>>;
+pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
 
 #[derive(Clone, Default, Debug, TransparentWrapper)]
 #[repr(transparent)]
@@ -252,15 +252,15 @@ fn add_systems_through_world<T>(
     }
 }
 
-fn send_resource_update<T: Resource>(
+fn send_resource_update<T: Resource + Clone>(
     resource: Res<T>,
     bevy_tx: ResMut<BevyTxChannel<T>>,
     // bevy_rx: ResMut<BevyRxChannel<T>>,
 ) {
-    bevy_tx.0.send(Arc::new(resource));
+    bevy_tx.0.send(resource.clone());
 }
 
-fn receive_resource_update<T: Resource>(
+fn receive_resource_update<T: Resource + Clone>(
     mut resource: ResMut<T>,
     bevy_rx: ResMut<BevyRxChannel<T>>,
     // bevy_rx: ResMut<BevyRxChannel<T>>,
@@ -330,13 +330,13 @@ impl ErasedSubGeneric for ErasedType {
 #[derive(Default, Resource)]
 pub struct TestResource(String);
 
-pub enum InsertDefaultResource<T: Resource> {
+pub enum InsertDefaultResource<T: Resource + Clone> {
     No,
     Yes(T)
 }
 
 /// Command to register dioxus bevy interop for a given resource.
-pub struct RegisterDioxusInterop<T: Resource> {
+pub struct RegisterDioxusInterop<T: Resource + Clone> {
     default_resource: InsertDefaultResource<T>,
 
     dioxus_tx: Sender<T>,
@@ -346,7 +346,7 @@ pub struct RegisterDioxusInterop<T: Resource> {
 }
 
 
-impl<T: Resource> RegisterDioxusInterop<T> {
+impl<T: Resource + Clone> RegisterDioxusInterop<T> {
     pub fn new(default_resource: InsertDefaultResource<T>) -> Self {
         let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<T>();
         let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<T>();
@@ -362,7 +362,7 @@ impl<T: Resource> RegisterDioxusInterop<T> {
 }
 
 
-impl<T: Resource> Command for RegisterDioxusInterop<T> {
+impl<T: Resource + Clone> Command for RegisterDioxusInterop<T> {
     fn apply(self, world: &mut World) -> () {
         let mut bevy_rx_channels = world.get_resource_or_init::<BevyRxChannelChannelsUntyped>();
 

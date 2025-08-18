@@ -11,18 +11,17 @@ use bevy_utils::default;
 use crate::{dioxus_in_bevy_plugin::{DioxusCommandQueueRx, DioxusProps}, systems::PanelUpdateKind, traits::ErasedSubGeneriResourcecMap, ArcAnytypeMap, BoxAnyTypeMap, DioxusPanel, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap, InsertDefaultResource, RegisterDioxusInterop};
 use bevy_ecs::prelude::Resource;
 
-#[derive(TransparentWrapper, Default, Clone)]
+#[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
-pub struct SignalRegistry(ArcAnytypeMap);
+pub struct SignalRegistry(BoxAnyTypeMap);
 
 impl ErasedSubGeneriResourcecMap for SignalRegistry {
     type Generic<T: Clone + Resource + Send + Sync + 'static> = SyncSignal<DioxusRes<T>>;
 }
 
-
 /// Dioxus signals of Dioxus copies of Bevy resources.
-#[derive(Default, Clone)]
-pub struct ResourceSignalRegistry(SignalRegistry);
+#[derive(Clone, Default)]
+pub struct ResourceSignalRegistry(Signal<SignalRegistry>);
 
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
@@ -36,7 +35,7 @@ pub struct DioxusTxChannels(pub Signal<DioxusTxChannelsUntyped>);
 #[derive(Clone, Default)]
 pub struct ResourceSignals(pub Signal<ResourceSignalRegistry>);
 
-pub struct DioxusRes<T: Resource> {
+pub struct DioxusRes<T: Clone + Resource> {
     pub(crate) resource_write: Sender<T>,
     //receiver: Receiver<T>,
     pub(crate) resource_read: Option<T>
@@ -60,7 +59,7 @@ impl<T: Clone + Resource> DioxusRes<T> {
     }
 }
 
-fn request_resource_channel<T:Resource>() -> SyncSignal<DioxusRes<T>> {
+fn request_resource_channel<T:Resource + Clone>() -> SyncSignal<DioxusRes<T>> {
     let mut resource_signals = use_context::<ResourceSignals>();
 
     let props= use_context::<DioxusProps>();
@@ -73,7 +72,7 @@ fn request_resource_channel<T:Resource>() -> SyncSignal<DioxusRes<T>> {
     let commands = CommandQueue::default();
 
     let mut dioxus_resource_copies = resource_signals.0.write();
-    dioxus_resource_copies.0.insert(new_signal.clone());
+    dioxus_resource_copies.0.write().insert(new_signal.clone());
 
     props.command_queues_tx.send(commands);
 
@@ -90,7 +89,8 @@ pub fn use_bevy_resource<T: Resource + Clone>() -> SyncSignal<DioxusRes<T>> {
 
     let mut dioxus_resource_copies = resource_signals.0.write();
 
-    let Some(signal) = dioxus_resource_copies.0.get::<T>() else {
+    let mut binding = dioxus_resource_copies.0.write();
+    let Some(signal) = binding.get::<T>() else {
             return request_resource_channel()
     };
     let signal = signal.clone();
@@ -133,11 +133,11 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     let register_updates = use_context_provider(||props);
 
 
-    let dioxus_tx_registry = use_context_provider(||DioxusTxChannels::default());
-    let dioxus_rx_registry = use_context_provider(||DioxusRxChannels::default());
-    let resource_registers = use_context_provider(||ResourceSignalRegistry::default());
-    let dioxus_panels = use_context_provider(||DioxusPanels::default());
-
+    let mut dioxus_tx_registry = use_context_provider(||DioxusTxChannels::default());
+    let mut dioxus_rx_registry = use_context_provider(||DioxusRxChannels::default());
+    let mut resource_registers = use_context_provider(||ResourceSignalRegistry::default());
+    let mut dioxus_panels = use_context_provider(||DioxusPanels::default());
+    let mut resource_signals = use_context_provider(||ResourceSignals::default());
 
     let update_frequency = 1000;
     use_future(move || {

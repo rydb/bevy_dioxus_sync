@@ -17,20 +17,21 @@ pub trait DioxusElementMarker: 'static + Sync + Send + Debug {
 
 pub trait ErasedSubGeneriResourcecMap
     where
-        Self: TransparentWrapper<ArcAnytypeMap> + Sized,
+        Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
 {
     type Generic<T: Clone + Resource + Send + Sync>: Send + Sync + Clone + 'static;
     fn insert<T: Clone + Resource + Send + Sync + 'static>(&mut self, value: Self::Generic<T>){   
         let map = TransparentWrapper::peel_mut(self);
-        let erased= Arc::new(value);
+        let erased= Box::new(value);
         map.insert(TypeId::of::<T>(), erased);
     }
 
-    fn get<T: Clone + Resource + Send + Sync + 'static>(&mut self) ->  Option<Arc<Self::Generic<T>>> {
+    fn get<T: Clone + Resource + Send + Sync + 'static>(&mut self) -> Option<&mut Self::Generic<T>> {
         let map = TransparentWrapper::peel_mut(self);
 
-        let value = map.get(&TypeId::of::<T>())?.clone();
-        value.downcast::<Self::Generic<T>>().inspect_err(|err| warn!("could not downcast: {:#}", type_name::<T>())).ok()
+        let value = map.get_mut(&TypeId::of::<T>())?;
+
+        value.downcast_mut::<Self::Generic<T>>()
     }
     fn extend(&mut self, value: Self) {
         let map = TransparentWrapper::peel_mut(self);

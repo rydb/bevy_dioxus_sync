@@ -5,7 +5,7 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::{DioxusElementMarker, ErasedSubGenericMap}, ui::{use_bevy_resource, UiRegisters}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped};
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::{DioxusElementMarker, ErasedSubGenericMap}, ui::{use_bevy_resource, ResourceSignalRegistry}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped};
 
 use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
 
@@ -63,7 +63,7 @@ pub struct UiState {
 
 pub fn app_ui() -> Element {
 
-    let mut registers = use_context::<UiRegisters>();
+    let mut resource_registry = use_context::<ResourceSignalRegistry>();
     let mut state = use_context_provider(|| UiState::default());
 
     
