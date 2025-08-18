@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use crossbeam_channel::{Receiver, Sender};
@@ -112,8 +114,14 @@ fn setup(
     ));
 }
 
-#[derive(Resource, Clone)]
+#[derive(Resource, Debug, Clone)]
 pub struct FPS(pub f32);
+
+impl Display for FPS {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 fn sync_with_ui(
     cube_query: Query<&MeshMaterial3d<StandardMaterial>, With<DynamicCube>>,

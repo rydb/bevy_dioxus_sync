@@ -1,12 +1,14 @@
 use std::{any::{type_name, Any, TypeId}, collections::HashMap, marker::PhantomData, rc::Rc, sync::Arc};
+use bevy_ptr::OwningPtr;
 use bevy_app::prelude::*;
 use bevy_derive::{Deref, DerefMut};
-use bevy_ecs::{component::{ComponentHooks, Components, Immutable, StorageType}, prelude::*, storage::Resources};
+use bevy_ecs::{change_detection::MaybeLocation, component::{ComponentHooks, Components, Immutable, StorageType}, prelude::*, schedule::ScheduleLabel, storage::Resources, system::{command::insert_resource, ScheduleSystem}, world::CommandQueue};
+use bevy_reflect::{GetTypeRegistration, TypeRegistry, TypeRegistryArc};
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use bevy_log::{tracing_subscriber::registry, warn};
 
-use crate::{dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannelsUntypedRegistry}, systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind}, traits::{DioxusElementMarker, ErasedSubGenericMap}};
+use crate::{dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannelsUntypedRegistry}, systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind}, traits::{DioxusElementMarker, ErasedSubGeneric, ErasedSubGenericMap}};
 
 // use crate::dioxus_in_bevy_plugin::DioxusChannelsUntypedRegistry;
 
@@ -16,7 +18,7 @@ use crate::{dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannel
 pub mod dioxus_in_bevy_plugin;
 pub mod ui;
 pub mod traits;
-mod systems;
+pub(crate) mod systems;
 
 
 pub struct SenderReceiver<T: Send + Sync + 'static> {
@@ -25,11 +27,13 @@ pub struct SenderReceiver<T: Send + Sync + 'static> {
 }
 
 /// An untyped hashmap that resolved typed entries by their type id.
-pub type AnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
+pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
+
+pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync + 'static>>;
 
 #[derive(Clone, Default, Debug, TransparentWrapper)]
 #[repr(transparent)]
-pub struct TxChannelRegistry(AnytypeMap);
+pub struct TxChannelRegistry(ArcAnytypeMap);
 
 impl ErasedSubGenericMap for TxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Sender::<T>;
@@ -37,7 +41,7 @@ impl ErasedSubGenericMap for TxChannelRegistry {
 
 #[derive(Clone, Default, Debug, TransparentWrapper)]
 #[repr(transparent)]
-pub struct RxChannelRegistry(AnytypeMap);
+pub struct RxChannelRegistry(ArcAnytypeMap);
 
 impl ErasedSubGenericMap for RxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Receiver::<T>;
@@ -229,16 +233,34 @@ impl<M: Send + Sync + Clone + Resource + 'static> Plugin for UiResourceRegistrat
     }
 }
 
+pub struct ResourceUpdates {}
 
-fn send_resource_update<T: Resource + Clone>(
+fn add_resource_updates_to_schedule() {
+
+}
+
+fn add_systems_through_world<T>(
+    world: &mut World,
+    schedule: impl ScheduleLabel,
+    systems: impl IntoScheduleConfigs<ScheduleSystem, T>
+    // mut schedules: ResMut<Schedules>, 
+    // systems: impl IntoScheduleConfigs<ScheduleSystem, T>
+) {
+    let mut schedules = world.get_resource_mut::<Schedules>().unwrap();
+    if let Some(schedule) = schedules.get_mut(schedule) {
+        schedule.add_systems(systems);
+    }
+}
+
+fn send_resource_update<T: Resource>(
     resource: Res<T>,
     bevy_tx: ResMut<BevyTxChannel<T>>,
     // bevy_rx: ResMut<BevyRxChannel<T>>,
 ) {
-    bevy_tx.0.send(resource.clone());
+    bevy_tx.0.send(Arc::new(resource));
 }
 
-fn receive_resource_update<T: Resource + Clone>(
+fn receive_resource_update<T: Resource>(
     mut resource: ResMut<T>,
     bevy_rx: ResMut<BevyRxChannel<T>>,
     // bevy_rx: ResMut<BevyRxChannel<T>>,
@@ -249,12 +271,136 @@ fn receive_resource_update<T: Resource + Clone>(
     *resource = new_res;
 }
 
-// pub struct ResourceRequestTx
+// #[derive(TransparentWrapper)]
+// #[repr(transparent)]
+// pub struct ResourceUntyped(ErasedType);
 
-// pub struct ResourceRequestRx
 
-// fn send_resource_update_erased(
-//     resources: Resources
-// ) {
-
+// impl ResourceUntyped {
+//     pub fn get<T>(&mut self) -> T {
+//         self.0.
+//     }
 // }
+
+/// wrapper for Box for mem::takeing box val to sidestpe box not being Clone while also preventing end-user initializing with None from `Option`
+pub struct BoxVal(Option<BoxSync>);
+
+impl BoxVal {
+    pub fn new<T: Send + Sync + 'static>(value: T) -> Self {
+        Self(Some(Box::new(value)))
+    }
+    pub fn take(&mut self) -> Box<dyn Any + Send + Sync + 'static> {
+        let val = self.0.take().expect("attempted .take() on box this is already taken.");
+        val
+    }
+}
+
+pub type BoxSync = Box<dyn Any + Send + Sync + 'static>;
+
+pub type AnyType = (TypeId, BoxVal);
+
+#[derive(TransparentWrapper)]
+#[repr(transparent)]
+pub struct ErasedTxChannel(AnyType);
+
+impl ErasedSubGeneric for ErasedTxChannel {
+    type Generic<T: Send + Sync + 'static> = Sender<T>;
+}
+
+#[derive(TransparentWrapper)]
+#[repr(transparent)]
+pub struct ErasedRxChannel(Box<dyn Resource>);
+
+// impl ErasedSubGeneric for ErasedRxChannel {
+//     type Generic<T: Send + Sync + 'static> = Receiver<T>;
+// }
+
+
+
+#[derive(TransparentWrapper)]
+#[repr(transparent)]
+pub struct ErasedType(AnyType);
+
+// pub struct ErasedResource(pub Box<dyn Resource + Send + Sync + Sized + 'static>);
+
+impl ErasedSubGeneric for ErasedType {
+    type Generic<T: Send + Sync + 'static> = T;
+}
+
+#[derive(Default, Resource)]
+pub struct TestResource(String);
+
+pub enum InsertDefaultResource<T: Resource> {
+    No,
+    Yes(T)
+}
+
+/// Command to register dioxus bevy interop for a given resource.
+pub struct RegisterDioxusInterop<T: Resource> {
+    default_resource: InsertDefaultResource<T>,
+
+    dioxus_tx: Sender<T>,
+    dioxus_rx: Receiver<T>,
+    bevy_tx: Sender<T>,
+    bevy_rx: Receiver<T> 
+}
+
+
+impl<T: Resource> RegisterDioxusInterop<T> {
+    pub fn new(default_resource: InsertDefaultResource<T>) -> Self {
+        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<T>();
+        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<T>();
+        
+        Self {
+            default_resource,
+            dioxus_tx,
+            dioxus_rx,
+            bevy_tx,
+            bevy_rx
+        }
+    }
+}
+
+
+impl<T: Resource> Command for RegisterDioxusInterop<T> {
+    fn apply(self, world: &mut World) -> () {
+        let mut bevy_rx_channels = world.get_resource_or_init::<BevyRxChannelChannelsUntyped>();
+
+        bevy_rx_channels.0.insert::<T>(self.bevy_rx.clone());
+
+
+        let mut bevy_tx_channels = world.get_resource_or_init::<BevyTxChannelChannelsUntyped>();
+
+        bevy_tx_channels.0.insert::<T>(self.bevy_tx.clone());
+
+
+        world.insert_resource(BevyTxChannel(self.bevy_tx));
+        world.insert_resource(BevyRxChannel(self.bevy_rx));
+        
+        add_systems_through_world(world, Update, send_resource_update::<T>.run_if(resource_changed::<T>));
+        add_systems_through_world(world, Update, receive_resource_update::<T>);
+
+        let dioxus_tx_channels = {
+            let mut channels = world.get_resource_or_init::<DioxusTxChannelsUntyped>();
+            channels.0.insert(self.dioxus_tx);
+            channels.clone()
+        };
+
+        let dioxus_rx_channels = {
+            let mut channels = world.get_resource_or_init::<DioxusRxChannelsUntyped>();
+            channels.0.insert(self.dioxus_rx);
+            channels.clone()
+        };
+
+        let dioxus_txrx_channels = DioxusTxRxChannelsUntyped {
+            tx: dioxus_tx_channels,
+            rx: dioxus_rx_channels
+        };
+
+        let dioxus_channels_registry = world.get_resource_mut::<DioxusTxRxChannelsUntypedRegistry>().unwrap();
+
+        dioxus_channels_registry.txrx.send(dioxus_txrx_channels);
+
+
+    }
+}

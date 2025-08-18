@@ -1,92 +1,131 @@
-use std::any::{type_name, TypeId};
+use std::{any::{type_name, TypeId}, fmt::Display};
 
 use async_std::task::sleep;
-use bevy_ecs::entity::Entity;
+use bevy_ecs::{entity::Entity, world::{CommandQueue, World}};
 use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
 use bevy_utils::default;
-use crate::{dioxus_in_bevy_plugin::{DioxusProps, SyncMessage}, systems::PanelUpdateKind, AnytypeMap, DioxusPanel, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use crate::{dioxus_in_bevy_plugin::{DioxusCommandQueueRx, DioxusProps}, systems::PanelUpdateKind, traits::ErasedSubGeneriResourcecMap, ArcAnytypeMap, BoxAnyTypeMap, DioxusPanel, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap, InsertDefaultResource, RegisterDioxusInterop};
 use bevy_ecs::prelude::Resource;
 
-#[derive(TransparentWrapper, Default)]
+#[derive(TransparentWrapper, Default, Clone)]
 #[repr(transparent)]
-pub struct SignalRegistry(AnytypeMap);
+pub struct SignalRegistry(ArcAnytypeMap);
 
-impl ErasedSubGenericMap for SignalRegistry {
-    type Generic<T: Send + Sync + 'static> = SyncSignal<T>;
+impl ErasedSubGeneriResourcecMap for SignalRegistry {
+    type Generic<T: Clone + Resource + Send + Sync + 'static> = SyncSignal<DioxusRes<T>>;
 }
+
 
 /// Dioxus signals of Dioxus copies of Bevy resources.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ResourceSignalRegistry(SignalRegistry);
 
+#[derive(Clone, Default)]
+pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 
 #[derive(Clone, Default)]
-pub struct UiRegisters {
-    // pub bevy_io_registry: Signal<BevyIOChannels>,
-    pub dioxus_panels: Signal<HashMap<Entity, DioxusPanel>>,
-    pub dioxus_tx_registry: Signal<DioxusTxChannelsUntyped>,
-    pub dioxus_rx_registry: Signal<DioxusRxChannelsUntyped>,
-    pub resource_signal_registry: Signal<ResourceSignalRegistry>
+pub struct DioxusRxChannels(pub Signal<DioxusRxChannelsUntyped>);
+
+#[derive(Clone, Default)]
+pub struct DioxusTxChannels(pub Signal<DioxusTxChannelsUntyped>);
+
+#[derive(Clone, Default)]
+pub struct ResourceSignals(pub Signal<ResourceSignalRegistry>);
+
+pub struct DioxusRes<T: Resource> {
+    pub(crate) resource_write: Sender<T>,
+    //receiver: Receiver<T>,
+    pub(crate) resource_read: Option<T>
 }
 
-pub struct DioxusRes<T: Clone + Resource> {
-    resource_write: Sender<T>,
-    // receiver: Receiver<T>,
-    resource_read: T
+impl<T: Clone + Resource + Display> Display for DioxusRes<T> 
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.read_resource().clone().map(|n| format!("{}", n)).unwrap_or("???".to_string()))
+    }
 }
+
 
 impl<T: Clone + Resource> DioxusRes<T> {
-    pub fn set(&mut self, value: T) {
+    pub fn set_resource(&mut self, value: T) {
         self.resource_write.send(value.clone()).unwrap();
-        self.resource_read = value
+        self.resource_read = Some(value)
     }
-    // pub fn read(&mut self) -> &T {
-    //     if let Ok(value) = self.receiver.try_recv() {
-    //         self.resource = value.clone();
-    //         &self.resource
-    //     } else {
-    //         &self.resource
-    //     }
-    // }
+    pub fn read_resource(&self) -> &Option<T> {
+       &self.resource_read
+    }
+}
+
+fn request_resource_channel<T:Resource>() -> SyncSignal<DioxusRes<T>> {
+    let mut resource_signals = use_context::<ResourceSignals>();
+
+    let props= use_context::<DioxusProps>();
+
+    let command = RegisterDioxusInterop::<T>::new(crate::InsertDefaultResource::No);
+    let new_signal = SyncSignal::new_maybe_sync(DioxusRes {
+        resource_read: None,
+        resource_write: command.dioxus_tx
+    });
+    let commands = CommandQueue::default();
+
+    let mut dioxus_resource_copies = resource_signals.0.write();
+    dioxus_resource_copies.0.insert(new_signal.clone());
+
+    props.command_queues_tx.send(commands);
+
+    return new_signal
 }
 
 /// requests a resource from bevy. 
-pub fn use_resource<T: Resource + Clone>(f: T) -> DioxusRes<T> {
-    //let context = try_consume_context::<DioxusRes<T>>();
-        let mut registers = use_context::<UiRegisters>();
+pub fn use_bevy_resource<T: Resource + Clone>() -> SyncSignal<DioxusRes<T>> {
+    warn!("moving to future for resource");
 
+    let mut resource_signals = use_context::<ResourceSignals>();
+    let mut dioxus_tx_registry = use_context::<DioxusTxChannels>();
+    let mut dioxus_rx_registry = use_context::<DioxusRxChannels>();
 
+    let mut dioxus_resource_copies = resource_signals.0.write();
 
-        use_future(move || {
+    let Some(signal) = dioxus_resource_copies.0.get::<T>() else {
+            return request_resource_channel()
+    };
+    let signal = signal.clone();
+
+    use_future(move || {
+        {
         async move {
+            let mut signal = signal.clone();
+            warn!("checkng for resource");
             loop {
-                if let Some(receiver) = registers.dioxus_rx_registry.write().0.get::<T>() {
-                    if let Some(sender) = registers.dioxus_tx_registry.write().0.get::<T>() {
+                if let Some(receiver) = dioxus_rx_registry.0.write().0.get::<T>() {
+                    if let Some(sender) = dioxus_tx_registry.0.write().0.get::<T>() {
+                        let mut new_value = None;
                         while let Ok(value) = receiver.try_recv() {
-                            va
+                            new_value = Some(value)
                         }
-                    } else {
-                        todo!("implement this properly")
+                        let Some(new_value) = new_value else{
+                            return signal
+                        };
+                        let write = signal.write().set_resource(new_value);
+                        return signal;
+
+                    } else {                        
+                        return request_resource_channel()
                     }                 
                 } else {
-                    let props= use_context::<DioxusProps>();
-                    props.sync_tx.send(SyncMessage::RequestResourceChannel(Box::new(f.clone())));
-                    break
+                    return request_resource_channel()
                 }
                 
-                // let bevy_receiver = registers.dioxus_rx_registry.write().0.get::<FPS>().clone();
             }
         }
+        }
     });
+    signal
 }
-
-// pub struct DioxRes<T> {
-//     res: Write<T>
-// }
 
 pub fn dioxus_app(props: DioxusProps) -> Element {
     // let mut state = use_context_provider(UiState::default);
@@ -94,10 +133,10 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     let register_updates = use_context_provider(||props);
 
 
-    let mut registers = use_context_provider(||UiRegisters {
-        ..default()
-    });
-
+    let dioxus_tx_registry = use_context_provider(||DioxusTxChannels::default());
+    let dioxus_rx_registry = use_context_provider(||DioxusRxChannels::default());
+    let resource_registers = use_context_provider(||ResourceSignalRegistry::default());
+    let dioxus_panels = use_context_provider(||DioxusPanels::default());
 
 
     let update_frequency = 1000;
@@ -111,8 +150,8 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
 
                 while let Ok(message) = value.try_recv() {
                     warn!("updating registry to {:#?}", message);
-                    let mut tx_registrations = registers.dioxus_tx_registry.write();
-                    let mut rx_registrations = registers.dioxus_rx_registry.write();
+                    let mut tx_registrations = dioxus_tx_registry.0.write();
+                    let mut rx_registrations = dioxus_rx_registry.0.write();
                     tx_registrations.0.extend(message.tx.0);
                     rx_registrations.0.extend(message.rx.0);
                 }
@@ -130,7 +169,7 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
                 sleep(std::time::Duration::from_millis(update_frequency)).await;
 
                 while let Ok(messages) = value.try_recv() {
-                    let mut dioxus_panels = registers.dioxus_panels.write();
+                    let mut dioxus_panels = dioxus_panels.0.write();
                     for update in messages.0 {
                         match update.value {
                             PanelUpdateKind::Add(dioxus_panel) => {
@@ -148,7 +187,7 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     });
 
     rsx! {
-        for (_, panel_kind) in registers.dioxus_panels.read().clone() {
+        for (_, panel_kind) in dioxus_panels.0.read().clone() {
             {panel_kind.element_marker.as_ref().element()}
         }
     }

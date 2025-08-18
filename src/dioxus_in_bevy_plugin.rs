@@ -13,7 +13,7 @@ use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::{prelude::*, WindowResized};
 use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_math::prelude::*;
 
 use anyrender_vello::{CustomPaintSource, VelloScenePainter};
@@ -32,7 +32,7 @@ use vello::{
 };
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::{systems::DioxusPanelUpdates, ui::dioxus_app, AnytypeMap, BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped, ErasedSubGenericMap};
+use crate::{systems::{read_dioxus_command_queues, DioxusPanelUpdates}, ui::dioxus_app, ArcAnytypeMap, BevyRxChannelChannelsUntyped, BevyTxChannelChannelsUntyped, DioxusRxChannelsUntyped, DioxusTxChannel, DioxusTxChannelsUntyped, ErasedSubGenericMap};
 
 // Constant scale factor and color scheme for example purposes
 const SCALE_FACTOR: f32 = 1.0;
@@ -56,9 +56,9 @@ pub struct DioxusInBevyPlugin {
 }
 
 
-pub enum SyncMessage {
-    RequestResourceChannel(Box<dyn bevy_ecs::prelude::Resource>)
-}
+// pub enum SyncMessage {
+//     RequestResourceChannel(Box<dyn bevy_ecs::prelude::Resource>)
+// }
 
 
 /// props for [`DioxusPlugin`]'s dioxus app.
@@ -66,12 +66,16 @@ pub enum SyncMessage {
 pub struct DioxusProps {
     pub(crate) dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
-    pub(crate) sync_tx: Sender<SyncMessage>
+    pub(crate) command_queues_tx: Sender<CommandQueue>,
+    // pub(crate) sync_tx: Sender<SyncMessage>
     //pub elements_register: Receiver<>
 }
 
+// #[derive(Resource)]
+// pub struct DioxusSyncReceiver(Receiver<SyncMessage>);
+
 #[derive(Resource)]
-pub struct DioxusSyncReceiver(Receiver<SyncMessage>);
+pub struct DioxusCommandQueueRx(pub Receiver<CommandQueue>);
 
 #[derive(Resource)]
 pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
@@ -82,11 +86,13 @@ impl Plugin for DioxusInBevyPlugin
     fn build(&self, app: &mut App) {
         let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
         let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) = crossbeam_channel::unbounded::<DioxusPanelUpdates>();
-        let (sync_tx, sync_rx) = crossbeam_channel::unbounded::<SyncMessage>();
+        let (command_queues_tx, command_queues_rx) = crossbeam_channel::unbounded::<CommandQueue>();
+
+        //let (sync_tx, sync_rx) = crossbeam_channel::unbounded::<SyncMessage>();
         let props = DioxusProps {
             dioxus_txrx: dioxus_txrx_channels_rx,
             dioxus_panel_updates: dioxus_panel_updates_rx,
-            sync_tx: sync_tx
+            command_queues_tx: command_queues_tx,
         };
         app.init_resource::<DioxusPanelUpdates>();
 
@@ -94,7 +100,7 @@ impl Plugin for DioxusInBevyPlugin
             txrx: dioxus_txrx_channels_tx
         });
 
-        app.insert_resource(DioxusSyncReceiver(sync_rx));
+        app.insert_resource(DioxusCommandQueueRx(command_queues_rx));
         app.insert_resource(DioxusPanelUpdatesSender(dioxus_panel_updates_tx));
 
         // Create the dioxus virtual dom and the dioxus-native document
@@ -126,6 +132,8 @@ impl Plugin for DioxusInBevyPlugin
         );
         app.add_systems(Update, update_ui);
         app.add_systems(PreUpdate, push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>));
+        app.add_systems(PreUpdate, read_dioxus_command_queues);
+        
     }
 
     fn finish(&self, app: &mut App) {

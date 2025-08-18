@@ -21,6 +21,7 @@ bevy_log = {version = "0.16"}
 bevy_input = {version = "0.16"}
 bevy_time = {version = "0.16"}
 bevy_image = {version = "0.16"}
+bevy_ptr = {version = "0.16"}
 bevy_reflect = {version = "0.16"}
 bevy_picking = {version = "0.16"}
 bevy_platform = {version = "0.16"}
