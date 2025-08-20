@@ -8,7 +8,7 @@ use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use bevy_log::{tracing_subscriber::registry, warn};
 
-use crate::{dioxus_in_bevy_plugin::{DioxusTxRxChannelsUntyped, DioxusTxRxChannelsUntypedRegistry}, systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind}, traits::{DioxusElementMarker, ErasedSubGeneric, ErasedSubGenericMap}};
+use crate::{systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind}, traits::{DioxusElementMarker, ErasedSubGeneric, ErasedSubGenericMap}};
 
 // use crate::dioxus_in_bevy_plugin::DioxusChannelsUntypedRegistry;
 
@@ -175,69 +175,65 @@ impl Component for DioxusPanel {
 }
 
 
-/// bevy resource marked handle updates to/from dioxus.
-pub struct UiResourceRegistration<T: Send + Sync + Clone + 'static + Resource> {
-    _a: PhantomData<T>
-}
+// /// bevy resource marked handle updates to/from dioxus.
+// pub struct UiResourceRegistration<T: Send + Sync + Clone + 'static + Resource> {
+//     _a: PhantomData<T>
+// }
 
-impl<T: Send + Sync + Clone + Resource + 'static> Default for UiResourceRegistration<T> {
-    fn default() -> Self {
-        Self { _a: Default::default() }
-    }
-}
+// impl<T: Send + Sync + Clone + Resource + 'static> Default for UiResourceRegistration<T> {
+//     fn default() -> Self {
+//         Self { _a: Default::default() }
+//     }
+// }
 
 
-impl<M: Send + Sync + Clone + Resource + 'static> Plugin for UiResourceRegistration<M> {
-    fn build(&self, app: &mut App) {
+// impl<M: Send + Sync + Clone + Resource + 'static> Plugin for UiResourceRegistration<M> {
+//     fn build(&self, app: &mut App) {
     
-        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<M>();
-        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<M>();
+//         let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<M>();
+//         let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<M>();
 
-        let mut bevy_rx_channels = app.world_mut().get_resource_or_init::<BevyRxChannelChannelsUntyped>();
+//         let mut bevy_rx_channels = app.world_mut().get_resource_or_init::<BevyRxChannelChannelsUntyped>();
 
-        bevy_rx_channels.0.insert::<M>(bevy_rx.clone());
-
-
-        let mut bevy_tx_channels = app.world_mut().get_resource_or_init::<BevyTxChannelChannelsUntyped>();
-
-        bevy_tx_channels.0.insert::<M>(bevy_tx.clone());
+//         bevy_rx_channels.0.insert::<M>(bevy_rx.clone());
 
 
-        app
-        .insert_resource(BevyTxChannel(bevy_tx))
-        .insert_resource(BevyRxChannel(bevy_rx))
-        .add_systems(Update, send_resource_update::<M>.run_if(resource_changed::<M>))
-        .add_systems(Update, receive_resource_update::<M>)
-        ;
+//         let mut bevy_tx_channels = app.world_mut().get_resource_or_init::<BevyTxChannelChannelsUntyped>();
 
-        let dioxus_tx_channels = {
-            let mut channels = app.world_mut().get_resource_or_init::<DioxusTxChannelsUntyped>();
-            channels.0.insert(dioxus_tx);
-            channels.clone()
-        };
+//         bevy_tx_channels.0.insert::<M>(bevy_tx.clone());
 
-        let dioxus_rx_channels = {
-            let mut channels = app.world_mut().get_resource_or_init::<DioxusRxChannelsUntyped>();
-            channels.0.insert(dioxus_rx);
-            channels.clone()
-        };
 
-        let dioxus_txrx_channels = DioxusTxRxChannelsUntyped {
-            tx: dioxus_tx_channels,
-            rx: dioxus_rx_channels
-        };
+//         app
+//         .insert_resource(BevyTxChannel(bevy_tx))
+//         .insert_resource(BevyRxChannel(bevy_rx))
+//         .add_systems(Update, send_resource_update::<M>.run_if(resource_changed::<M>))
+//         .add_systems(Update, receive_resource_update::<M>)
+//         ;
 
-        let dioxus_channels_registry = app.world_mut().get_resource_mut::<DioxusTxRxChannelsUntypedRegistry>().unwrap();
+//         let dioxus_tx_channels = {
+//             let mut channels = app.world_mut().get_resource_or_init::<DioxusTxChannelsUntyped>();
+//             channels.0.insert(dioxus_tx);
+//             channels.clone()
+//         };
 
-        dioxus_channels_registry.txrx.send(dioxus_txrx_channels);
-    }
-}
+//         let dioxus_rx_channels = {
+//             let mut channels = app.world_mut().get_resource_or_init::<DioxusRxChannelsUntyped>();
+//             channels.0.insert(dioxus_rx);
+//             channels.clone()
+//         };
+
+//         let dioxus_txrx_channels = DioxusTxRxChannelsUntyped {
+//             tx: dioxus_tx_channels,
+//             rx: dioxus_rx_channels
+//         };
+
+//         let dioxus_channels_registry = app.world_mut().get_resource_mut::<DioxusTxRxChannelsUntypedRegistry>().unwrap();
+
+//         dioxus_channels_registry.txrx.send(dioxus_txrx_channels).inspect_err(|err| warn!("could not send dioxus_txrx due to {:#}", err));
+//     }
+// }
 
 pub struct ResourceUpdates {}
-
-fn add_resource_updates_to_schedule() {
-
-}
 
 fn add_systems_through_world<T>(
     world: &mut World,
@@ -257,7 +253,7 @@ fn send_resource_update<T: Resource + Clone>(
     bevy_tx: ResMut<BevyTxChannel<T>>,
     // bevy_rx: ResMut<BevyRxChannel<T>>,
 ) {
-    bevy_tx.0.send(resource.clone());
+    bevy_tx.0.send(resource.clone()).inspect_err(|err| warn!("could not send resource update due to {:#}", err));
 }
 
 fn receive_resource_update<T: Resource + Clone>(
@@ -380,26 +376,26 @@ impl<T: Resource + Clone> Command for RegisterDioxusInterop<T> {
         add_systems_through_world(world, Update, send_resource_update::<T>.run_if(resource_changed::<T>));
         add_systems_through_world(world, Update, receive_resource_update::<T>);
 
-        let dioxus_tx_channels = {
-            let mut channels = world.get_resource_or_init::<DioxusTxChannelsUntyped>();
-            channels.0.insert(self.dioxus_tx);
-            channels.clone()
-        };
+        // let dioxus_tx_channels = {
+        //     let mut channels = world.get_resource_or_init::<DioxusTxChannelsUntyped>();
+        //     channels.0.insert(self.dioxus_tx);
+        //     channels.clone()
+        // };
 
-        let dioxus_rx_channels = {
-            let mut channels = world.get_resource_or_init::<DioxusRxChannelsUntyped>();
-            channels.0.insert(self.dioxus_rx);
-            channels.clone()
-        };
+        // let dioxus_rx_channels = {
+        //     let mut channels = world.get_resource_or_init::<DioxusRxChannelsUntyped>();
+        //     channels.0.insert(self.dioxus_rx);
+        //     channels.clone()
+        // };
 
-        let dioxus_txrx_channels = DioxusTxRxChannelsUntyped {
-            tx: dioxus_tx_channels,
-            rx: dioxus_rx_channels
-        };
+        // let dioxus_txrx_channels = DioxusTxRxChannelsUntyped {
+        //     tx: dioxus_tx_channels,
+        //     rx: dioxus_rx_channels
+        // };
 
-        let dioxus_channels_registry = world.get_resource_mut::<DioxusTxRxChannelsUntypedRegistry>().unwrap();
+        // let dioxus_channels_registry = world.get_resource_mut::<DioxusTxRxChannelsUntypedRegistry>().unwrap();
 
-        dioxus_channels_registry.txrx.send(dioxus_txrx_channels);
+        // dioxus_channels_registry.txrx.send(dioxus_txrx_channels).inspect_err(|err| warn!("couldn't send dioxus_txrx channels due to {:#}", err));
 
 
     }

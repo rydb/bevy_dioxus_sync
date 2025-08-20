@@ -4,7 +4,7 @@ use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::signals::{Readable, Signal, SyncSignal, Writable};
-use dioxus_bevy_panel::{DioxusPanel, DioxusRxChannel, UiResourceRegistration};
+use dioxus_bevy_panel::{DioxusPanel, DioxusRxChannel};
 
 use crate::ui::{AppUi, UiState};
 
@@ -61,7 +61,7 @@ pub struct BevyScenePlugin;
 impl Plugin for BevyScenePlugin {
     fn build(&self, app: &mut App) {
         // app.add_plugins(UiMessageRegistration::<UiState>::default());
-        app.add_plugins(UiResourceRegistration::<FPS>::default());
+        // app.add_plugins(UiResourceRegistration::<FPS>::default());
         app.insert_resource(ClearColor(bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0)));
         app.insert_resource(CubeTranslationSpeed::default());
         app.insert_resource(FPS(0.0));
@@ -134,6 +134,7 @@ fn sync_with_ui(
     let new_fps = 1000.0 / time.delta().as_millis() as f32;
     // sender.0.send(UiState {
 
+    // println!("new fps is {:#?}", fps);
     *fps = FPS(new_fps);
     // })
 

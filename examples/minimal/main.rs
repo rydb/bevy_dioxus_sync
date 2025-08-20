@@ -36,7 +36,7 @@ pub struct BevyQuery<T: Component + Clone> {
 //                 return;
 //             }
 //         },
-//         BevyQueryScope::World => {
+//         BevyQueryScope::World => {f
 //             let datas = query.iter().clone();
 //                 todo!("send this to dioxus for it to read inside BevyQuery or somethign and update its state with this component")
 //                 datas

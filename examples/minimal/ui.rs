@@ -144,7 +144,7 @@ pub fn app_ui() -> Element {
     //         }
     //     }
     // });
-    warn!("attempting to call use_bevy_resource");
+    // warn!("attempting to call use_bevy_resource");
     let fps = use_bevy_resource::<FPS>();
 
     rsx! {

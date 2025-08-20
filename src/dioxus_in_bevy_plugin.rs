@@ -39,17 +39,17 @@ const SCALE_FACTOR: f32 = 1.0;
 const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 const CATCH_EVENTS_CLASS: &str = "catch-events";
 
-/// sender of channels for input/output from and to bevy on the Dioxus side of the app.
-#[derive(Resource)]
-pub struct DioxusTxRxChannelsUntypedRegistry {
-    pub txrx: Sender<DioxusTxRxChannelsUntyped>,
-}
+// /// sender of channels for input/output from and to bevy on the Dioxus side of the app.
+// #[derive(Resource)]
+// pub struct DioxusTxRxChannelsUntypedRegistry {
+//     pub txrx: Sender<DioxusTxRxChannelsUntyped>,
+// }
 
-#[derive(Debug)]
-pub struct DioxusTxRxChannelsUntyped {
-    pub tx: DioxusTxChannelsUntyped,
-    pub rx: DioxusRxChannelsUntyped,
-}
+// #[derive(Debug)]
+// pub struct DioxusTxRxChannelsUntyped {
+//     pub tx: DioxusTxChannelsUntyped,
+//     pub rx: DioxusRxChannelsUntyped,
+// }
 
 pub struct DioxusInBevyPlugin {
     //pub ui: fn(props: DioxusProps) -> Element,
@@ -64,7 +64,7 @@ pub struct DioxusInBevyPlugin {
 /// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
 pub struct DioxusProps {
-    pub(crate) dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
+    // pub(crate) dioxus_txrx: Receiver<DioxusTxRxChannelsUntyped>,
     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
     pub(crate) command_queues_tx: Sender<CommandQueue>,
     // pub(crate) sync_tx: Sender<SyncMessage>
@@ -84,21 +84,21 @@ pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
 impl Plugin for DioxusInBevyPlugin
 {
     fn build(&self, app: &mut App) {
-        let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
+        // let (dioxus_txrx_channels_tx, dioxus_txrx_channels_rx) = crossbeam_channel::unbounded::<DioxusTxRxChannelsUntyped>();
         let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) = crossbeam_channel::unbounded::<DioxusPanelUpdates>();
         let (command_queues_tx, command_queues_rx) = crossbeam_channel::unbounded::<CommandQueue>();
 
         //let (sync_tx, sync_rx) = crossbeam_channel::unbounded::<SyncMessage>();
         let props = DioxusProps {
-            dioxus_txrx: dioxus_txrx_channels_rx,
+            // dioxus_txrx: dioxus_txrx_channels_rx,
             dioxus_panel_updates: dioxus_panel_updates_rx,
             command_queues_tx: command_queues_tx,
         };
         app.init_resource::<DioxusPanelUpdates>();
 
-        app.insert_resource(DioxusTxRxChannelsUntypedRegistry {
-            txrx: dioxus_txrx_channels_tx
-        });
+        // app.insert_resource(DioxusTxRxChannelsUntypedRegistry {
+        //     txrx: dioxus_txrx_channels_tx
+        // });
 
         app.insert_resource(DioxusCommandQueueRx(command_queues_rx));
         app.insert_resource(DioxusPanelUpdatesSender(dioxus_panel_updates_tx));

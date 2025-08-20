@@ -30,6 +30,7 @@ pub fn read_dioxus_command_queues(
 ) {
     let receiver = world.get_resource_mut::<DioxusCommandQueueRx>().unwrap().0.clone();
     while let Ok(mut command_queue) = receiver.try_recv() {
+        warn!("ammending command queue: {:#?}", command_queue);
         world.commands().append(&mut command_queue);        
     }
 }
