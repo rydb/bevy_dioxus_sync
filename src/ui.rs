@@ -8,7 +8,7 @@ use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
 use bevy_utils::default;
-use crate::{dioxus_in_bevy_plugin::{DioxusCommandQueueRx, DioxusProps}, systems::PanelUpdateKind, traits::ErasedSubGeneriResourcecMap, ArcAnytypeMap, BoxAnyTypeMap, DioxusPanel, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped, ErasedSubGenericMap, InsertDefaultResource, RegisterDioxusInterop};
+use crate::{dioxus_in_bevy_plugin::{DioxusCommandQueueRx, DioxusProps}, resource_sync::RequestBevyResource, systems::PanelUpdateKind, traits::ErasedSubGeneriResourcecMap, ArcAnytypeMap, BoxAnyTypeMap, DioxusPanel, ErasedSubGenericMap};
 use bevy_ecs::prelude::Resource;
 use std::fmt::Debug;
 
@@ -26,12 +26,6 @@ pub struct ResourceSignalRegistry(Signal<SignalRegistry>);
 
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
-
-// #[derive(Clone, Default)]
-// pub struct DioxusRxChannels(pub Signal<DioxusRxChannelsUntyped>);
-
-// #[derive(Clone, Default)]
-// pub struct DioxusTxChannels(pub Signal<DioxusTxChannelsUntyped>);
 
 #[derive(Clone, Default)]
 pub struct ResourceSignals(pub Signal<ResourceSignalRegistry>);
@@ -64,7 +58,7 @@ impl<T: Clone + Resource> DioxusRes<T> {
 fn request_resource_channel<T:Resource + Clone>(props: DioxusProps, mut signal_registry: WriteLock<'_, SignalRegistry, UnsyncStorage, SignalSubscriberDrop<SignalRegistry, UnsyncStorage>>) -> SyncSignal<DioxusRes<T>> {
     let mut commands = CommandQueue::default();
 
-    let command = RegisterDioxusInterop::<T>::new(crate::InsertDefaultResource::No);
+    let command = RequestBevyResource::<T>::new(crate::resource_sync::InsertDefaultResource::No);
     
     let dioxus_rx = command.dioxus_rx.clone();
     let dioxus_tx = command.dioxus_tx.clone();
@@ -122,25 +116,6 @@ pub fn use_bevy_resource<T: Resource + Clone + Debug>() -> SyncSignal<DioxusRes<
                     warn!("received value: {:#?}", value);
                     resource.resource_read = Some(value)
                 }
-                //while let Ok(value) = 
-                // if let Some(receiver) = dioxus_rx_registry.0.write().0.get::<T>() {
-                //     let mut new_value = None;
-                //     while let Ok(value) = receiver.try_recv() {
-                //         new_value = Some(value)
-                //     }
-                //     let Some(new_value) = new_value else{
-                //         return signal
-                //     };
-                //     // println!("setting resource to vaue: {:#?}", new_value);
-                //     signal.write().set_resource(new_value);
-                //     return signal;          
-                // } 
-                // else {
-                //     let mut dioxus_resource_copies = resource_signals.0.write();
-                //     let signal_signal_registry = dioxus_resource_copies.0.write();
-
-                //     return request_resource_channel(value, signal_signal_registry)
-                // }
                 
             }
         }
@@ -163,25 +138,6 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     let mut resource_signals = use_context_provider(||ResourceSignals::default());
 
     let update_frequency = 1000;
-    // use_future(move || {
-    //     {
-    //     let value = register_updates.dioxus_txrx.clone();
-    //     async move {
-    //         loop {
-    //             // Update UI every 1s in this demo.
-    //             sleep(std::time::Duration::from_millis(update_frequency)).await;
-
-    //             while let Ok(message) = value.try_recv() {
-    //                 warn!("updating registry to {:#?}", message);
-    //                 let mut tx_registrations = dioxus_tx_registry.0.write();
-    //                 let mut rx_registrations = dioxus_rx_registry.0.write();
-    //                 tx_registrations.0.extend(message.tx.0);
-    //                 rx_registrations.0.extend(message.rx.0);
-    //             }
-    //         }
-    //     }
-    //     }
-    // });
 
     use_future(move || {
         {

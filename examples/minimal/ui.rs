@@ -5,7 +5,7 @@ use bevy_log::warn;
 use bevy_platform::collections::HashMap;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::{DioxusElementMarker, ErasedSubGenericMap}, ui::{use_bevy_resource, ResourceSignalRegistry}, DioxusRxChannelsUntyped, DioxusTxChannelsUntyped};
+use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::{DioxusElementMarker, ErasedSubGenericMap}, ui::{use_bevy_resource, ResourceSignalRegistry}};
 
 use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
 
@@ -58,7 +58,6 @@ impl DioxusElementMarker for AppUi {
 pub struct UiState {
     cube_color: Signal<[f32; 4]>,
     cube_translation_speed: Signal<f32>,
-    // fps: Signal<f32>,
 }
 
 pub fn app_ui() -> Element {
@@ -149,10 +148,6 @@ pub fn app_ui() -> Element {
 
     rsx! {
         style { {include_str!("./ui.css")} }
-        // div {
-        //     id: "panel",
-        //     p {"success!" }
-        // }
         div {
             id: "panel",
             class: "catch-events",

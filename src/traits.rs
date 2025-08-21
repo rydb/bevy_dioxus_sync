@@ -6,7 +6,7 @@ use crossbeam_channel::{Receiver, Sender};
 use dioxus::core::Element;
 use std::{any::{type_name, Any, TypeId}, default, fmt::Debug, mem, sync::Arc};
 
-use crate::{AnyType, ArcAnytypeMap, BoxAnyTypeMap, BoxVal};
+use crate::{ArcAnytypeMap, BoxAnyTypeMap};
 
 /// marks a struct as a Dioxus element. 
 /// used to statically typed dioxus [`Element`]s
@@ -63,31 +63,3 @@ pub trait ErasedSubGenericMap
         map.extend(value);
     }
 }
-
-/// Anytype that that is a `Generic<T>` mapped by its `T`. E.G: `Sender<T>` would be indexed by `T`
-pub trait ErasedSubGeneric
-    where
-        Self: TransparentWrapper<AnyType> + Sized
-{
-    type Generic<T: Send + Sync + 'static>: Send + Sync + 'static;
-
-    fn new<T: Send + Sync + 'static>(value: Self::Generic<T>) -> Self{
-        let any_type = (TypeId::of::<T>(), BoxVal::new(value));
-        let new_self = Self::wrap(any_type);
-        new_self
-    } 
-    fn get<T: Send + Sync + 'static>(&mut self) -> Box<Self::Generic<T>> 
-    {
-        let (a,  box_ptr) = TransparentWrapper::peel_mut(self);
-
-        let ptr = box_ptr.take();
-        
-        let value = ptr.downcast::<Self::Generic<T>>().unwrap();
-        value
-    }
-    // fn get_untyped(self, id_check: TypeId) -> BoxSync {
-    //     let (type_id, data) = TransparentWrapper::peel(self);
-    //     if (type_id)
-    // }
-}
-
