@@ -1,13 +1,10 @@
-use std::any::{type_name, TypeId};
-
-use async_std::task::sleep;
-use bevy_log::warn;
-use bevy_platform::collections::HashMap;
-use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{dioxus_in_bevy_plugin::DioxusProps, traits::{DioxusElementMarker, ErasedSubGenericMap}, ui::{use_bevy_resource, ResourceSignalRegistry}};
+use dioxus_bevy_panel::{
+    traits::{DioxusElementMarker, ErasedSubGenericMap},
+    ui::{ResourceSignalRegistry, use_bevy_resource},
+};
 
-use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
+use crate::bevy_scene_plugin::FPS;
 
 // macro_rules! define_ui_state {
 //     (
@@ -61,11 +58,9 @@ pub struct UiState {
 }
 
 pub fn app_ui() -> Element {
-
-    let mut resource_registry = use_context::<ResourceSignalRegistry>();
+    let resource_registry = use_context::<ResourceSignalRegistry>();
     let mut state = use_context_provider(|| UiState::default());
 
-    
     //let ui_state = use_signal(|| UiState::default());
 
     // let cube_color = use_signal(|| None);
@@ -134,7 +129,7 @@ pub fn app_ui() -> Element {
     //             //         warn!("fps set to {:#}", v);
     //             //         fps = Some(v)
     //             //     }
-    //             // } 
+    //             // }
 
     //             // if let Some(fps) = fps {
     //             //     println!("fps set to {:#}", fps);

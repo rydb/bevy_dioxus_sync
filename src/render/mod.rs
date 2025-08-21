@@ -1,32 +1,36 @@
 use anyrender_vello::VelloScenePainter;
+use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_core_pipeline::core_2d::Camera2d;
 use bevy_derive::Deref;
 use bevy_ecs::prelude::*;
+use bevy_image::prelude::*;
 use bevy_log::debug;
+use bevy_math::prelude::*;
+use bevy_render::{
+    Extract,
+    prelude::*,
+    render_asset::RenderAssets,
+    render_graph::{self, NodeRunError, RenderGraphContext, RenderLabel},
+    renderer::{RenderContext, RenderDevice, RenderQueue},
+    texture::GpuImage,
+};
+use bevy_sprite::prelude::*;
 use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
-use bevy_image::prelude::*;
-use bevy_asset::{prelude::*, RenderAssetUsages};
-use bevy_render::{prelude::*, render_asset::RenderAssets, render_graph::{self, NodeRunError, RenderGraphContext, RenderLabel}, renderer::{RenderContext, RenderDevice, RenderQueue}, texture::GpuImage, Extract};
-use bevy_sprite::prelude::*;
-use bevy_math::prelude::*;
+use blitz_dom::Document;
 use blitz_paint::paint_scene;
 use blitz_traits::shell::{ColorScheme, Viewport};
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_native::{CustomPaintSource, DioxusDocument};
 use rustc_hash::FxHashMap;
-use vello::{
-    peniko::color::AlphaColor, RenderParams, Renderer as VelloRenderer, RendererOptions, Scene,
-};
+use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
-use blitz_dom::Document;
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 
 pub mod plugins;
-
 
 #[derive(Resource)]
 pub struct TextureImage(pub Handle<Image>);

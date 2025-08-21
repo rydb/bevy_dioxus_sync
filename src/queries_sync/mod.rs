@@ -10,7 +10,7 @@
 
 // pub fn changed<T: Component + Clone>(
 //     query: Query<Ref<T>>,
-// ) {   
+// ) {
 //     let sample = BevyQueryScope::World;
 
 //     match sample {

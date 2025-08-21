@@ -1,6 +1,6 @@
 use bevy_app::prelude::*;
-use bevy_render::{prelude::*, renderer::RenderDevice, RenderApp};
-use vello::{Renderer, RendererOptions};
+use bevy_render::{RenderApp, renderer::RenderDevice};
+use vello::RendererOptions;
 
 use crate::render::*;
 
@@ -8,11 +8,8 @@ pub struct DioxusRenderPlugin;
 
 impl Plugin for DioxusRenderPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .add_systems(Startup, setup_ui)
-        .add_systems(Update, update_ui);
-
-
+        app.add_systems(Startup, setup_ui)
+            .add_systems(Update, update_ui);
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer
@@ -31,7 +28,9 @@ impl Plugin for DioxusRenderPlugin {
         render_app.insert_resource(RenderWorldSender(s));
 
         // Add a render graph node to get the GPU texture
-        let mut graph = render_app.world_mut().resource_mut::<bevy_render::render_graph::RenderGraph>();
+        let mut graph = render_app
+            .world_mut()
+            .resource_mut::<bevy_render::render_graph::RenderGraph>();
         graph.add_node(TextureGetterNode, TextureGetterNodeDriver);
         graph.add_node_edge(bevy_render::graph::CameraDriverLabel, TextureGetterNode);
     }

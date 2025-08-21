@@ -1,11 +1,10 @@
-use bevy_input::{mouse::MouseButtonInput, prelude::*, ButtonState};
 use bevy_ecs::prelude::*;
+use bevy_input::{ButtonState, mouse::MouseButtonInput, prelude::*};
 use bevy_window::CursorMoved;
+use blitz_dom::Document;
 use blitz_traits::events::{BlitzMouseButtonEvent, MouseEventButton, MouseEventButtons, UiEvent};
 use dioxus::html::Modifiers;
 use dioxus_native::DioxusDocument;
-use blitz_dom::Document;
-
 
 use crate::event_sync::does_catch_events;
 

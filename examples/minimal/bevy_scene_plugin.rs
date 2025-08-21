@@ -2,11 +2,9 @@ use std::fmt::Display;
 
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
-use crossbeam_channel::{Receiver, Sender};
-use dioxus::signals::{Readable, Signal, SyncSignal, Writable};
-use dioxus_bevy_panel::{DioxusPanel, DioxusRxChannel};
+use dioxus_bevy_panel::DioxusPanel;
 
-use crate::ui::{AppUi, UiState};
+use crate::ui::AppUi;
 
 #[derive(Component)]
 pub struct DynamicCube;
@@ -103,9 +101,7 @@ fn setup(
         brightness: 100.0,
         affects_lightmapped_meshes: true,
     });
-    commands.spawn(
-        DioxusPanel::new( AppUi {} )
-    );
+    commands.spawn(DioxusPanel::new(AppUi {}));
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 0.0, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
@@ -125,9 +121,9 @@ impl Display for FPS {
 
 fn sync_with_ui(
     cube_query: Query<&MeshMaterial3d<StandardMaterial>, With<DynamicCube>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut translation_speed: ResMut<CubeTranslationSpeed>,
-    mut rotation_speed: ResMut<CubeRotationSpeed>,
+    materials: ResMut<Assets<StandardMaterial>>,
+    translation_speed: ResMut<CubeTranslationSpeed>,
+    rotation_speed: ResMut<CubeRotationSpeed>,
     mut fps: ResMut<FPS>,
     time: Res<Time>,
 ) {

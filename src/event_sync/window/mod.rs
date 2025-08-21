@@ -1,15 +1,15 @@
+use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
-use bevy_asset::prelude::*;
 use bevy_log::debug;
+use bevy_math::prelude::*;
 use bevy_sprite::{ColorMaterial, MeshMaterial2d};
 use bevy_transform::components::Transform;
-use bevy_window::{prelude::*, WindowResized};
-use blitz_traits::shell::{ColorScheme, Viewport};
-use bevy_math::prelude::*;
+use bevy_window::WindowResized;
+use blitz_traits::shell::Viewport;
 use dioxus_native::DioxusDocument;
 
-use crate::render::{create_ui_texture, DioxusUiQuad, TextureImage, COLOR_SCHEME, SCALE_FACTOR};
+use crate::render::{COLOR_SCHEME, DioxusUiQuad, SCALE_FACTOR, TextureImage, create_ui_texture};
 
 pub(crate) fn handle_window_resize(
     mut dioxus_doc: NonSendMut<DioxusDocument>,

@@ -1,41 +1,20 @@
-use std::{any::{type_name, Any, TypeId}, collections::HashMap, marker::PhantomData, sync::Arc};
-
-use bevy_core_pipeline::core_2d::Camera2d;
-use bevy_asset::{prelude::*, RenderAssetUsages};
-use bevy_derive::Deref;
-use bevy_image::Image;
-use bevy_input::{keyboard::{Key as BevyKey, KeyCode as BevyKeyCode, KeyboardInput}, mouse::MouseButtonInput, prelude::*, ButtonState, InputSystem};
-use bevy_log::{debug, warn};
-use bevy_platform::collections::HashSet;
-use bevy_render::{prelude::*, render_asset::RenderAssets, render_graph::{self, *}, renderer::{RenderContext, RenderDevice, RenderQueue}, texture::GpuImage, Extract, RenderApp};
-use bevy_sprite::prelude::*;
-use bevy_transform::components::Transform;
-use bevy_utils::default;
-use bevy_window::{prelude::*, WindowResized};
 use bevy_app::prelude::*;
 use bevy_ecs::{prelude::*, world::CommandQueue};
-use bevy_math::prelude::*;
 
-use anyrender_vello::{CustomPaintSource, VelloScenePainter};
-use blitz_dom::{Document as _, DocumentConfig};
-use blitz_paint::paint_scene;
-use blitz_traits::events::{
-    BlitzKeyEvent, BlitzMouseButtonEvent, KeyState, MouseEventButton, MouseEventButtons, UiEvent,
-};
-use blitz_traits::shell::{ColorScheme, Viewport};
+use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
 use dioxus_native_dom::DioxusDocument;
-use rustc_hash::FxHashMap;
-use vello::{
-    peniko::color::AlphaColor, RenderParams, Renderer as VelloRenderer, RendererOptions, Scene,
+
+use crate::{
+    ErasedSubGenericMap,
+    event_sync::plugins::DioxusEventSyncPlugin,
+    render::plugins::DioxusRenderPlugin,
+    systems::{DioxusPanelUpdates, read_dioxus_command_queues},
+    ui::dioxus_app,
 };
-use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::{event_sync::plugins::DioxusEventSyncPlugin, render::plugins::DioxusRenderPlugin, systems::{read_dioxus_command_queues, DioxusPanelUpdates}, ui::dioxus_app, ArcAnytypeMap, DioxusTxChannel, ErasedSubGenericMap};
-
-pub struct DioxusPlugin {
-}
+pub struct DioxusPlugin {}
 /// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
 pub struct DioxusProps {
@@ -49,11 +28,10 @@ pub struct DioxusCommandQueueRx(pub Receiver<CommandQueue>);
 #[derive(Resource)]
 pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
 
-
-impl Plugin for DioxusPlugin
-{
+impl Plugin for DioxusPlugin {
     fn build(&self, app: &mut App) {
-        let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) = crossbeam_channel::unbounded::<DioxusPanelUpdates>();
+        let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) =
+            crossbeam_channel::unbounded::<DioxusPanelUpdates>();
         let (command_queues_tx, command_queues_rx) = crossbeam_channel::unbounded::<CommandQueue>();
 
         let props = DioxusProps {
@@ -84,15 +62,17 @@ impl Plugin for DioxusPlugin
 
         app.insert_non_send_resource(dioxus_doc);
         app.insert_non_send_resource(waker);
-        app.add_systems(PreUpdate, push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>));
+        app.add_systems(
+            PreUpdate,
+            push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>),
+        );
         app.add_systems(PreUpdate, read_dioxus_command_queues);
-        
     }
 }
 
 pub fn push_panel_updates(
     mut panel_updates: ResMut<DioxusPanelUpdates>,
-    panel_update_sender: ResMut<DioxusPanelUpdatesSender>
+    panel_update_sender: ResMut<DioxusPanelUpdatesSender>,
 ) {
     let mut updates = Vec::new();
 
@@ -100,4 +80,3 @@ pub fn push_panel_updates(
 
     panel_update_sender.0.send(DioxusPanelUpdates(updates));
 }
-

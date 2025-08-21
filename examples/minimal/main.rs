@@ -1,12 +1,7 @@
-use std::sync::atomic::AtomicPtr;
-
-use bevy::gizmos::cross;
 use bevy::prelude::*;
-use dioxus::signals::SyncSignal;
 use dioxus_bevy_panel::dioxus_in_bevy_plugin::DioxusPlugin;
 
-use crate::bevy_scene_plugin::CubeRotationSpeed;
-use crate::{bevy_scene_plugin::BevyScenePlugin};
+use crate::bevy_scene_plugin::BevyScenePlugin;
 
 mod bevy_scene_plugin;
 mod ui;

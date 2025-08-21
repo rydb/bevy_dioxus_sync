@@ -2,12 +2,10 @@ use dioxus_native::DioxusDocument;
 
 pub mod keyboard;
 pub mod mouse;
-pub mod window;
 pub mod plugins;
-
+pub mod window;
 
 const CATCH_EVENTS_CLASS: &str = "catch-events";
-
 
 fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
     if let Some(node) = dioxus_doc.get_node(node_id) {

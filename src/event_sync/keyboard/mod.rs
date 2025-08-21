@@ -1,12 +1,14 @@
-use bevy_ecs::prelude::*;
-use dioxus_native::*;
-use bevy_input::{keyboard::{Key as BevyKey, KeyCode as BevyKeyCode, KeyboardInput}, mouse::MouseButtonInput, prelude::*, ButtonState, InputSystem};
-use dioxus::prelude::*;
 use crate::event_sync::{does_catch_events, mouse::MouseState};
-use blitz_traits::events::{
-    BlitzKeyEvent, BlitzMouseButtonEvent, KeyState, MouseEventButton, MouseEventButtons, UiEvent,
+use bevy_ecs::prelude::*;
+use bevy_input::{
+    ButtonState,
+    keyboard::{Key as BevyKey, KeyCode as BevyKeyCode, KeyboardInput},
+    prelude::*,
 };
 use blitz_dom::*;
+use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
+use dioxus::prelude::*;
+use dioxus_native::*;
 
 pub(crate) fn handle_keyboard_events(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
