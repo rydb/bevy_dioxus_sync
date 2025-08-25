@@ -1,10 +1,9 @@
 use dioxus::prelude::*;
 use dioxus_bevy_panel::{
-    traits::{DioxusElementMarker, ErasedSubGenericMap},
-    ui::{ResourceSignalRegistry, use_bevy_resource},
+    resource_sync::{use_bevy_resource, ResourceSignals}, traits::{DioxusElementMarker, ErasedSubGenericMap},
 };
 
-use crate::bevy_scene_plugin::FPS;
+use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
 
 // macro_rules! define_ui_state {
 //     (
@@ -58,7 +57,7 @@ pub struct UiState {
 }
 
 pub fn app_ui() -> Element {
-    let resource_registry = use_context::<ResourceSignalRegistry>();
+    let resource_registry = use_context::<ResourceSignals>();
     let mut state = use_context_provider(|| UiState::default());
 
     //let ui_state = use_signal(|| UiState::default());
@@ -140,7 +139,7 @@ pub fn app_ui() -> Element {
     // });
     // warn!("attempting to call use_bevy_resource");
     let fps = use_bevy_resource::<FPS>();
-
+    // let cube_rotations = use_bevy_component_query::<CubeRotationSpeed>();
     rsx! {
         style { {include_str!("./ui.css")} }
         div {

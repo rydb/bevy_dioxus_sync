@@ -1,8 +1,11 @@
+use async_std::task::sleep;
 use bevy_app::prelude::*;
-use bevy_ecs::prelude::*;
+use bevy_ecs::{prelude::*, world::CommandQueue};
 use crossbeam_channel::{Receiver, Sender};
+use dioxus::{hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
+use std::fmt::{Debug, Display};
 
-use crate::*;
+use crate::{dioxus_in_bevy_plugin::DioxusProps, traits::ErasedSubGenericResourcecMap, *};
 pub enum InsertDefaultResource<T: Resource + Clone> {
     No,
     Yes(T),
@@ -67,4 +70,123 @@ fn receive_resource_update<T: Resource + Clone>(
         return;
     };
     *resource = new_res;
+}
+
+
+fn request_resource_channel<T: Resource + Clone>(
+    props: DioxusProps,
+    mut signal_registry: WriteLock<
+        '_,
+        ResourcesErased,
+        UnsyncStorage,
+        SignalSubscriberDrop<ResourcesErased, UnsyncStorage>,
+    >,
+) -> SyncSignal<BevyRes<T>> {
+    let mut commands = CommandQueue::default();
+
+    let command = RequestBevyResource::<T>::new(crate::resource_sync::InsertDefaultResource::No);
+
+    let dioxus_rx = command.dioxus_rx.clone();
+    let dioxus_tx = command.dioxus_tx.clone();
+    commands.push(command);
+
+    let new_signal = SyncSignal::new_maybe_sync(BevyRes {
+        resource_read: None,
+        resource_incoming: dioxus_rx,
+        resource_write: dioxus_tx,
+    });
+
+    signal_registry.insert(new_signal.clone());
+    props.command_queues_tx.send(commands);
+
+    return new_signal;
+}
+
+/// Dioxus signals of Dioxus copies of Bevy resources.
+#[derive(Clone, Default)]
+pub struct ResourceSignals(Signal<ResourcesErased>);
+
+/// requests a resource from bevy.
+pub fn use_bevy_resource<T: Resource + Clone + Debug>() -> SyncSignal<BevyRes<T>> {
+    let props = use_context::<DioxusProps>();
+
+    //let mut resource_signals = use_context::<ResourceSignals>();
+
+    let mut resource_signals = use_context::<ResourceSignals>();
+    let signal = {
+        // let mut dioxus_resource_copies = resource_signals.0.write();
+
+        //let mut signal_registry = dioxus_resource_copies.0.write();
+
+        let mut signal_registry = resource_signals.0.write();
+
+        let value = signal_registry.get::<T>();
+        let Some(signal) = value else {
+            warn!("requesting resource channel");
+            return request_resource_channel(props, signal_registry);
+        };
+        signal.clone()
+    };
+
+    use_future(move || {
+        let value = props.clone();
+        async move {
+            let mut signal = signal.clone();
+            loop {
+                sleep(std::time::Duration::from_millis(1000)).await;
+
+                let mut resource = signal.write();
+                warn!("attempting to receive resource");
+                while let Ok(value) = resource.resource_incoming.try_recv() {
+                    warn!("received value: {:#?}", value);
+                    resource.resource_read = Some(value)
+                }
+            }
+        }
+    });
+    signal
+}
+
+pub struct BevyRes<T: Clone + Resource> {
+    pub(crate) resource_write: Sender<T>,
+    pub(crate) resource_incoming: Receiver<T>,
+    //receiver: Receiver<T>,
+    pub(crate) resource_read: Option<T>,
+}
+
+#[derive(TransparentWrapper, Default)]
+#[repr(transparent)]
+pub struct ResourcesErased(BoxAnyTypeMap);
+
+impl ErasedSubGenericResourcecMap for ResourcesErased {
+    type Generic<T: Clone + Resource + Send + Sync + 'static> = SyncSignal<BevyRes<T>>;
+}
+
+
+// #[derive(Clone, Default)]
+// pub struct ResourceSignals(pub Signal<ResourceSignals>);
+
+impl<T: Clone + Resource + Display> Display for BevyRes<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.read_resource()
+                .clone()
+                .map(|n| format!("{}", n))
+                .unwrap_or("???".to_string())
+        )
+    }
+}
+
+impl<T: Clone + Resource> BevyRes<T> {
+    pub fn set_resource(&mut self, value: T) {
+        self.resource_write
+            .send(value.clone())
+            .inspect_err(|err| warn!("could not update local resource signal due to {:#}", err));
+        self.resource_read = Some(value)
+    }
+    pub fn read_resource(&self) -> &Option<T> {
+        &self.resource_read
+    }
 }
