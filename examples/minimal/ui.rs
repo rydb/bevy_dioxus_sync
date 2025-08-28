@@ -1,9 +1,11 @@
+use bevy::pbr::{MeshMaterial3d, StandardMaterial};
+use bevy_color::Color;
 use dioxus::prelude::*;
 use dioxus_bevy_panel::{
-    resource_sync::{use_bevy_resource, ResourceSignals}, traits::{DioxusElementMarker, ErasedSubGenericMap},
+    queries_sync::asset_single::hook::use_bevy_asset_singleton, resource_sync::{use_bevy_resource, ResourceSignals}, traits::{DioxusElementMarker, ErasedSubGenericMap}
 };
 
-use crate::bevy_scene_plugin::{CubeRotationSpeed, FPS};
+use crate::bevy_scene_plugin::{CubeRotationSpeed, DynamicCube, FPS};
 
 // macro_rules! define_ui_state {
 //     (
@@ -52,7 +54,7 @@ impl DioxusElementMarker for AppUi {
 
 #[derive(Default, Clone)]
 pub struct UiState {
-    cube_color: Signal<[f32; 4]>,
+    // cube_color: Signal<[f32; 4]>,
     cube_translation_speed: Signal<f32>,
 }
 
@@ -140,6 +142,9 @@ pub fn app_ui() -> Element {
     // warn!("attempting to call use_bevy_resource");
     let fps = use_bevy_resource::<FPS>();
     // let cube_rotations = use_bevy_component_query::<CubeRotationSpeed>();
+    let cube_color = use_bevy_asset_singleton::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
+    
+    // let x = cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(1.0, 1.0, 1.0, 1.0)));
     rsx! {
         style { {include_str!("./ui.css")} }
         div {
@@ -154,17 +159,26 @@ pub fn app_ui() -> Element {
                 button {
                     id: "button-red",
                     class: "color-button",
-                    onclick: move |_| state.cube_color.set([1.0, 0.0, 0.0, 1.0]),
+                    onclick: move |_| {
+                        cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
+                        // state.cube_color.set([1.0, 0.0, 0.0, 1.0])
+                    },
                 }
                 button {
                     id: "button-green",
                     class: "color-button",
-                    onclick: move |_| state.cube_color.set([0.0, 1.0, 0.0, 1.0]),
+                    onclick: move |_| {
+                        cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
+                        // state.cube_color.set([0.0, 1.0, 0.0, 1.0])
+                    },
                 }
                 button {
                     id: "button-blue",
                     class: "color-button",
-                    onclick: move |_| state.cube_color.set([0.0, 0.0, 1.0, 1.0]),
+                    onclick: move |_| {
+                        cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
+                        // state.cube_color.set([0.0, 0.0, 1.0, 1.0])
+                    },
                 }
             }
             div {

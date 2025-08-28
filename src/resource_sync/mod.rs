@@ -2,7 +2,7 @@ use async_std::task::sleep;
 use bevy_app::prelude::*;
 use bevy_ecs::{prelude::*, world::CommandQueue};
 use crossbeam_channel::{Receiver, Sender};
-use dioxus::{hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
+use dioxus::{core::use_hook, hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
 use std::fmt::{Debug, Display};
 
 use crate::{dioxus_in_bevy_plugin::DioxusProps, traits::ErasedSubGenericResourcecMap, *};
@@ -110,28 +110,25 @@ pub struct ResourceSignals(Signal<ResourcesErased>);
 pub fn use_bevy_resource<T: Resource + Clone + Debug>() -> SyncSignal<BevyRes<T>> {
     let props = use_context::<DioxusProps>();
 
-    //let mut resource_signals = use_context::<ResourceSignals>();
-
     let mut resource_signals = use_context::<ResourceSignals>();
-    let signal = {
-        // let mut dioxus_resource_copies = resource_signals.0.write();
 
-        //let mut signal_registry = dioxus_resource_copies.0.write();
 
-        let mut signal_registry = resource_signals.0.write();
+    let signal = use_hook(|| {
+        let mut map_erased = resource_signals.0.write();
 
-        let value = signal_registry.get::<T>();
-        let Some(signal) = value else {
-            warn!("requesting resource channel");
-            return request_resource_channel(props, signal_registry);
+        let value = map_erased.get::<T>();
+        let signal = if let Some(signal) = value {
+            signal.clone()
+        } else {
+            request_resource_channel(props.clone(), map_erased)
         };
-        signal.clone()
-    };
+        signal
+    });
 
     use_future(move || {
         let value = props.clone();
         async move {
-            let mut signal = signal.clone();
+            let mut signal: Signal<BevyRes<T>, dioxus::prelude::SyncStorage> = signal.clone();
             loop {
                 sleep(std::time::Duration::from_millis(1000)).await;
 

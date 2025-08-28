@@ -10,8 +10,10 @@ use dioxus::{hooks::{use_context, use_future}, signals::{Signal, SignalSubscribe
 
 use crate::{add_systems_through_world, dioxus_in_bevy_plugin::DioxusProps, queries_sync::BevyDioxusIO, traits::ErasedSubGenericComponentsMap, BevyRxChannel, BevyTxChannel, BoxAnyTypeMap};
 
+pub type EntityComponentQueue<T> = AddRemoveQueues<Entity, T>;
+
 pub struct RequestBevyComponents<T: Component> {
-    pub(crate) io: BevyDioxusIO<AddRemoveQueues<T>>
+    pub(crate) io: BevyDioxusIO<EntityComponentQueue<T>>
 }
 
 
@@ -19,8 +21,8 @@ pub struct RequestBevyComponents<T: Component> {
 
 impl<T: Component> RequestBevyComponents<T> {
         pub fn new<'a>() -> Self {
-        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<AddRemoveQueues<T>>();
-        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<AddRemoveQueues<T>>();
+        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<EntityComponentQueue<T>>();
+        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<EntityComponentQueue<T>>();
 
         Self {
             io: BevyDioxusIO {
@@ -41,13 +43,13 @@ impl<T: Component + Clone> Command for RequestBevyComponents<T>{
         let component_hook = world
         .register_component_hooks::<T>()
         .try_on_remove(|mut world, hook| {
-            let bevy_tx = world.get_resource_mut::<BevyTxChannel<AddRemoveQueues<T>>>().unwrap();
+            let bevy_tx = world.get_resource_mut::<BevyTxChannel<EntityComponentQueue<T>>>().unwrap();
 
             let mut remove = HashSet::new();
             
             remove.insert(hook.entity);
 
-            let new_requests = AddRemoveQueues {
+            let new_requests = EntityComponentQueue {
                 add: Default::default(),
                 remove,
             };
@@ -76,12 +78,12 @@ impl<T: Component + Clone> Command for RequestBevyComponents<T>{
     }
 }
 
-pub struct AddRemoveQueues<T> {
-    pub add: HashMap<Entity, T>,
-    pub remove: HashSet<Entity>
+pub struct AddRemoveQueues<T, U> {
+    pub add: HashMap<T, U>,
+    pub remove: HashSet<T>
 }
 
-impl<T> Default for AddRemoveQueues<T> {
+impl<T, U> Default for AddRemoveQueues<T, U> {
     fn default() -> Self {
         Self { add: HashMap::default(), remove: HashSet::default() }
     }
@@ -89,7 +91,7 @@ impl<T> Default for AddRemoveQueues<T> {
 
 pub(crate) fn populate_initial_entity_component_map< T: Component + Clone>(
     components: Query<(Entity, &T)>,
-    bevy_tx: ResMut<BevyTxChannel<AddRemoveQueues<T>>>,
+    bevy_tx: ResMut<BevyTxChannel<EntityComponentQueue<T>>>,
 ) {
     // let mut vec = Vec::new();
     let mut map = HashMap::new();
@@ -107,7 +109,7 @@ pub(crate) fn populate_initial_entity_component_map< T: Component + Clone>(
 
 pub(crate) fn send_updated_entity_components<'a, T: Component + Clone>(
     components: Query<(Entity, &T), Changed<T>>,
-    bevy_tx: ResMut<BevyTxChannel<AddRemoveQueues<T>>>,
+    bevy_tx: ResMut<BevyTxChannel<EntityComponentQueue<T>>>,
 ) {
     let mut map = HashMap::new();
     for (e, component) in components {
@@ -121,7 +123,7 @@ pub(crate) fn send_updated_entity_components<'a, T: Component + Clone>(
 }  
 
 pub(crate) fn fallback_update_removed_components<T: Component>(
-    bevy_tx: ResMut<BevyTxChannel<AddRemoveQueues<T>>>,
+    bevy_tx: ResMut<BevyTxChannel<EntityComponentQueue<T>>>,
     mut removed: RemovedComponents<T>
 ) {
     let mut map = HashSet::new();
@@ -133,42 +135,6 @@ pub(crate) fn fallback_update_removed_components<T: Component>(
         remove: map
     }).inspect_err(|err| warn!("could not push remove requests due to {:#}", err));
 }  
-
-
-pub enum BevyQueryScope {
-    Entity(Entity),
-    World
-}
-
-// pub struct BevyQuery<T: Component + Clone> {
-//     /// Filter and components being checked for
-//     content: T,
-// }
-
-
-// pub fn changed<T: Component + Clone>(
-//     query: Query<Ref<T>>,
-// ) {
-//     let sample = BevyQueryScope::World;
-
-//     match sample {
-//         BevyQueryScope::Entity(entity) => {
-//             let Ok(data) =query.get(entity)
-//             .inspect_err(|err| warn!("blah blah blah thing doesn't exist")) else {
-//                 todo!("something somehting something, tell dioxus that entity is invalid and to requery for entity based on component or something");
-//                 (entity, data);
-//                 return;
-//             }
-//         },
-//         BevyQueryScope::World => {f
-//             let datas = query.iter().clone();
-//                 todo!("send this to dioxus for it to read inside BevyQuery or somethign and update its state with this component")
-//                 datas
-
-//             },
-//     }
-// }
-
 
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
@@ -183,8 +149,8 @@ pub struct BevyComponentsSignals(Signal<ComponentsErased>);
 
 pub struct BevyQueryComponents<T: Component> {
     pub components: HashMap<Entity, T>,
-    pub query_read: Receiver<AddRemoveQueues<T>>,
-    pub query_write: Sender<AddRemoveQueues<T>>,
+    pub query_read: Receiver<EntityComponentQueue<T>>,
+    pub query_write: Sender<EntityComponentQueue<T>>,
 }
 
 
@@ -212,7 +178,7 @@ fn request_component_channels<T: Component + Clone>(
     });
 
     signal_registry.insert(new_signal.clone());
-    props.command_queues_tx.send(commands);
+    let _ =props.command_queues_tx.send(commands).inspect_err(|err| warn!("could not request component channel for {:#}: {:#}", type_name::<T>(), err));
 
     return new_signal;
 }

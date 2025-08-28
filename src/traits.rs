@@ -3,14 +3,13 @@
 //! can't get assocaited types to have "stricter impl's" then their oriignal definition, so this
 //! is what we do to side step that...
 
+use bevy_asset::{Asset, Handle};
 use bevy_ecs::{component::Component, resource::Resource};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use dioxus::core::Element;
 use std::{
-    any::{Any, TypeId, type_name},
-    fmt::Debug,
-    sync::Arc,
+    any::{type_name, Any, TypeId}, fmt::Debug, ops::Deref, sync::Arc
 };
 
 use crate::{ArcAnytypeMap, BoxAnyTypeMap};
@@ -96,6 +95,45 @@ where
         let value = map.get_mut(&TypeId::of::<T>())?;
 
         value.downcast_mut::<Self::Generic<T>>()
+    }
+    fn extend(&mut self, value: Self) {
+        let map = TransparentWrapper::peel_mut(self);
+        let value = TransparentWrapper::peel(value);
+        map.extend(value);
+    }
+}
+
+pub trait ErasedSubGenericAssetsMap
+where
+    Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
+{
+    type Generic
+    <
+        T: Deref<Target = Handle<U>> + Component, 
+        U: Asset + Clone
+    >: Send + Sync + Clone + 'static;
+    fn insert<T, U>(&mut self, value: Self::Generic<T, U>) 
+        where
+            T: Deref<Target = Handle<U>> + Component + 'static,
+            U: Asset + Clone + Send + Sync + 'static
+    {
+        let map = TransparentWrapper::peel_mut(self);
+        let erased = Box::new(value);
+        map.insert(TypeId::of::<T>(), erased);
+    }
+
+    fn get<T, U>(
+        &mut self,
+    ) -> Option<&mut Self::Generic<T, U>> 
+        where
+            T: Deref<Target = Handle<U>> + Component + 'static,
+            U: Asset + Clone + Send + Sync + 'static
+    {
+        let map = TransparentWrapper::peel_mut(self);
+
+        let value = map.get_mut(&TypeId::of::<T>())?;
+
+        value.downcast_mut::<Self::Generic<T, U>>()
     }
     fn extend(&mut self, value: Self) {
         let map = TransparentWrapper::peel_mut(self);
