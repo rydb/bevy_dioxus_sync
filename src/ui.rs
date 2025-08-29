@@ -10,10 +10,17 @@ use bevy_ecs::entity::Entity;
 use bevy_platform::collections::HashMap;
 use dioxus::prelude::*;
 
+/// refresh rate for info sent to dioxus.
+#[derive(Clone)]
+pub struct InfoRefershRateMS(pub u64);
+
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 
 pub fn dioxus_app(props: DioxusProps) -> Element {
+    let refresh_rate_ms = 1000 / props.fps.clone();
+    
+    let _info_refresh_rate = use_context_provider(|| InfoRefershRateMS(refresh_rate_ms.into()));
     let register_updates = use_context_provider(|| props);
 
     let _resource_registers = use_context_provider(|| ResourceSignals::default());
@@ -21,6 +28,8 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     let mut dioxus_panels = use_context_provider(|| DioxusPanels::default());
     let _asset_singletons = use_context_provider(|| BevyWrappedAssetsSignals::default());
     let _component_singletons = use_context_provider(|| BevyComponentSignletonSignals::default());
+
+
 
     let update_frequency = 1000;
 

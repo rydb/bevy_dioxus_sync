@@ -66,7 +66,7 @@ pub fn app_ui() -> Element {
             }
             div {
                 id: "cube-rotation",
-                label { "Transform:" }
+                label { "rotation:" }
                 input {
                     r#type: "number",
                     min: "0.0",

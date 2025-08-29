@@ -11,10 +11,7 @@ use dioxus::{
 };
 
 use crate::{
-    BoxAnyTypeMap,
-    dioxus_in_bevy_plugin::DioxusProps,
-    hooks::component_single::{BevyComponentSingleton, command::RequestBevyComponentSingleton},
-    traits::{ErasedSubGenericComponentSingletonMap},
+    dioxus_in_bevy_plugin::DioxusProps, hooks::component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, traits::ErasedSubGenericComponentSingletonMap, ui::InfoRefershRateMS, BoxAnyTypeMap
 };
 
 pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton<T, U>>
@@ -23,6 +20,8 @@ where
     U: Component,
 {
     let props = use_context::<DioxusProps>();
+    let refresh_rate = use_context::<InfoRefershRateMS>();
+
 
     let mut signals_register = use_context::<BevyComponentSignletonSignals>();
 
@@ -39,12 +38,12 @@ where
     });
 
     use_future(move || {
-        // let value = props.clone();
+        let refresh_rate = refresh_rate.clone();
 
         async move {
             let mut signal = signal.clone();
             loop {
-                sleep(std::time::Duration::from_millis(1000)).await;
+                sleep(std::time::Duration::from_millis(refresh_rate.0)).await;
 
                 let mut asset = signal.write();
                 while let Ok(value) = asset.read.try_recv() {

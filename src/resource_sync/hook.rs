@@ -9,10 +9,7 @@ use dioxus::{
 };
 
 use crate::{
-    dioxus_in_bevy_plugin::DioxusProps,
-    resource_sync::command::{RequestBevyResource},
-    traits::ErasedSubGenericResourcecMap,
-    *,
+    dioxus_in_bevy_plugin::DioxusProps, resource_sync::command::RequestBevyResource, traits::ErasedSubGenericResourcecMap, ui::InfoRefershRateMS, *
 };
 
 fn request_resource_channel<T: Resource + Clone>(
@@ -51,6 +48,7 @@ pub struct ResourceSignals(Signal<ResourcesErased>);
 /// requests a resource from bevy.
 pub fn use_bevy_resource<T: Resource + Clone + Display>() -> SyncSignal<BevyRes<T>> {
     let props = use_context::<DioxusProps>();
+    let refresh_rate = use_context::<InfoRefershRateMS>();
 
     let mut resource_signals = use_context::<ResourceSignals>();
 
@@ -68,10 +66,11 @@ pub fn use_bevy_resource<T: Resource + Clone + Display>() -> SyncSignal<BevyRes<
 
     use_future(move || {
         // let value = props.clone();
+        let refresh_rate = refresh_rate.clone();
         async move {
             let mut signal: Signal<BevyRes<T>, dioxus::prelude::SyncStorage> = signal.clone();
             loop {
-                sleep(std::time::Duration::from_millis(1000)).await;
+                sleep(std::time::Duration::from_millis(refresh_rate.0)).await;
 
                 let mut resource = signal.write();
                 // warn!("attempting to receive resource");

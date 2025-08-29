@@ -12,10 +12,7 @@ use dioxus::{
 };
 
 use crate::{
-    BoxAnyTypeMap,
-    dioxus_in_bevy_plugin::DioxusProps,
-    hooks::asset_single::{BevyWrappedAsset, command::RequestBevyWrappedAsset},
-    traits::ErasedSubGenericAssetsMap,
+    dioxus_in_bevy_plugin::DioxusProps, hooks::asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, traits::ErasedSubGenericAssetsMap, ui::InfoRefershRateMS, BoxAnyTypeMap
 };
 
 #[derive(TransparentWrapper, Default)]
@@ -74,6 +71,7 @@ where
     V: Component,
 {
     let props = use_context::<DioxusProps>();
+    let refresh_rate = use_context::<InfoRefershRateMS>();
 
     let mut signals_register = use_context::<BevyWrappedAssetsSignals>();
 
@@ -90,13 +88,12 @@ where
     });
 
     use_future(move || {
-        // let value = props.clone();
-
+        let refresh_rate = refresh_rate.clone();
         async move {
             let mut signal: Signal<BevyWrappedAsset<T, U>, dioxus::prelude::SyncStorage> =
                 signal.clone();
             loop {
-                sleep(std::time::Duration::from_millis(1000)).await;
+                sleep(std::time::Duration::from_millis(refresh_rate.0)).await;
 
                 let mut asset = signal.write();
                 while let Ok(value) = asset.read.try_recv() {

@@ -14,12 +14,16 @@ use crate::{
     ui::dioxus_app,
 };
 
-pub struct DioxusPlugin {}
+pub struct DioxusPlugin {
+    /// how many times per second does dioxus refresh info from bevy. 
+    pub bevy_info_refresh_fps: u16
+}
 /// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
 pub struct DioxusProps {
     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
     pub(crate) command_queues_tx: Sender<CommandQueue>,
+    pub(crate) fps: u16
 }
 
 #[derive(Resource)]
@@ -37,6 +41,7 @@ impl Plugin for DioxusPlugin {
         let props = DioxusProps {
             dioxus_panel_updates: dioxus_panel_updates_rx,
             command_queues_tx: command_queues_tx,
+            fps: self.bevy_info_refresh_fps
         };
         app.add_plugins(DioxusRenderPlugin);
         app.add_plugins(DioxusEventSyncPlugin);
