@@ -3,7 +3,12 @@ use bevy_color::Color;
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
 use dioxus_bevy_panel::{
-    queries_sync::{asset_single::hook::use_bevy_asset_singleton, component_single::hook::use_bevy_component_singleton}, resource_sync::hook::use_bevy_resource, traits::{DioxusElementMarker, ErasedSubGenericMap}
+    hooks::{
+        asset_single::hook::use_bevy_asset_singleton,
+        component_single::hook::use_bevy_component_singleton,
+    },
+    resource_sync::hook::use_bevy_resource,
+    traits::{DioxusElementMarker},
 };
 
 use crate::bevy_scene_plugin::{CubeRotationSpeed, CubeTranslationSpeed, DynamicCube, FPS};

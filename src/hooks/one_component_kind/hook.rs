@@ -4,9 +4,18 @@ use async_std::task::sleep;
 use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use dioxus::{core::use_hook, hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
+use dioxus::{
+    core::use_hook,
+    hooks::{use_context, use_future},
+    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
+};
 
-use crate::{dioxus_in_bevy_plugin::DioxusProps, queries_sync::one_component_kind::{command::RequestBevyComponents, BevyQueryComponents}, traits::ErasedSubGenericComponentsMap, BoxAnyTypeMap};
+use crate::{
+    BoxAnyTypeMap,
+    dioxus_in_bevy_plugin::DioxusProps,
+    hooks::one_component_kind::{BevyQueryComponents, command::RequestBevyComponents},
+    traits::ErasedSubGenericComponentsMap,
+};
 
 pub fn use_bevy_component_query<T: Component + Clone>() -> SyncSignal<BevyQueryComponents<T>> {
     let props = use_context::<DioxusProps>();
@@ -36,14 +45,15 @@ pub fn use_bevy_component_query<T: Component + Clone>() -> SyncSignal<BevyQueryC
                 warn!("attempting to receive resource");
                 while let Ok(value) = copies.query_read.try_recv() {
                     // warn!("received entity component map");
-                    copies.components.retain(|key, n| value.remove.contains(key) == false);
+                    copies
+                        .components
+                        .retain(|key, n| value.remove.contains(key) == false);
                     copies.components.extend(value.add);
                 }
             }
         }
     });
     signal
-
 }
 
 fn request_component_channels<T: Component + Clone>(
@@ -70,7 +80,13 @@ fn request_component_channels<T: Component + Clone>(
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ =props.command_queues_tx.send(commands).inspect_err(|err| warn!("could not request component channel for {:#}: {:#}", type_name::<T>(), err));
+    let _ = props.command_queues_tx.send(commands).inspect_err(|err| {
+        warn!(
+            "could not request component channel for {:#}: {:#}",
+            type_name::<T>(),
+            err
+        )
+    });
 
     return new_signal;
 }

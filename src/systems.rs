@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::*;
-use bevy_log::warn;
 use std::fmt::Debug;
 
 use crate::{DioxusPanel, dioxus_in_bevy_plugin::DioxusCommandQueueRx};
@@ -26,7 +25,6 @@ pub fn read_dioxus_command_queues(world: &mut World) {
         .0
         .clone();
     while let Ok(mut command_queue) = receiver.try_recv() {
-        warn!("ammending command queue: {:#?}", command_queue);
         world.commands().append(&mut command_queue);
     }
 }

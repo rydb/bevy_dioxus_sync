@@ -1,5 +1,5 @@
 //! TODO: Find better alternative to copying one trait bound across each generic map.
-//! 
+//!
 //! can't get assocaited types to have "stricter impl's" then their oriignal definition, so this
 //! is what we do to side step that...
 
@@ -9,7 +9,10 @@ use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use dioxus::core::Element;
 use std::{
-    any::{type_name, Any, TypeId}, fmt::Debug, ops::Deref, sync::Arc
+    any::{Any, TypeId, type_name},
+    fmt::Debug,
+    ops::Deref,
+    sync::Arc,
 };
 
 use crate::{ArcAnytypeMap, BoxAnyTypeMap};
@@ -65,7 +68,7 @@ where
         let value = map.get(&TypeId::of::<T>())?.clone();
         value
             .downcast::<Self::Generic<T>>()
-            .inspect_err(|err| warn!("could not downcast: {:#}", type_name::<T>()))
+            .inspect_err(|err| warn!("could not downcast: {:#}: {:#?}", type_name::<T>(), err))
             .ok()
     }
     fn extend(&mut self, value: Self) {
@@ -74,7 +77,6 @@ where
         map.extend(value);
     }
 }
-
 
 pub trait ErasedSubGenericComponentsMap
 where
@@ -107,27 +109,21 @@ pub trait ErasedSubGenericComponentSingletonMap
 where
     Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
 {
-    type Generic
-    <
-        T: Component + Clone, 
-        U: Component
-    >: Send + Sync + Clone + 'static;
-    fn insert<T, U>(&mut self, value: Self::Generic<T, U>) 
-        where
-            T: Component + Clone + Send + Sync + 'static,
-            U: Component,
+    type Generic<T: Component + Clone, U: Component>: Send + Sync + Clone + 'static;
+    fn insert<T, U>(&mut self, value: Self::Generic<T, U>)
+    where
+        T: Component + Clone + Send + Sync + 'static,
+        U: Component,
     {
         let map = TransparentWrapper::peel_mut(self);
         let erased = Box::new(value);
         map.insert(TypeId::of::<T>(), erased);
     }
 
-    fn get<T, U>(
-        &mut self,
-    ) -> Option<&mut Self::Generic<T, U>> 
-        where
-            T: Component + Clone + Send + Sync + 'static,
-            U: Component,
+    fn get<T, U>(&mut self) -> Option<&mut Self::Generic<T, U>>
+    where
+        T: Component + Clone + Send + Sync + 'static,
+        U: Component,
     {
         let map = TransparentWrapper::peel_mut(self);
 
@@ -142,32 +138,28 @@ where
     }
 }
 
-
 pub trait ErasedSubGenericAssetsMap
 where
     Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
 {
-    type Generic
-    <
-        T: Deref<Target = Handle<U>> + Component, 
-        U: Asset + Clone
-    >: Send + Sync + Clone + 'static;
-    fn insert<T, U>(&mut self, value: Self::Generic<T, U>) 
-        where
-            T: Deref<Target = Handle<U>> + Component + 'static,
-            U: Asset + Clone + Send + Sync + 'static
+    type Generic<T: Deref<Target = Handle<U>> + Component, U: Asset + Clone>: Send
+        + Sync
+        + Clone
+        + 'static;
+    fn insert<T, U>(&mut self, value: Self::Generic<T, U>)
+    where
+        T: Deref<Target = Handle<U>> + Component + 'static,
+        U: Asset + Clone + Send + Sync + 'static,
     {
         let map = TransparentWrapper::peel_mut(self);
         let erased = Box::new(value);
         map.insert(TypeId::of::<T>(), erased);
     }
 
-    fn get<T, U>(
-        &mut self,
-    ) -> Option<&mut Self::Generic<T, U>> 
-        where
-            T: Deref<Target = Handle<U>> + Component + 'static,
-            U: Asset + Clone + Send + Sync + 'static
+    fn get<T, U>(&mut self) -> Option<&mut Self::Generic<T, U>>
+    where
+        T: Deref<Target = Handle<U>> + Component + 'static,
+        U: Asset + Clone + Send + Sync + 'static,
     {
         let map = TransparentWrapper::peel_mut(self);
 

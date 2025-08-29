@@ -1,13 +1,13 @@
 use bevy_app::prelude::*;
 use bevy_ecs::{prelude::*, world::CommandQueue};
 
+use bevy_log::warn;
 use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
 use dioxus_native_dom::DioxusDocument;
 
 use crate::{
-    ErasedSubGenericMap,
     event_sync::plugins::DioxusEventSyncPlugin,
     render::plugins::DioxusRenderPlugin,
     systems::{DioxusPanelUpdates, read_dioxus_command_queues},
@@ -78,5 +78,5 @@ pub fn push_panel_updates(
 
     updates.extend(panel_updates.0.drain(..));
 
-    panel_update_sender.0.send(DioxusPanelUpdates(updates));
+    let _ = panel_update_sender.0.send(DioxusPanelUpdates(updates)).inspect_err(|err| warn!("{:#}", err));
 }

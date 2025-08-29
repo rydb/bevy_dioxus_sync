@@ -24,7 +24,7 @@ pub mod traits;
 pub mod ui;
 
 pub mod event_sync;
-pub mod queries_sync;
+pub mod hooks;
 pub mod render;
 pub mod resource_sync;
 
@@ -53,8 +53,6 @@ pub struct RxChannelRegistry(ArcAnytypeMap);
 impl ErasedSubGenericMap for RxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Receiver<T>;
 }
-
-pub struct BevyRxChannelTypeId(TypeId);
 
 /// Bevy side channel for giving [`T`] to dioxus
 #[derive(Resource)]

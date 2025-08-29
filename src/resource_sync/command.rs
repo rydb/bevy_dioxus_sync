@@ -1,10 +1,9 @@
-use bevy_ecs::prelude::*;
 use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use crossbeam_channel::{Receiver, Sender};
 
-use crate::{add_systems_through_world, BevyRxChannel, BevyTxChannel};
-
+use crate::{BevyRxChannel, BevyTxChannel, add_systems_through_world};
 
 pub enum InsertDefaultResource<T: Resource + Clone> {
     No,
@@ -13,7 +12,7 @@ pub enum InsertDefaultResource<T: Resource + Clone> {
 
 /// Command to register dioxus bevy interop for a given resource.
 pub(crate) struct RequestBevyResource<T: Resource + Clone> {
-    default_resource: InsertDefaultResource<T>,
+    // default_resource: InsertDefaultResource<T>,
 
     pub(crate) dioxus_tx: Sender<T>,
     pub(crate) dioxus_rx: Receiver<T>,
@@ -22,12 +21,14 @@ pub(crate) struct RequestBevyResource<T: Resource + Clone> {
 }
 
 impl<T: Resource + Clone> RequestBevyResource<T> {
-    pub fn new(default_resource: InsertDefaultResource<T>) -> Self {
+    pub fn new(
+        //default_resource: InsertDefaultResource<T>
+    ) -> Self {
         let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<T>();
         let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<T>();
 
         Self {
-            default_resource,
+            //default_resource,
             dioxus_tx,
             dioxus_rx,
             bevy_tx,
@@ -55,10 +56,10 @@ fn send_resource_update<T: Resource + Clone>(
     bevy_tx: ResMut<BevyTxChannel<T>>,
     // bevy_rx: ResMut<BevyRxChannel<T>>,
 ) {
-    bevy_tx
+    let _ = bevy_tx
         .0
         .send(resource.clone())
-        .inspect_err(|err| warn!("could not send resource update due to {:#}", err));
+        .inspect_err(|err| warn!("could not send resource: {:#}", err));
 }
 
 fn receive_resource_update<T: Resource + Clone>(

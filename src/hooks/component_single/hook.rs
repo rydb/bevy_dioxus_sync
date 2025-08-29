@@ -1,17 +1,26 @@
-use std::{any::type_name, collections::HashMap, marker::PhantomData};
+use std::{any::type_name, marker::PhantomData};
 
 use async_std::task::sleep;
 use bevy_ecs::{component::Mutable, prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use dioxus::{core::use_hook, hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
+use dioxus::{
+    core::use_hook,
+    hooks::{use_context, use_future},
+    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
+};
 
-use crate::{dioxus_in_bevy_plugin::DioxusProps, queries_sync::{component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, one_component_kind::{command::RequestBevyComponents, BevyQueryComponents}}, traits::{ErasedSubGenericComponentSingletonMap, ErasedSubGenericComponentsMap}, BoxAnyTypeMap};
+use crate::{
+    BoxAnyTypeMap,
+    dioxus_in_bevy_plugin::DioxusProps,
+    hooks::component_single::{BevyComponentSingleton, command::RequestBevyComponentSingleton},
+    traits::{ErasedSubGenericComponentSingletonMap},
+};
 
-pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton<T, U>> 
-    where
-        T: Component<Mutability = Mutable> + Clone,
-        U: Component
+pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton<T, U>>
+where
+    T: Component<Mutability = Mutable> + Clone,
+    U: Component,
 {
     let props = use_context::<DioxusProps>();
 
@@ -45,7 +54,6 @@ pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton
         }
     });
     signal
-
 }
 
 fn request_component_channels<T, U>(
@@ -57,9 +65,9 @@ fn request_component_channels<T, U>(
         SignalSubscriberDrop<ComponentsSingletonsErased, UnsyncStorage>,
     >,
 ) -> SyncSignal<BevyComponentSingleton<T, U>>
-    where
-        T: Component<Mutability = Mutable> + Clone,
-        U: Component
+where
+    T: Component<Mutability = Mutable> + Clone,
+    U: Component,
 {
     let mut commands = CommandQueue::default();
 
@@ -73,11 +81,17 @@ fn request_component_channels<T, U>(
         value: None,
         read: dioxus_rx,
         write: dioxus_tx,
-        _marker: PhantomData::default()
+        _marker: PhantomData::default(),
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ =props.command_queues_tx.send(commands).inspect_err(|err| warn!("could not request component channel for {:#}: {:#}", type_name::<T>(), err));
+    let _ = props.command_queues_tx.send(commands).inspect_err(|err| {
+        warn!(
+            "could not request component channel for {:#}: {:#}",
+            type_name::<T>(),
+            err
+        )
+    });
 
     return new_signal;
 }
@@ -87,11 +101,7 @@ fn request_component_channels<T, U>(
 pub struct ComponentsSingletonsErased(BoxAnyTypeMap);
 
 impl ErasedSubGenericComponentSingletonMap for ComponentsSingletonsErased {
-    type Generic
-    <
-        T: Component + Clone, 
-        U: Component
-    >: = SyncSignal<BevyComponentSingleton<T, U>>;
+    type Generic<T: Component + Clone, U: Component> = SyncSignal<BevyComponentSingleton<T, U>>;
 }
 
 #[derive(Clone, Default)]

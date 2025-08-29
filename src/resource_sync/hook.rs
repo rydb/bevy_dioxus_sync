@@ -2,9 +2,18 @@ use std::fmt::Display;
 
 use async_std::task::sleep;
 use bevy_ecs::world::CommandQueue;
-use dioxus::{core::use_hook, hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
+use dioxus::{
+    core::use_hook,
+    hooks::{use_context, use_future},
+    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
+};
 
-use crate::{dioxus_in_bevy_plugin::DioxusProps, resource_sync::command::{InsertDefaultResource, RequestBevyResource}, traits::ErasedSubGenericResourcecMap, *};
+use crate::{
+    dioxus_in_bevy_plugin::DioxusProps,
+    resource_sync::command::{RequestBevyResource},
+    traits::ErasedSubGenericResourcecMap,
+    *,
+};
 
 fn request_resource_channel<T: Resource + Clone>(
     props: DioxusProps,
@@ -17,7 +26,7 @@ fn request_resource_channel<T: Resource + Clone>(
 ) -> SyncSignal<BevyRes<T>> {
     let mut commands = CommandQueue::default();
 
-    let command = RequestBevyResource::<T>::new(InsertDefaultResource::No);
+    let command = RequestBevyResource::<T>::new();
 
     let dioxus_rx = command.dioxus_rx.clone();
     let dioxus_tx = command.dioxus_tx.clone();
@@ -30,7 +39,7 @@ fn request_resource_channel<T: Resource + Clone>(
     });
 
     signal_registry.insert(new_signal.clone());
-    props.command_queues_tx.send(commands);
+    let _ = props.command_queues_tx.send(commands).inspect_err(|err| warn!("{:#}", err));
 
     return new_signal;
 }
@@ -44,7 +53,6 @@ pub fn use_bevy_resource<T: Resource + Clone + Display>() -> SyncSignal<BevyRes<
     let props = use_context::<DioxusProps>();
 
     let mut resource_signals = use_context::<ResourceSignals>();
-
 
     let signal = use_hook(|| {
         let mut map_erased = resource_signals.0.write();
@@ -86,10 +94,9 @@ pub struct BevyRes<T: Clone + Resource> {
 
 impl<T: Clone + Resource> BevyRes<T> {
     pub fn set_resource(&self, value: T) {
-        self.resource_write
+        let _ = self.resource_write
             .send(value.clone())
             .inspect_err(|err| warn!("could not update local resource signal due to {:#}", err));
-        //self.resource_read = Some(value)
     }
     pub fn read_resource(&self) -> &Option<T> {
         &self.resource_read
@@ -103,8 +110,6 @@ pub struct ResourcesErased(BoxAnyTypeMap);
 impl ErasedSubGenericResourcecMap for ResourcesErased {
     type Generic<T: Clone + Resource + Send + Sync + 'static> = SyncSignal<BevyRes<T>>;
 }
-
-
 
 impl<T: Clone + Resource + Display> Display for BevyRes<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

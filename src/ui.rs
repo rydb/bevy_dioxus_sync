@@ -1,44 +1,26 @@
-use std::fmt::Display;
-
-use crate::queries_sync::asset_single::hook::BevyWrappedAssetsSignals;
-use crate::queries_sync::component_single::hook::BevyComponentSignletonSignals;
-use crate::queries_sync::one_component_kind::hook::BevyComponentsSignals;
+use crate::hooks::asset_single::hook::BevyWrappedAssetsSignals;
+use crate::hooks::component_single::hook::BevyComponentSignletonSignals;
+// use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
 use crate::resource_sync::hook::ResourceSignals;
-use crate::traits::ErasedSubGenericComponentsMap;
 use crate::{
-    BoxAnyTypeMap, DioxusPanel, ErasedSubGenericMap, dioxus_in_bevy_plugin::DioxusProps,
-    systems::PanelUpdateKind,
-    traits::ErasedSubGenericResourcecMap,
+    DioxusPanel, dioxus_in_bevy_plugin::DioxusProps, systems::PanelUpdateKind,
 };
 use async_std::task::sleep;
-use bevy_ecs::component::Component;
-use bevy_ecs::prelude::Resource;
-use bevy_ecs::query::QueryData;
-use bevy_ecs::{entity::Entity, world::CommandQueue};
-use bevy_log::warn;
+use bevy_ecs::entity::Entity;
 use bevy_platform::collections::HashMap;
-use bytemuck::TransparentWrapper;
-use crossbeam_channel::{Receiver, Sender};
 use dioxus::prelude::*;
-use std::fmt::Debug;
-use bevy_ecs::prelude::*;
-
-
-
 
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 
 pub fn dioxus_app(props: DioxusProps) -> Element {
-
     let register_updates = use_context_provider(|| props);
 
-    let resource_registers = use_context_provider(|| ResourceSignals::default());
-    let component_signals = use_context_provider(||BevyComponentsSignals::default());
+    let _resource_registers = use_context_provider(|| ResourceSignals::default());
+    // let component_signals = use_context_provider(|| BevyComponentsSignals::default());
     let mut dioxus_panels = use_context_provider(|| DioxusPanels::default());
-    let mut assets_wrapped = use_context_provider(||BevyWrappedAssetsSignals::default());
-
-    let mut component_singletons = use_context_provider(|| BevyComponentSignletonSignals::default());
+    let _asset_singletons = use_context_provider(|| BevyWrappedAssetsSignals::default());
+    let _component_singletons = use_context_provider(|| BevyComponentSignletonSignals::default());
 
     let update_frequency = 1000;
 

@@ -9,7 +9,6 @@ mod ui;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // .add_plugins()
         .add_plugins(DioxusPlugin {})
         .add_plugins(BevyScenePlugin)
         .run();

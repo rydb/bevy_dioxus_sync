@@ -28,12 +28,6 @@ impl Default for OrbitCamera {
     }
 }
 
-// #[derive(Resource, Deref)]
-// struct UIMessageSender(Sender<UIMessage>);
-
-// #[derive(Resource, Deref)]
-// struct UIMessageReceiver(Receiver<UIMessage>);
-
 #[derive(Resource, Clone, Debug, Deref, DerefMut)]
 pub struct CubeTranslationSpeed(pub f32);
 
@@ -61,8 +55,6 @@ impl Display for CubeRotationSpeed {
 impl Default for CubeRotationSpeed {
     fn default() -> Self {
         Self(2.0)
-        //Self(SyncSignal::new_maybe_sync(2.0))
-        //Self(UiState::DEFAULT_CUBE_ROTATION_SPEED)
     }
 }
 
@@ -70,8 +62,6 @@ pub struct BevyScenePlugin;
 
 impl Plugin for BevyScenePlugin {
     fn build(&self, app: &mut App) {
-        // app.add_plugins(UiMessageRegistration::<UiState>::default());
-        // app.add_plugins(UiResourceRegistration::<FPS>::default());
         app.insert_resource(ClearColor(bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0)));
         app.insert_resource(CubeTranslationSpeed::default());
         app.insert_resource(FPS(0.0));
@@ -132,40 +122,11 @@ impl Display for FPS {
 }
 
 fn sync_with_ui(
-    cube_query: Query<&MeshMaterial3d<StandardMaterial>, With<DynamicCube>>,
-    materials: ResMut<Assets<StandardMaterial>>,
-    translation_speed: ResMut<CubeTranslationSpeed>,
-    rotation_speed: ResMut<CubeRotationSpeed>,
     mut fps: ResMut<FPS>,
     time: Res<Time>,
 ) {
     let new_fps = 1000.0 / time.delta().as_millis() as f32;
-    // sender.0.send(UiState {
-
-    // println!("new fps is {:#?}", fps);
     *fps = FPS(new_fps);
-    // })
-
-    // while let Ok(message) = receiver.0.try_recv() {
-    //     warn!("recieved message: {:#?}", message);
-    //     match message {
-    //         UIMessage::CubeColor(c) => {
-    //             for cube_material in cube_query.iter() {
-    //                 if let Some(material) = materials.get_mut(&cube_material.0) {
-    //                     material.base_color = Color::Srgba(bevy::color::Srgba::from_f32_array(c));
-    //                 }
-    //             }
-    //         }
-    //         UIMessage::CubeTranslationSpeed(speed) => {
-    //             translation_speed.0 = speed;
-    //         }
-    //         //rotation_speed.
-    //         // UIMessage::CubeRotationSpeed(speed) => {
-    //         //     rotation_speed.0 = speed;
-    //         // }
-    //         _ => {}
-    //     }
-    // }
 }
 
 fn animate(

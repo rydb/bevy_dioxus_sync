@@ -1,13 +1,22 @@
-use std::ops::Deref;
+use std::{any::type_name, ops::Deref};
 
 use async_std::task::sleep;
+use bevy_asset::prelude::*;
+use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use dioxus::{core::use_hook, hooks::{use_context, use_future}, signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock}};
-use bevy_ecs::{prelude::*, world::CommandQueue};
-use bevy_asset::prelude::*;
+use dioxus::{
+    core::use_hook,
+    hooks::{use_context, use_future},
+    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
+};
 
-use crate::{dioxus_in_bevy_plugin::DioxusProps, queries_sync::asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, traits::ErasedSubGenericAssetsMap, BoxAnyTypeMap};
+use crate::{
+    BoxAnyTypeMap,
+    dioxus_in_bevy_plugin::DioxusProps,
+    hooks::asset_single::{BevyWrappedAsset, command::RequestBevyWrappedAsset},
+    traits::ErasedSubGenericAssetsMap,
+};
 
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
@@ -16,7 +25,7 @@ pub struct BevyWrappedAssetsErased(BoxAnyTypeMap);
 impl ErasedSubGenericAssetsMap for BevyWrappedAssetsErased {
     type Generic<
         T: Deref<Target = Handle<U>> + Component + Send + Sync + 'static,
-        U: Asset + Clone
+        U: Asset + Clone,
     > = SyncSignal<BevyWrappedAsset<T, U>>;
 }
 
@@ -31,11 +40,11 @@ fn request_asset_channel<T, U, V>(
         UnsyncStorage,
         SignalSubscriberDrop<BevyWrappedAssetsErased, UnsyncStorage>,
     >,
-) -> SyncSignal<BevyWrappedAsset<T, U>> 
-    where
-        T: Deref<Target = Handle<U>> + Component,
-        U: Asset + Clone, 
-        V: Component
+) -> SyncSignal<BevyWrappedAsset<T, U>>
+where
+    T: Deref<Target = Handle<U>> + Component,
+    U: Asset + Clone,
+    V: Component,
 {
     let mut commands = CommandQueue::default();
 
@@ -52,22 +61,21 @@ fn request_asset_channel<T, U, V>(
     });
 
     signal_registry.insert(new_signal.clone());
-    props.command_queues_tx.send(commands);
+    let _ = props.command_queues_tx.send(commands).inspect_err(|err| warn!("could not send command for {:#}: {:#}", type_name::<T>(), err));
 
     return new_signal;
 }
 
 /// requests an asset from bevy.
-pub fn use_bevy_asset_singleton<T, U, V>() -> SyncSignal<BevyWrappedAsset<T, U>> 
-    where
-        T: Deref<Target = Handle<U>> + Component,
-        U: Asset + Clone,
-        V: Component
+pub fn use_bevy_asset_singleton<T, U, V>() -> SyncSignal<BevyWrappedAsset<T, U>>
+where
+    T: Deref<Target = Handle<U>> + Component,
+    U: Asset + Clone,
+    V: Component,
 {
     let props = use_context::<DioxusProps>();
 
     let mut signals_register = use_context::<BevyWrappedAssetsSignals>();
-
 
     let signal = use_hook(|| {
         let mut map_erased = signals_register.0.write();
@@ -85,7 +93,8 @@ pub fn use_bevy_asset_singleton<T, U, V>() -> SyncSignal<BevyWrappedAsset<T, U>>
         // let value = props.clone();
 
         async move {
-            let mut signal: Signal<BevyWrappedAsset<T, U>, dioxus::prelude::SyncStorage> = signal.clone();
+            let mut signal: Signal<BevyWrappedAsset<T, U>, dioxus::prelude::SyncStorage> =
+                signal.clone();
             loop {
                 sleep(std::time::Duration::from_millis(1000)).await;
 
