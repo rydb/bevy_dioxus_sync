@@ -18,7 +18,7 @@ use crate::{
     traits::{DioxusElementMarker, ErasedSubGenericMap},
 };
 
-pub mod dioxus_in_bevy_plugin;
+pub mod plugins;
 pub(crate) mod systems;
 pub mod traits;
 pub mod ui;

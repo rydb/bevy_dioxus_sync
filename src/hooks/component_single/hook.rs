@@ -12,8 +12,8 @@ use dioxus::{
 
 use crate::{
     BoxAnyTypeMap,
-    dioxus_in_bevy_plugin::DioxusProps,
     hooks::component_single::{BevyComponentSingleton, command::RequestBevyComponentSingleton},
+    plugins::DioxusProps,
     traits::ErasedSubGenericComponentSingletonMap,
     ui::InfoRefershRateMS,
 };

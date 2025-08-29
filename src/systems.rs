@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use std::fmt::Debug;
 
-use crate::{DioxusPanel, dioxus_in_bevy_plugin::DioxusCommandQueueRx};
+use crate::{DioxusPanel, plugins::DioxusCommandQueueRx};
 
 #[derive(Debug)]
 pub struct PanelUpdate {

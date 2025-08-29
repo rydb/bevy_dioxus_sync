@@ -9,7 +9,7 @@ use dioxus::{
 };
 
 use crate::{
-    dioxus_in_bevy_plugin::DioxusProps, resource_sync::command::RequestBevyResource,
+    plugins::DioxusProps, resource_sync::command::RequestBevyResource,
     traits::ErasedSubGenericResourcecMap, ui::InfoRefershRateMS, *,
 };
 

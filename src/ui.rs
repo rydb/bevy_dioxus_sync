@@ -4,7 +4,7 @@ use crate::hooks::asset_single::hook::BevyWrappedAssetsSignals;
 use crate::hooks::component_single::hook::BevyComponentSignletonSignals;
 // use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
 use crate::resource_sync::hook::ResourceSignals;
-use crate::{DioxusPanel, dioxus_in_bevy_plugin::DioxusProps, systems::PanelUpdateKind};
+use crate::{DioxusPanel, plugins::DioxusProps, systems::PanelUpdateKind};
 use async_std::task::sleep;
 use bevy_ecs::entity::Entity;
 use dioxus::prelude::*;

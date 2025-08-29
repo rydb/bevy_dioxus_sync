@@ -13,8 +13,8 @@ use dioxus::{
 
 use crate::{
     BoxAnyTypeMap,
-    dioxus_in_bevy_plugin::DioxusProps,
     hooks::asset_single::{BevyWrappedAsset, command::RequestBevyWrappedAsset},
+    plugins::DioxusProps,
     traits::ErasedSubGenericAssetsMap,
     ui::InfoRefershRateMS,
 };
