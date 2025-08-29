@@ -2,7 +2,7 @@ use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_color::Color;
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
-use dioxus_bevy_panel::{
+use bevy_dioxus_sync::{
     hooks::{
         asset_single::hook::use_bevy_asset_singleton,
         component_single::hook::use_bevy_component_singleton,

@@ -1,5 +1,7 @@
+//! minimal example showing each of the hooks
+
 use bevy::prelude::*;
-use dioxus_bevy_panel::dioxus_in_bevy_plugin::DioxusPlugin;
+use bevy_dioxus_sync::dioxus_in_bevy_plugin::DioxusPlugin;
 
 use crate::bevy_scene_plugin::BevyScenePlugin;
 

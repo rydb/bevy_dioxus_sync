@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
-use dioxus_bevy_panel::DioxusPanel;
+use bevy_dioxus_sync::DioxusPanel;
 
 use crate::ui::AppUi;
 
