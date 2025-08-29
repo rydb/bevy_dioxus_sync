@@ -103,6 +103,46 @@ where
     }
 }
 
+pub trait ErasedSubGenericComponentSingletonMap
+where
+    Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
+{
+    type Generic
+    <
+        T: Component + Clone, 
+        U: Component
+    >: Send + Sync + Clone + 'static;
+    fn insert<T, U>(&mut self, value: Self::Generic<T, U>) 
+        where
+            T: Component + Clone + Send + Sync + 'static,
+            U: Component,
+    {
+        let map = TransparentWrapper::peel_mut(self);
+        let erased = Box::new(value);
+        map.insert(TypeId::of::<T>(), erased);
+    }
+
+    fn get<T, U>(
+        &mut self,
+    ) -> Option<&mut Self::Generic<T, U>> 
+        where
+            T: Component + Clone + Send + Sync + 'static,
+            U: Component,
+    {
+        let map = TransparentWrapper::peel_mut(self);
+
+        let value = map.get_mut(&TypeId::of::<T>())?;
+
+        value.downcast_mut::<Self::Generic<T, U>>()
+    }
+    fn extend(&mut self, value: Self) {
+        let map = TransparentWrapper::peel_mut(self);
+        let value = TransparentWrapper::peel(value);
+        map.extend(value);
+    }
+}
+
+
 pub trait ErasedSubGenericAssetsMap
 where
     Self: TransparentWrapper<BoxAnyTypeMap> + Sized,

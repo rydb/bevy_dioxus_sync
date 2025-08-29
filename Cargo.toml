@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "93db519394c29d3bd91f6d6f00b274be1b75fd73"}
-dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "93db519394c29d3bd91f6d6f00b274be1b75fd73"}
+dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
+dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
 
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
@@ -41,7 +41,7 @@ blitz-shell = { version = "=0.1.0-rc.3", default-features = false }
 
 async-std = "1.13"
 crossbeam-channel = "0.5"
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "93db519394c29d3bd91f6d6f00b274be1b75fd73"}
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
 wgpu = "24"
 wgpu-types = "24"
 

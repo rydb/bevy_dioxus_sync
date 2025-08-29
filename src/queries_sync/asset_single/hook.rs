@@ -7,7 +7,7 @@ use dioxus::{core::use_hook, hooks::{use_context, use_future}, signals::{Signal,
 use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_asset::prelude::*;
 
-use crate::{dioxus_in_bevy_plugin::DioxusProps, queries_sync::asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, resource_sync::ResourcesErased, traits::ErasedSubGenericAssetsMap, BoxAnyTypeMap};
+use crate::{dioxus_in_bevy_plugin::DioxusProps, queries_sync::asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, traits::ErasedSubGenericAssetsMap, BoxAnyTypeMap};
 
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
@@ -82,7 +82,7 @@ pub fn use_bevy_asset_singleton<T, U, V>() -> SyncSignal<BevyWrappedAsset<T, U>>
     });
 
     use_future(move || {
-        let value = props.clone();
+        // let value = props.clone();
 
         async move {
             let mut signal: Signal<BevyWrappedAsset<T, U>, dioxus::prelude::SyncStorage> = signal.clone();

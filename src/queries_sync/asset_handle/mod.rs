@@ -265,7 +265,7 @@
 // pub struct BevyAssetHandle<T: Asset + Clone>(pub Option<Handle<T>>);
 
 // impl<T: Asset + Clone> BevyAssetHandle<T> {
-//     pub fn write_asset(&self, value: T, assets: &mut BevyAssetsProcessed<T>) {
+//     pub fn set_asset(&self, value: T, assets: &mut BevyAssetsProcessed<T>) {
 //         let Some(handle) = &self.0 else {
 //             warn!("could not write asset because its handle isn't initialized yet.");
 //             return;

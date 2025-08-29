@@ -37,7 +37,7 @@ impl<T, U> BevyWrappedAsset<T, U>
         T: Deref<Target = Handle<U>> + Component,
         U: Asset + Clone
 {
-    pub fn write_asset(&self, value: U) {
+    pub fn set_asset(&self, value: U) {
         let Some(old_value) = &self.value else {
             warn!("could not write asset as initial handle is not initialized");
             return

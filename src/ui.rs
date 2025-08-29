@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
 use crate::queries_sync::asset_single::hook::BevyWrappedAssetsSignals;
-use crate::queries_sync::one_component_kind::BevyComponentsSignals;
-use crate::resource_sync::{ResourceSignals};
+use crate::queries_sync::component_single::hook::BevyComponentSignletonSignals;
+use crate::queries_sync::one_component_kind::hook::BevyComponentsSignals;
+use crate::resource_sync::hook::ResourceSignals;
 use crate::traits::ErasedSubGenericComponentsMap;
 use crate::{
     BoxAnyTypeMap, DioxusPanel, ErasedSubGenericMap, dioxus_in_bevy_plugin::DioxusProps,
-    resource_sync::RequestBevyResource, systems::PanelUpdateKind,
+    systems::PanelUpdateKind,
     traits::ErasedSubGenericResourcecMap,
 };
 use async_std::task::sleep;
@@ -29,18 +30,15 @@ use bevy_ecs::prelude::*;
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 
 pub fn dioxus_app(props: DioxusProps) -> Element {
-    // let mut state = use_context_provider(UiState::default);
 
     let register_updates = use_context_provider(|| props);
 
-    // let mut dioxus_tx_registry = use_context_provider(||DioxusTxChannels::default());
-    // let mut dioxus_rx_registry = use_context_provider(||DioxusRxChannels::default());
     let resource_registers = use_context_provider(|| ResourceSignals::default());
     let component_signals = use_context_provider(||BevyComponentsSignals::default());
     let mut dioxus_panels = use_context_provider(|| DioxusPanels::default());
     let mut assets_wrapped = use_context_provider(||BevyWrappedAssetsSignals::default());
-    // let resource_signals = use_context_provider(|| ResourceSignals::default());
-    // let resource_signals = use_context_provider(|| ResourceSignals::default());
+
+    let mut component_singletons = use_context_provider(|| BevyComponentSignletonSignals::default());
 
     let update_frequency = 1000;
 

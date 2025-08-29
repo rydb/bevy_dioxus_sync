@@ -1,47 +1,12 @@
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_color::Color;
+use bevy_transform::components::Transform;
 use dioxus::prelude::*;
 use dioxus_bevy_panel::{
-    queries_sync::asset_single::hook::use_bevy_asset_singleton, resource_sync::{use_bevy_resource, ResourceSignals}, traits::{DioxusElementMarker, ErasedSubGenericMap}
+    queries_sync::{asset_single::hook::use_bevy_asset_singleton, component_single::hook::use_bevy_component_singleton}, resource_sync::hook::use_bevy_resource, traits::{DioxusElementMarker, ErasedSubGenericMap}
 };
 
-use crate::bevy_scene_plugin::{CubeRotationSpeed, DynamicCube, FPS};
-
-// macro_rules! define_ui_state {
-//     (
-//         $($field:ident : $type:ty = $default:expr),* $(,)?
-//     ) => { paste! {
-//         #[allow(dead_code)]
-//         #[derive(Clone, Copy, Debug)]
-//         pub struct UiState {
-//             $($field: Signal<$type>,)*
-//         }
-
-//         #[allow(dead_code)]
-//         impl UiState {
-//             fn default() -> Self {
-//                 Self {
-//                     $($field: Signal::new($default),)*
-//                 }
-//             }
-
-//             $(pub const [<DEFAULT_ $field:upper>]: $type = $default;)*
-//         }
-
-//         #[allow(dead_code)]
-//         #[derive(Debug)]
-//         pub enum UIMessage {
-//             $([<$field:camel>]($type),)*
-//         }
-//     }};
-// }
-
-// define_ui_state! {
-//     cube_color: [f32; 4] = [0.0, 0.0, 1.0, 1.0],
-//     cube_translation_speed: f32 = 2.0,
-//     //cube_rotation_speed: f32 = 1.0,
-//     fps: f32 = 0.0,
-// }
+use crate::bevy_scene_plugin::{CubeRotationSpeed, CubeTranslationSpeed, DynamicCube, FPS};
 
 #[derive(Debug)]
 pub struct AppUi;
@@ -52,100 +17,16 @@ impl DioxusElementMarker for AppUi {
     }
 }
 
-#[derive(Default, Clone)]
-pub struct UiState {
-    // cube_color: Signal<[f32; 4]>,
-    cube_translation_speed: Signal<f32>,
-}
-
 pub fn app_ui() -> Element {
-    let resource_registry = use_context::<ResourceSignals>();
-    let mut state = use_context_provider(|| UiState::default());
-
-    //let ui_state = use_signal(|| UiState::default());
-
-    // let cube_color = use_signal(|| None);
-    // let cube_translation_speed = use_signal(|| None);
-    // let cube_rotation_speed = use_signal(||None);
-    // let fps = use_signal(||None);
-    //let mut rotation_speed = use_context::<CubeRotationSpeed>();
-
-    // use_effect({
-    //     let ui_sender = props.ui_sender.clone();
-    //     move || {
-    //         println!("Color changed to {:?}", state.cube_color);
-    //         ui_sender
-    //             .send(UIMessage::CubeColor((state.cube_color)()))
-    //             .unwrap();
-    //     }
-    // });
-
-    // use_effect({
-    //     let ui_sender = props.ui_sender.clone();
-    //     move || {
-    //         println!("Rotation speed changed to {:?}", state.cube_rotation_speed);
-    //         ui_sender
-    //             .send(UIMessage::CubeRotationSpeed((state.cube_rotation_speed)()))
-    //             .unwrap();
-    //     }
-    // });
-
-    // use_effect({
-    //     let ui_sender = props.ui_sender.clone();
-    //     move || {
-    //         println!(
-    //             "Translation speed changed to {:?}",
-    //             state.cube_translation_speed
-    //         );
-    //         ui_sender
-    //             .send(UIMessage::CubeTranslationSpeed((state
-    //                 .cube_translation_speed)(
-    //             )))
-    //             .unwrap();
-    //     }
-    // });
-
-    // use_future(move || {
-    //     async move {
-    //         loop {
-    //             let bevy_receiver = registers.dioxus_rx_registry.write().0.get::<FPS>().clone();
-
-    //             // // Update UI every 1s in this demo.
-    //             // sleep(std::time::Duration::from_millis(1000)).await;
-    //             sleep(std::time::Duration::from_millis(100)).await;
-
-    //             //let mut fps = Option::<f32>::None;
-
-    //             let Some(ref app_receiver) = bevy_receiver else {
-    //                 warn!("no app receiver");
-    //                 sleep(std::time::Duration::from_millis(1000)).await;
-    //                 continue;
-    //             };
-    //             warn!("attempting to recieve message");
-    //             while let Ok(fps) = app_receiver.try_recv() {
-    //                 state.fps.set(fps.0);
-    //             }
-    //             // while let Ok(message) = app_receiver.clone().try_recv().inspect_err(|err| warn!("couldn't recieve, reason: {:#}", err)) {
-    //             //     if let UIMessage::Fps(v) = message {
-    //             //         warn!("fps set to {:#}", v);
-    //             //         fps = Some(v)
-    //             //     }
-    //             // }
-
-    //             // if let Some(fps) = fps {
-    //             //     println!("fps set to {:#}", fps);
-    //             //     state.fps.set(fps);
-    //             // }
-    //         }
-    //     }
-    // });
-    // warn!("attempting to call use_bevy_resource");
     let fps = use_bevy_resource::<FPS>();
-    // let cube_rotations = use_bevy_component_query::<CubeRotationSpeed>();
     let cube_color = use_bevy_asset_singleton::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
-    
-    // let x = cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(1.0, 1.0, 1.0, 1.0)));
+    let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
+    let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
+    let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
+
+    const DEMO_CSS: Asset = asset!("./examples/minimal/ui.css");
     rsx! {
+        document::Stylesheet { href: DEMO_CSS }
         style { {include_str!("./ui.css")} }
         div {
             id: "panel",
@@ -160,25 +41,38 @@ pub fn app_ui() -> Element {
                     id: "button-red",
                     class: "color-button",
                     onclick: move |_| {
-                        cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
-                        // state.cube_color.set([1.0, 0.0, 0.0, 1.0])
+                        cube_color.peek().set_asset(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
                     },
                 }
                 button {
                     id: "button-green",
                     class: "color-button",
                     onclick: move |_| {
-                        cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
-                        // state.cube_color.set([0.0, 1.0, 0.0, 1.0])
+                        cube_color.peek().set_asset(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
                     },
                 }
                 button {
                     id: "button-blue",
                     class: "color-button",
                     onclick: move |_| {
-                        cube_color.peek().write_asset(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
-                        // state.cube_color.set([0.0, 0.0, 1.0, 1.0])
+                        cube_color.peek().set_asset(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
                     },
+                }
+            }
+            div {
+                id: "cube-rotation",
+                label { "Transform:" }
+                input {
+                    r#type: "number",
+                    min: "0.0",
+                    max: "10.0",
+                    step: "0.1",
+                    value: cube_transform.read().read_component().map(|n| format!("{:#}", n.rotation)).unwrap_or("???".to_string()),
+                    oninput: move |event| {
+                        if let Ok(speed) = event.value().parse::<f32>() {
+                            cube_translation_speed.peek().set_resource(CubeTranslationSpeed(speed));
+                        }
+                    }
                 }
             }
             div {
@@ -189,31 +83,30 @@ pub fn app_ui() -> Element {
                     min: "0.0",
                     max: "10.0",
                     step: "0.1",
-                    value: "{state.cube_translation_speed}",
+                    value: "{cube_translation_speed}",
                     oninput: move |event| {
                         if let Ok(speed) = event.value().parse::<f32>() {
-                            state.cube_translation_speed.set(speed);
+                            cube_translation_speed.peek().set_resource(CubeTranslationSpeed(speed));
                         }
                     }
                 }
             }
-        // div {
-        //     id: "rotation-speed-control",
-        //     label { "Rotation Speed:" }
-        //     input {
-        //         r#type: "number",
-        //         min: "0.0",
-        //         max: "10.0",
-        //         step: "0.1",
-        //         value: "{rotation_speed.0}",
-        //         oninput: move |event| {
-        //             if let Ok(speed) = event.value().parse::<f32>() {
-        //                 //state.cube_rotation_speed.set(speed);
-        //                 rotation_speed.0 = speed
-        //             }
-        //         }
-        //     }
-        // }
+            div {
+                id: "rotation-speed-control",
+                label { "Rotation Speed:" }
+                input {
+                    r#type: "number",
+                    min: "0.0",
+                    max: "10.0",
+                    step: "0.1",
+                    value: "{cube_rotation_speed}",
+                    oninput: move |event| {
+                        if let Ok(speed) = event.value().parse::<f32>() {
+                            cube_rotation_speed.peek().set_resource(CubeRotationSpeed(speed));
+                        }
+                    }
+                }
+            }
             div {
                 id: "footer",
                 p { "Bevy framerate: {fps}" }
