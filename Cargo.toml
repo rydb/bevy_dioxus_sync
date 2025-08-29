@@ -4,9 +4,9 @@ version = "0.1.0-rc.1"
 edition = "2024"
 
 [dependencies]
-dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
-dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
+dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
+dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
 
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
@@ -31,11 +31,11 @@ vello = {version = "0.5"}
 rustc-hash = "1"
 bytemuck = "1.23"
 anyrender_vello = {version = "0.5"}
-blitz-net = { version = "=0.1.0-rc.3" }
-blitz-paint = { version = "=0.1.0-rc.3" }
-blitz-traits = { version = "=0.1.0-rc.3" }
-blitz-dom = { version = "=0.1.0-rc.3", default-features = false }
-blitz-shell = { version = "=0.1.0-rc.3", default-features = false }
+blitz-net = { version = "=0.1.0" }
+blitz-paint = { version = "=0.1.0" }
+blitz-traits = { version = "=0.1.0" }
+blitz-dom = { version = "=0.1.0", default-features = false }
+blitz-shell = { version = "=0.1.0", default-features = false }
 
 async-std = "1.13"
 crossbeam-channel = "0.5"
