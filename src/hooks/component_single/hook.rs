@@ -11,7 +11,11 @@ use dioxus::{
 };
 
 use crate::{
-    dioxus_in_bevy_plugin::DioxusProps, hooks::component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, traits::ErasedSubGenericComponentSingletonMap, ui::InfoRefershRateMS, BoxAnyTypeMap
+    BoxAnyTypeMap,
+    dioxus_in_bevy_plugin::DioxusProps,
+    hooks::component_single::{BevyComponentSingleton, command::RequestBevyComponentSingleton},
+    traits::ErasedSubGenericComponentSingletonMap,
+    ui::InfoRefershRateMS,
 };
 
 pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton<T, U>>
@@ -21,7 +25,6 @@ where
 {
     let props = use_context::<DioxusProps>();
     let refresh_rate = use_context::<InfoRefershRateMS>();
-
 
     let mut signals_register = use_context::<BevyComponentSignletonSignals>();
 

@@ -12,7 +12,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DioxusPlugin {
-            bevy_info_refresh_fps: 30
+            bevy_info_refresh_fps: 30,
         })
         .add_plugins(BevyScenePlugin)
         .run();

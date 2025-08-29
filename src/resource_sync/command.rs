@@ -13,7 +13,6 @@ pub enum InsertDefaultResource<T: Resource + Clone> {
 /// Command to register dioxus bevy interop for a given resource.
 pub(crate) struct RequestBevyResource<T: Resource + Clone> {
     // default_resource: InsertDefaultResource<T>,
-
     pub(crate) dioxus_tx: Sender<T>,
     pub(crate) dioxus_rx: Receiver<T>,
     pub(crate) bevy_tx: Sender<T>,
@@ -21,8 +20,7 @@ pub(crate) struct RequestBevyResource<T: Resource + Clone> {
 }
 
 impl<T: Resource + Clone> RequestBevyResource<T> {
-    pub fn new(
-        //default_resource: InsertDefaultResource<T>
+    pub fn new(//default_resource: InsertDefaultResource<T>
     ) -> Self {
         let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<T>();
         let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<T>();

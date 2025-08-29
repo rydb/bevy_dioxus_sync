@@ -12,7 +12,11 @@ use dioxus::{
 };
 
 use crate::{
-    dioxus_in_bevy_plugin::DioxusProps, hooks::asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, traits::ErasedSubGenericAssetsMap, ui::InfoRefershRateMS, BoxAnyTypeMap
+    BoxAnyTypeMap,
+    dioxus_in_bevy_plugin::DioxusProps,
+    hooks::asset_single::{BevyWrappedAsset, command::RequestBevyWrappedAsset},
+    traits::ErasedSubGenericAssetsMap,
+    ui::InfoRefershRateMS,
 };
 
 #[derive(TransparentWrapper, Default)]
@@ -58,7 +62,13 @@ where
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ = props.command_queues_tx.send(commands).inspect_err(|err| warn!("could not send command for {:#}: {:#}", type_name::<T>(), err));
+    let _ = props.command_queues_tx.send(commands).inspect_err(|err| {
+        warn!(
+            "could not send command for {:#}: {:#}",
+            type_name::<T>(),
+            err
+        )
+    });
 
     return new_signal;
 }

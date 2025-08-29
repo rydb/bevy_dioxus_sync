@@ -79,11 +79,14 @@ fn send_asset_singleton<T, U, V>(
         return;
     };
 
-    let _ = bevy_tx.0.send(AssetWithHandle {
-        asset: asset.clone(),
-        handle: handle,
-        new_type: PhantomData::default(),
-    }).inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<T>(), err));
+    let _ = bevy_tx
+        .0
+        .send(AssetWithHandle {
+            asset: asset.clone(),
+            handle: handle,
+            new_type: PhantomData::default(),
+        })
+        .inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<T>(), err));
 }
 
 fn receive_asset_update<T, U>(

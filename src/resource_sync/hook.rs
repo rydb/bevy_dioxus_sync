@@ -9,7 +9,8 @@ use dioxus::{
 };
 
 use crate::{
-    dioxus_in_bevy_plugin::DioxusProps, resource_sync::command::RequestBevyResource, traits::ErasedSubGenericResourcecMap, ui::InfoRefershRateMS, *
+    dioxus_in_bevy_plugin::DioxusProps, resource_sync::command::RequestBevyResource,
+    traits::ErasedSubGenericResourcecMap, ui::InfoRefershRateMS, *,
 };
 
 fn request_resource_channel<T: Resource + Clone>(
@@ -36,7 +37,10 @@ fn request_resource_channel<T: Resource + Clone>(
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ = props.command_queues_tx.send(commands).inspect_err(|err| warn!("{:#}", err));
+    let _ = props
+        .command_queues_tx
+        .send(commands)
+        .inspect_err(|err| warn!("{:#}", err));
 
     return new_signal;
 }
@@ -93,7 +97,8 @@ pub struct BevyRes<T: Clone + Resource> {
 
 impl<T: Clone + Resource> BevyRes<T> {
     pub fn set_resource(&self, value: T) {
-        let _ = self.resource_write
+        let _ = self
+            .resource_write
             .send(value.clone())
             .inspect_err(|err| warn!("could not update local resource signal due to {:#}", err));
     }

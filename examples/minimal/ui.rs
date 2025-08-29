@@ -1,15 +1,15 @@
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_color::Color;
-use bevy_transform::components::Transform;
-use dioxus::prelude::*;
 use bevy_dioxus_sync::{
     hooks::{
         asset_single::hook::use_bevy_asset_singleton,
         component_single::hook::use_bevy_component_singleton,
     },
     resource_sync::hook::use_bevy_resource,
-    traits::{DioxusElementMarker},
+    traits::DioxusElementMarker,
 };
+use bevy_transform::components::Transform;
+use dioxus::prelude::*;
 
 use crate::bevy_scene_plugin::{CubeRotationSpeed, CubeTranslationSpeed, DynamicCube, FPS};
 

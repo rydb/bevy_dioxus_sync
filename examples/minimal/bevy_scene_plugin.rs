@@ -121,10 +121,7 @@ impl Display for FPS {
     }
 }
 
-fn sync_with_ui(
-    mut fps: ResMut<FPS>,
-    time: Res<Time>,
-) {
+fn sync_with_ui(mut fps: ResMut<FPS>, time: Res<Time>) {
     let new_fps = 1000.0 / time.delta().as_millis() as f32;
     *fps = FPS(new_fps);
 }

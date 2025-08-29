@@ -62,7 +62,10 @@ fn send_component_singleton<T, U>(
     let Ok((value, _)) = singleton.single() else {
         return;
     };
-    let _ = bevy_tx.0.send(value.clone()).inspect_err(|err| warn!("{:#}", err));
+    let _ = bevy_tx
+        .0
+        .send(value.clone())
+        .inspect_err(|err| warn!("{:#}", err));
 }
 
 fn receive_component_update<T, U>(

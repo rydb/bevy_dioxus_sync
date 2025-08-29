@@ -1,11 +1,12 @@
 [package]
 name = "bevy_dioxus_sync"
-version = "0.1.0"
+version = "0.1.0-rc.1"
 edition = "2024"
 
 [dependencies]
 dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
 dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
 
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
@@ -21,10 +22,7 @@ bevy_log = {version = "0.16"}
 bevy_input = {version = "0.16"}
 bevy_time = {version = "0.16"}
 bevy_image = {version = "0.16"}
-bevy_ptr = {version = "0.16"}
-bevy_reflect = {version = "0.16"}
 bevy_picking = {version = "0.16"}
-bevy_platform = {version = "0.16"}
 bevy_derive = {version = "0.16"}
 bevy_color = {version = "0.16"}
 bevy_sprite = {version = "0.16"}
@@ -41,7 +39,6 @@ blitz-shell = { version = "=0.1.0-rc.3", default-features = false }
 
 async-std = "1.13"
 crossbeam-channel = "0.5"
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "ed568be4"}
 wgpu = "24"
 wgpu-types = "24"
 

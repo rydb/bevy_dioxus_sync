@@ -101,11 +101,11 @@ impl Component for DioxusPanel {
             };
             let value = value.clone();
             let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            warn!(
-                "pushing panel update for {:#} to {:#?}",
-                hook.entity,
-                PanelUpdateKind::Add(value.clone())
-            );
+            // warn!(
+            //     "pushing panel update for {:#} to {:#?}",
+            //     hook.entity,
+            //     PanelUpdateKind::Add(value.clone())
+            // );
             panel_updates.0.push(PanelUpdate {
                 key: hook.entity,
                 value: PanelUpdateKind::Add(value),
