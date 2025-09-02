@@ -3,7 +3,7 @@ use bevy_app::PreUpdate;
 use bevy_ecs::schedule::IntoScheduleConfigs;
 use bevy_input::InputSystem;
 
-use crate::event_sync::{
+use super::{
     keyboard::handle_keyboard_events, mouse::handle_mouse_events, window::handle_window_resize,
 };
 

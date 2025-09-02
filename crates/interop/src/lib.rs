@@ -20,54 +20,14 @@ use crate::{
 
 pub mod plugins;
 pub(crate) mod systems;
-pub mod traits;
 pub mod ui;
 
-pub mod event_sync;
-pub mod hooks;
-pub mod render;
-pub mod resource_sync;
 
 pub struct SenderReceiver<T: Send + Sync + 'static> {
     pub sender: Sender<T>,
     pub receiver: Receiver<T>,
 }
 
-/// An untyped hashmap that resolved typed entries by their type id.
-pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
-
-pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
-
-#[derive(Clone, Default, Debug, TransparentWrapper)]
-#[repr(transparent)]
-pub struct TxChannelRegistry(ArcAnytypeMap);
-
-impl ErasedSubGenericMap for TxChannelRegistry {
-    type Generic<T: Send + Sync + 'static> = Sender<T>;
-}
-
-#[derive(Clone, Default, Debug, TransparentWrapper)]
-#[repr(transparent)]
-pub struct RxChannelRegistry(ArcAnytypeMap);
-
-impl ErasedSubGenericMap for RxChannelRegistry {
-    type Generic<T: Send + Sync + 'static> = Receiver<T>;
-}
-
-/// Bevy side channel for giving [`T`] to dioxus
-#[derive(Resource)]
-struct BevyTxChannel<T>(pub Sender<T>);
-
-/// Dioxus side channel for receiving [`T`] from bevy.
-#[derive(Resource)]
-struct BevyRxChannel<T>(pub Receiver<T>);
-
-/// Dioxus side channel for sending [`T`] to bevy
-pub struct DioxusTxChannel<T>(pub Sender<T>);
-
-/// Bevy side channel for receiving [`T`] from dioxus.
-#[derive(Resource)]
-pub struct DioxusRxChannel<T>(pub Receiver<T>);
 
 /// Component that marks an entity as a dioxus panel
 #[derive(Clone, Debug)]
@@ -121,16 +81,5 @@ impl Component for DioxusPanel {
     }
 }
 pub struct ResourceUpdates {}
-
-fn add_systems_through_world<T>(
-    world: &mut World,
-    schedule: impl ScheduleLabel,
-    systems: impl IntoScheduleConfigs<ScheduleSystem, T>,
-) {
-    let mut schedules = world.get_resource_mut::<Schedules>().unwrap();
-    if let Some(schedule) = schedules.get_mut(schedule) {
-        schedule.add_systems(systems);
-    }
-}
 
 pub type BoxSync = Box<dyn Any + Send + Sync + 'static>;

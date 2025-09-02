@@ -1,4 +1,4 @@
-use crate::event_sync::{does_catch_events, mouse::MouseState};
+use super::{does_catch_events, mouse::MouseState};
 use bevy_ecs::prelude::*;
 use bevy_input::{
     ButtonState,

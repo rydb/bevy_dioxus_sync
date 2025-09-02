@@ -9,13 +9,14 @@ use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use dioxus::core::Element;
 use std::{
-    any::{Any, TypeId, type_name},
-    fmt::Debug,
-    ops::Deref,
-    sync::Arc,
+    any::{type_name, Any, TypeId}, collections::HashMap, fmt::Debug, ops::Deref, sync::Arc
 };
 
-use crate::{ArcAnytypeMap, BoxAnyTypeMap};
+/// An untyped hashmap that resolved typed entries by their type id.
+pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
+
+pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
+
 
 /// marks a struct as a Dioxus element.
 /// used to statically typed dioxus [`Element`]s

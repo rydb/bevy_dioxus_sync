@@ -11,7 +11,7 @@ use dioxus::{
     signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
 };
 
-use crate::{
+use super::{
     BoxAnyTypeMap,
     hooks::asset_single::{BevyWrappedAsset, command::RequestBevyWrappedAsset},
     plugins::DioxusProps,

@@ -3,8 +3,9 @@ use bevy_ecs::{component::Mutable, prelude::*};
 use bevy_log::warn;
 use std::marker::PhantomData;
 
-use crate::{BevyRxChannel, BevyTxChannel, add_systems_through_world};
 use crossbeam_channel::{Receiver, Sender};
+
+use crate::{add_systems_through_world, BevyRxChannel, BevyTxChannel};
 
 /// Command to register dioxus bevy interop for a given resource.
 pub(crate) struct RequestBevyComponentSingleton<T, U>

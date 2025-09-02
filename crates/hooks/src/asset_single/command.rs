@@ -3,7 +3,7 @@ use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
 use std::{any::type_name, marker::PhantomData, ops::Deref};
 
-use crate::{
+use super::{
     BevyRxChannel, BevyTxChannel, add_systems_through_world, hooks::asset_single::AssetWithHandle,
 };
 use bevy_log::warn;

@@ -2,7 +2,7 @@ use bevy_app::prelude::*;
 use bevy_render::{RenderApp, renderer::RenderDevice};
 use vello::RendererOptions;
 
-use crate::render::*;
+use crate::*;
 
 pub struct DioxusRenderPlugin;
 

@@ -1,12 +1,22 @@
-[package]
+[workspace.package]
 name = "bevy_dioxus_sync"
 version = "0.1.0-rc.1"
 edition = "2024"
 
-[dependencies]
+[workspace]
+members = [
+    "crates/*"
+]
+resolver = "3"
+
+[workspace.dependencies]
 dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
 dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
 dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
+
+bevy_dioxus_render = {path = "./crates/render"}
+bevy_dioxus_interop = {path = "./crates/interop"}
+bevy_dioxus_hooks = {path = "./crates/hooks"}
 
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
@@ -42,6 +52,6 @@ crossbeam-channel = "0.5"
 wgpu = "24"
 wgpu-types = "24"
 
-[dev-dependencies]
-bevy = {version = "0.16", features = ["dynamic_linking"]}
-paste = "1.0"
+# [dev-dependencies]
+# bevy = {version = "0.16", features = ["dynamic_linking"]}
+# paste = "1.0"

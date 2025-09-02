@@ -10,13 +10,7 @@ use dioxus::{
     signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
 };
 
-use crate::{
-    BoxAnyTypeMap,
-    hooks::component_single::{BevyComponentSingleton, command::RequestBevyComponentSingleton},
-    plugins::DioxusProps,
-    traits::ErasedSubGenericComponentSingletonMap,
-    ui::InfoRefershRateMS,
-};
+use crate::{component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, traits::{BoxAnyTypeMap, ErasedSubGenericComponentSingletonMap}};
 
 pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton<T, U>>
 where

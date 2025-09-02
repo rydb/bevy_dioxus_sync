@@ -1,0 +1,16 @@
+[package]
+name = "bevy_dioxus_hooks"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy_ecs = {workspace = true}
+bevy_log = {workspace = true}
+bevy_app = {workspace = true}
+bevy_asset = {workspace = true}
+
+async-std = {workspace = true}
+crossbeam-channel = {workspace = true}
+bytemuck = {workspace = true}
+
+dioxus = {workspace = true}

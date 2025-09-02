@@ -1,0 +1,31 @@
+[package]
+name = "bevy_dioxus_render"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy_app = {workspace = true}
+bevy_render = {workspace = true}
+bevy_log = {workspace = true}
+bevy_core_pipeline = {workspace = true}
+bevy_image = {workspace = true}
+bevy_asset = {workspace = true}
+bevy_sprite = {workspace = true}
+bevy_transform = {workspace = true}
+bevy_ecs = {workspace = true}
+bevy_derive = {workspace = true}
+bevy_math = {workspace = true}
+bevy_window = {workspace = true}
+bevy_utils = {workspace = true}
+
+rustc-hash = {workspace = true}
+crossbeam-channel = {workspace = true}
+
+
+wgpu = {workspace = true}
+blitz-dom = {workspace = true}
+blitz-paint = {workspace = true}
+blitz-traits = {workspace = true}
+vello = {workspace = true}
+anyrender_vello = {workspace = true}
+dioxus-native = {workspace = true}

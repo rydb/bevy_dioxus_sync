@@ -6,7 +6,7 @@ use blitz_traits::events::{BlitzMouseButtonEvent, MouseEventButton, MouseEventBu
 use dioxus::html::Modifiers;
 use dioxus_native::DioxusDocument;
 
-use crate::event_sync::does_catch_events;
+use super::does_catch_events;
 
 #[derive(Resource, Default)]
 pub struct MouseState {

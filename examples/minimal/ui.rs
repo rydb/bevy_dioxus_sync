@@ -22,6 +22,7 @@ impl DioxusElementMarker for AppUi {
     }
 }
 
+#[component]
 pub fn app_ui() -> Element {
     let fps = use_bevy_resource::<FPS>();
     let cube_color = use_bevy_asset_singleton::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();

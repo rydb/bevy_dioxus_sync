@@ -1,0 +1,16 @@
+[package]
+name = "bevy_dioxus_interop"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy_ecs = {workspace = true}
+bevy_app = {workspace = true}
+bevy_log = {workspace = true}
+bytemuck = {workspace = true}
+crossbeam-channel = {workspace = true}
+async-std = {workspace = true}
+
+blitz-dom = {workspace = true}
+dioxus = {workspace = true}
+dioxus-native-dom = {workspace = true}
