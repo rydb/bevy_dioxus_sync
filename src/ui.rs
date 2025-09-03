@@ -1,17 +1,12 @@
 use std::collections::HashMap;
 
-use crate::hooks::asset_single::hook::BevyWrappedAssetsSignals;
-use crate::hooks::component_single::hook::BevyComponentSignletonSignals;
 // use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
-use crate::resource_sync::hook::ResourceSignals;
 use crate::{DioxusPanel, plugins::DioxusProps, systems::PanelUpdateKind};
 use async_std::task::sleep;
+use bevy_dioxus_hooks::{asset_single::hook::BevyWrappedAssetsSignals, component_single::hook::BevyComponentSignletonSignals, resource::hook::ResourceSignals};
+use bevy_dioxus_interop::{BevyCommandQueueTx, InfoRefershRateMS};
 use bevy_ecs::entity::Entity;
 use dioxus::prelude::*;
-
-/// refresh rate for info sent to dioxus.
-#[derive(Clone)]
-pub struct InfoRefershRateMS(pub u64);
 
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
@@ -20,6 +15,7 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
     let refresh_rate_ms = 1000 / props.fps.clone();
 
     let _info_refresh_rate = use_context_provider(|| InfoRefershRateMS(refresh_rate_ms.into()));
+    let _command_queue_tx = use_context_provider(|| BevyCommandQueueTx(props.command_queues_tx.clone()));
     let register_updates = use_context_provider(|| props);
 
     let _resource_registers = use_context_provider(|| ResourceSignals::default());

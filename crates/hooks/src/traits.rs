@@ -4,6 +4,7 @@
 //! is what we do to side step that...
 
 use bevy_asset::{Asset, Handle};
+use bevy_dioxus_interop::BoxAnyTypeMap;
 use bevy_ecs::{component::Component, resource::Resource};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
@@ -11,19 +12,6 @@ use dioxus::core::Element;
 use std::{
     any::{type_name, Any, TypeId}, collections::HashMap, fmt::Debug, ops::Deref, sync::Arc
 };
-
-/// An untyped hashmap that resolved typed entries by their type id.
-pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
-
-pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
-
-
-/// marks a struct as a Dioxus element.
-/// used to statically typed dioxus [`Element`]s
-pub trait DioxusElementMarker: 'static + Sync + Send + Debug {
-    //const ELEMENT_FUNCTION: fn() -> Element;
-    fn element(&self) -> Element;
-}
 
 pub trait ErasedSubGenericResourcecMap
 where
@@ -44,33 +32,6 @@ where
         let value = map.get_mut(&TypeId::of::<T>())?;
 
         value.downcast_mut::<Self::Generic<T>>()
-    }
-    fn extend(&mut self, value: Self) {
-        let map = TransparentWrapper::peel_mut(self);
-        let value = TransparentWrapper::peel(value);
-        map.extend(value);
-    }
-}
-
-pub trait ErasedSubGenericMap
-where
-    Self: TransparentWrapper<ArcAnytypeMap> + Sized,
-{
-    type Generic<T: Send + Sync + 'static>: Send + Sync + 'static;
-    fn insert<T: Send + Sync + 'static>(&mut self, value: Self::Generic<T>) {
-        let map = TransparentWrapper::peel_mut(self);
-        let erased: Arc<dyn Any + Send + Sync> = Arc::new(value);
-        map.insert(TypeId::of::<T>(), erased);
-    }
-
-    fn get<T: Send + Sync + 'static>(&mut self) -> Option<Arc<Self::Generic<T>>> {
-        let map = TransparentWrapper::peel_mut(self);
-
-        let value = map.get(&TypeId::of::<T>())?.clone();
-        value
-            .downcast::<Self::Generic<T>>()
-            .inspect_err(|err| warn!("could not downcast: {:#}: {:#?}", type_name::<T>(), err))
-            .ok()
     }
     fn extend(&mut self, value: Self) {
         let map = TransparentWrapper::peel_mut(self);

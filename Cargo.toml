@@ -1,5 +1,9 @@
-[workspace.package]
+[package]
 name = "bevy_dioxus_sync"
+version.workspace = true
+edition.workspace = true
+
+[workspace.package]
 version = "0.1.0-rc.1"
 edition = "2024"
 
@@ -15,9 +19,11 @@ dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731d
 dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
 
 bevy_dioxus_render = {path = "./crates/render"}
-bevy_dioxus_interop = {path = "./crates/interop"}
 bevy_dioxus_hooks = {path = "./crates/hooks"}
+bevy_dioxus_interop = {path = "./crates/interop"}
+bevy_dioxus_events = {path = "./crates/events"}
 
+bevy = {version = "0.16"}
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
 bevy_app = {version = "0.16"}
@@ -52,6 +58,28 @@ crossbeam-channel = "0.5"
 wgpu = "24"
 wgpu-types = "24"
 
-# [dev-dependencies]
-# bevy = {version = "0.16", features = ["dynamic_linking"]}
+[dependencies]
+bevy_dioxus_render = {workspace = true}
+bevy_dioxus_hooks = {workspace = true}
+bevy_dioxus_interop = {workspace = true}
+bevy_dioxus_events = {workspace = true}
+
+bevy_input = {workspace = true}
+bevy_log = {workspace = true}
+bevy_time = {workspace = true}
+bevy_app = {workspace = true}
+bevy_ecs = {workspace = true}
+
+async-std = {workspace = true}
+crossbeam-channel = {workspace = true}
+bytemuck = {workspace = true}
+
+blitz-dom = {workspace = true}
+dioxus = {workspace = true}
+dioxus-native-dom = {workspace = true}
+
+[dev-dependencies]
+bevy = {workspace = true, features = ["dynamic_linking"]}
+bevy_color = {workspace = true}
+bevy_transform = {workspace = true}
 # paste = "1.0"

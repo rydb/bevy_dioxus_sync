@@ -1,13 +1,13 @@
 use bevy_app::Update;
 use bevy_asset::prelude::*;
+use bevy_dioxus_interop::{add_systems_through_world, BevyRxChannel, BevyTxChannel};
 use bevy_ecs::prelude::*;
 use std::{any::type_name, marker::PhantomData, ops::Deref};
 
-use super::{
-    BevyRxChannel, BevyTxChannel, add_systems_through_world, hooks::asset_single::AssetWithHandle,
-};
 use bevy_log::warn;
 use crossbeam_channel::{Receiver, Sender};
+
+use crate::asset_single::AssetWithHandle;
 
 /// Command to register dioxus bevy interop for a given resource.
 pub(crate) struct RequestBevyWrappedAsset<T, U, V>

@@ -5,8 +5,11 @@ use bevy_dioxus_sync::plugins::DioxusPlugin;
 
 use crate::bevy_scene_plugin::BevyScenePlugin;
 
+
+mod ui;
+mod bevy_scene_plugin;
+
 fn main() {
-    println!("test change");
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DioxusPlugin {

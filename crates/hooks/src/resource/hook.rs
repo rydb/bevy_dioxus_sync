@@ -1,20 +1,21 @@
 use std::fmt::Display;
 
 use async_std::task::sleep;
-use bevy_ecs::world::CommandQueue;
+use bevy_dioxus_interop::{BevyCommandQueueTx, BoxAnyTypeMap, InfoRefershRateMS};
+use bevy_ecs::{prelude::*, world::CommandQueue};
+use bevy_log::warn;
+use bytemuck::TransparentWrapper;
+use crossbeam_channel::{Receiver, Sender};
 use dioxus::{
     core::use_hook,
     hooks::{use_context, use_future},
     signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
 };
 
-use crate::{
-    plugins::DioxusProps, resource_sync::command::RequestBevyResource,
-    traits::ErasedSubGenericResourcecMap, ui::InfoRefershRateMS, *,
-};
+use crate::{resource::command::RequestBevyResource, traits::ErasedSubGenericResourcecMap};
 
 fn request_resource_channel<T: Resource + Clone>(
-    props: DioxusProps,
+    command_queue_tx: BevyCommandQueueTx,
     mut signal_registry: WriteLock<
         '_,
         ResourcesErased,
@@ -22,6 +23,7 @@ fn request_resource_channel<T: Resource + Clone>(
         SignalSubscriberDrop<ResourcesErased, UnsyncStorage>,
     >,
 ) -> SyncSignal<BevyRes<T>> {
+
     let mut commands = CommandQueue::default();
 
     let command = RequestBevyResource::<T>::new();
@@ -37,8 +39,7 @@ fn request_resource_channel<T: Resource + Clone>(
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ = props
-        .command_queues_tx
+    let _ = command_queue_tx.0
         .send(commands)
         .inspect_err(|err| warn!("{:#}", err));
 
@@ -51,10 +52,10 @@ pub struct ResourceSignals(Signal<ResourcesErased>);
 
 /// requests a resource from bevy.
 pub fn use_bevy_resource<T: Resource + Clone + Display>() -> SyncSignal<BevyRes<T>> {
-    let props = use_context::<DioxusProps>();
     let refresh_rate = use_context::<InfoRefershRateMS>();
 
     let mut resource_signals = use_context::<ResourceSignals>();
+    let command_queue_tx = use_context::<BevyCommandQueueTx>();
 
     let signal = use_hook(|| {
         let mut map_erased = resource_signals.0.write();
@@ -63,7 +64,7 @@ pub fn use_bevy_resource<T: Resource + Clone + Display>() -> SyncSignal<BevyRes<
         let signal = if let Some(signal) = value {
             signal.clone()
         } else {
-            request_resource_channel(props.clone(), map_erased)
+            request_resource_channel(command_queue_tx, map_erased)
         };
         signal
     });

@@ -2,6 +2,7 @@ use std::{any::type_name, ops::Deref};
 
 use async_std::task::sleep;
 use bevy_asset::prelude::*;
+use bevy_dioxus_interop::{BevyCommandQueueTx, BoxAnyTypeMap, InfoRefershRateMS};
 use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
@@ -11,13 +12,7 @@ use dioxus::{
     signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
 };
 
-use super::{
-    BoxAnyTypeMap,
-    hooks::asset_single::{BevyWrappedAsset, command::RequestBevyWrappedAsset},
-    plugins::DioxusProps,
-    traits::ErasedSubGenericAssetsMap,
-    ui::InfoRefershRateMS,
-};
+use crate::{asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, traits::ErasedSubGenericAssetsMap};
 
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
@@ -34,7 +29,7 @@ impl ErasedSubGenericAssetsMap for BevyWrappedAssetsErased {
 pub struct BevyWrappedAssetsSignals(Signal<BevyWrappedAssetsErased>);
 
 fn request_asset_channel<T, U, V>(
-    props: DioxusProps,
+    command_queue_tx: BevyCommandQueueTx,
     mut signal_registry: WriteLock<
         '_,
         BevyWrappedAssetsErased,
@@ -47,6 +42,7 @@ where
     U: Asset + Clone,
     V: Component,
 {
+
     let mut commands = CommandQueue::default();
 
     let command = RequestBevyWrappedAsset::<T, U, V>::new();
@@ -62,7 +58,7 @@ where
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ = props.command_queues_tx.send(commands).inspect_err(|err| {
+    let _ = command_queue_tx.0.send(commands).inspect_err(|err| {
         warn!(
             "could not send command for {:#}: {:#}",
             type_name::<T>(),
@@ -80,9 +76,9 @@ where
     U: Asset + Clone,
     V: Component,
 {
-    let props = use_context::<DioxusProps>();
     let refresh_rate = use_context::<InfoRefershRateMS>();
 
+    let command_queue_tx = use_context::<BevyCommandQueueTx>();
     let mut signals_register = use_context::<BevyWrappedAssetsSignals>();
 
     let signal = use_hook(|| {
@@ -92,7 +88,7 @@ where
         let signal = if let Some(signal) = value {
             signal.clone()
         } else {
-            request_asset_channel::<T, U, V>(props.clone(), map_erased)
+            request_asset_channel::<T, U, V>(command_queue_tx, map_erased)
         };
         signal
     });

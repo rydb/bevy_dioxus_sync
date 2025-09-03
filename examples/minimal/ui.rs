@@ -1,13 +1,7 @@
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_color::Color;
-use bevy_dioxus_sync::{
-    hooks::{
-        asset_single::hook::use_bevy_asset_singleton,
-        component_single::hook::use_bevy_component_singleton,
-    },
-    resource_sync::hook::use_bevy_resource,
-    traits::DioxusElementMarker,
-};
+use bevy_dioxus_hooks::{asset_single::hook::use_bevy_asset_singleton, component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource};
+use bevy_dioxus_sync::DioxusElementMarker;
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
 

@@ -1,85 +1,88 @@
-use bevy_ecs::{
-    component::{ComponentHooks, Immutable, StorageType},
-    prelude::*,
-    schedule::ScheduleLabel,
-    system::ScheduleSystem,
-};
-use bevy_log::warn;
+use std::{any::{Any, TypeId}, collections::HashMap, sync::Arc};
+
+use bevy_ecs::{prelude::*, schedule::ScheduleLabel, system::ScheduleSystem, world::CommandQueue};
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
-use std::{
-    any::{Any, TypeId, type_name},
-    collections::HashMap,
-    sync::Arc,
-};
+use dioxus::signals::Signal;
 
-use crate::{
-    systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind},
-    traits::{DioxusElementMarker, ErasedSubGenericMap},
-};
+use crate::traits::ErasedSubGenericMap;
 
+pub mod traits;
 pub mod plugins;
-pub(crate) mod systems;
-pub mod ui;
+
+/// Bevy side channel for giving [`T`] to dioxus
+#[derive(Resource)]
+pub struct BevyTxChannel<T>(pub Sender<T>);
+
+/// Dioxus side channel for receiving [`T`] from bevy.
+#[derive(Resource)]
+pub struct BevyRxChannel<T>(pub Receiver<T>);
+
+/// Dioxus side channel for sending [`T`] to bevy
+pub struct DioxusTxChannel<T>(pub Sender<T>);
+
+/// Bevy side channel for receiving [`T`] from dioxus.
+#[derive(Resource)]
+pub struct DioxusRxChannel<T>(pub Receiver<T>);
+
+#[derive(Resource)]
+pub struct DioxusCommandQueueRx(pub Receiver<CommandQueue>);
 
 
-pub struct SenderReceiver<T: Send + Sync + 'static> {
-    pub sender: Sender<T>,
-    pub receiver: Receiver<T>,
+/// An untyped hashmap that resolved typed entries by their type id.
+pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
+
+pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
+
+
+#[derive(Clone, Default, Debug, TransparentWrapper)]
+#[repr(transparent)]
+pub struct TxChannelRegistry(ArcAnytypeMap);
+
+impl ErasedSubGenericMap for TxChannelRegistry {
+    type Generic<T: Send + Sync + 'static> = Sender<T>;
 }
 
+#[derive(Clone, Default, Debug, TransparentWrapper)]
+#[repr(transparent)]
+pub struct RxChannelRegistry(ArcAnytypeMap);
 
-/// Component that marks an entity as a dioxus panel
-#[derive(Clone, Debug)]
-pub struct DioxusPanel {
-    pub(crate) element_marker: Arc<dyn DioxusElementMarker>,
+impl ErasedSubGenericMap for RxChannelRegistry {
+    type Generic<T: Send + Sync + 'static> = Receiver<T>;
 }
 
-impl DioxusPanel {
-    pub fn new<T: DioxusElementMarker>(element: T) -> Self {
-        Self {
-            element_marker: Arc::new(element),
-        }
+pub struct BevyDioxusIO<B, D = B> {
+    pub bevy_tx: Sender<B>,
+    pub bevy_rx: Receiver<D>,
+    pub dioxus_tx: Sender<D>,
+    pub dioxus_rx: Receiver<B>,
+}
+
+pub fn add_systems_through_world<T>(
+    world: &mut World,
+    schedule: impl ScheduleLabel,
+    systems: impl IntoScheduleConfigs<ScheduleSystem, T>,
+) {
+    let mut schedules = world.get_resource_mut::<Schedules>().unwrap();
+    if let Some(schedule) = schedules.get_mut(schedule) {
+        schedule.add_systems(systems);
     }
 }
 
-impl Component for DioxusPanel {
-    const STORAGE_TYPE: StorageType = StorageType::Table;
+#[derive(Clone)]
+pub struct BevyCommandQueueTx(pub Sender<CommandQueue>);
 
-    /// to change the panel on this entity, insert a new one.
-    type Mutability = Immutable;
+/// refresh rate for info sent to dioxus.
+#[derive(Clone)]
+pub struct InfoRefershRateMS(pub u64);
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, hook| {
-            let Some(value) = world.entity(hook.entity).get::<Self>() else {
-                warn!(
-                    "could not get {:#} on {:#}",
-                    type_name::<Self>(),
-                    hook.entity
-                );
-                return;
-            };
-            let value = value.clone();
-            let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            // warn!(
-            //     "pushing panel update for {:#} to {:#?}",
-            //     hook.entity,
-            //     PanelUpdateKind::Add(value.clone())
-            // );
-            panel_updates.0.push(PanelUpdate {
-                key: hook.entity,
-                value: PanelUpdateKind::Add(value),
-            })
-        });
-        hooks.on_remove(|mut world, hook| {
-            let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            panel_updates.0.push(PanelUpdate {
-                key: hook.entity,
-                value: PanelUpdateKind::Remove,
-            })
-        });
+pub fn read_dioxus_command_queues(world: &mut World) {
+    let receiver = world
+        .get_resource_mut::<DioxusCommandQueueRx>()
+        .unwrap()
+        .0
+        .clone();
+    while let Ok(mut command_queue) = receiver.try_recv() {
+        world.commands().append(&mut command_queue);
     }
 }
-pub struct ResourceUpdates {}
-
-pub type BoxSync = Box<dyn Any + Send + Sync + 'static>;

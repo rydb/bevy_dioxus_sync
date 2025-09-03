@@ -1,6 +1,7 @@
 use std::{any::type_name, marker::PhantomData};
 
 use async_std::task::sleep;
+use bevy_dioxus_interop::{BevyCommandQueueTx, BoxAnyTypeMap, InfoRefershRateMS};
 use bevy_ecs::{component::Mutable, prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
@@ -10,17 +11,18 @@ use dioxus::{
     signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
 };
 
-use crate::{component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, traits::{BoxAnyTypeMap, ErasedSubGenericComponentSingletonMap}};
+use crate::{component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, traits::{ErasedSubGenericComponentSingletonMap}};
 
 pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyComponentSingleton<T, U>>
 where
     T: Component<Mutability = Mutable> + Clone,
     U: Component,
 {
-    let props = use_context::<DioxusProps>();
+    //let props = use_context::<DioxusProps>();
     let refresh_rate = use_context::<InfoRefershRateMS>();
 
     let mut signals_register = use_context::<BevyComponentSignletonSignals>();
+    let command_queue_tx = use_context::<BevyCommandQueueTx>();
 
     let signal = use_hook(|| {
         let mut map_erased = signals_register.0.write();
@@ -29,7 +31,7 @@ where
         let signal = if let Some(signal) = value {
             signal.clone()
         } else {
-            request_component_channels(props.clone(), map_erased)
+            request_component_channels(command_queue_tx, map_erased)
         };
         signal
     });
@@ -53,7 +55,7 @@ where
 }
 
 fn request_component_channels<T, U>(
-    props: DioxusProps,
+    command_queue_tx: BevyCommandQueueTx,
     mut signal_registry: WriteLock<
         '_,
         ComponentsSingletonsErased,
@@ -81,7 +83,7 @@ where
     });
 
     signal_registry.insert(new_signal.clone());
-    let _ = props.command_queues_tx.send(commands).inspect_err(|err| {
+    let _ = command_queue_tx.0.send(commands).inspect_err(|err| {
         warn!(
             "could not request component channel for {:#}: {:#}",
             type_name::<T>(),
