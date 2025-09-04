@@ -3,7 +3,7 @@ use std::{any::{Any, TypeId}, collections::HashMap, sync::Arc};
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel, system::ScheduleSystem, world::CommandQueue};
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus::signals::Signal;
+use dioxus_signals::Signal;
 
 use crate::traits::ErasedSubGenericMap;
 

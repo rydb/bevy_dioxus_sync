@@ -1,0 +1,24 @@
+[package]
+name = "frontend"
+version.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+bevy_ecs = {workspace = true}
+bevy_app = {workspace = true}
+bevy_color = {workspace = true}
+bevy_asset = {workspace = true}
+bevy_pbr = {workspace = true}
+bevy_derive = {workspace = true}
+
+bevy_dioxus_hooks = {workspace = true}
+bevy_dioxus_sync = {workspace = true}
+bevy_transform = {workspace = true}
+
+dioxus = {workspace = true, features = ["html", "signals", "macro", "native"]}
+# dioxus-signals = {workspace = true}
+# dioxus-core-macro = {workspace = true}
+# # dioxus-elements = {workspace = true}
+# dioxus-core = {workspace = true}
+# dioxus = {workspace = true,features = ["desktop"]}

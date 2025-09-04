@@ -3,7 +3,7 @@ use bevy_input::{ButtonState, mouse::MouseButtonInput, prelude::*};
 use bevy_window::CursorMoved;
 use blitz_dom::Document;
 use blitz_traits::events::{BlitzMouseButtonEvent, MouseEventButton, MouseEventButtons, UiEvent};
-use dioxus::html::Modifiers;
+use dioxus_html::Modifiers;
 use dioxus_native::DioxusDocument;
 
 use super::does_catch_events;

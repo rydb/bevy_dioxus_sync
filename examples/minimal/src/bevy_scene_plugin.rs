@@ -3,11 +3,7 @@ use std::fmt::Display;
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use bevy_dioxus_sync::DioxusPanel;
-
-use crate::ui::AppUi;
-
-#[derive(Component)]
-pub struct DynamicCube;
+use frontend::ui::{AppUi, CubeRotationSpeed, CubeTranslationSpeed, DynamicCube, FPS};
 
 #[derive(Component)]
 pub struct OrbitCamera {
@@ -27,37 +23,6 @@ impl Default for OrbitCamera {
         }
     }
 }
-
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
-pub struct CubeTranslationSpeed(pub f32);
-
-impl Default for CubeTranslationSpeed {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
-
-impl Display for CubeTranslationSpeed {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
-pub struct CubeRotationSpeed(pub f32);
-
-impl Display for CubeRotationSpeed {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Default for CubeRotationSpeed {
-    fn default() -> Self {
-        Self(2.0)
-    }
-}
-
 pub struct BevyScenePlugin;
 
 impl Plugin for BevyScenePlugin {
@@ -110,15 +75,6 @@ fn setup(
         Name::new("MainCamera"),
         OrbitCamera::default(),
     ));
-}
-
-#[derive(Resource, Debug, Clone)]
-pub struct FPS(pub f32);
-
-impl Display for FPS {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
 }
 
 fn sync_with_ui(mut fps: ResMut<FPS>, time: Res<Time>) {

@@ -5,11 +5,9 @@ use bevy_dioxus_interop::{BevyCommandQueueTx, BoxAnyTypeMap, InfoRefershRateMS};
 use bevy_ecs::{component::Mutable, prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use dioxus::{
-    core::use_hook,
-    hooks::{use_context, use_future},
-    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
-};
+use dioxus_core::use_hook;
+use dioxus_hooks::{use_context, use_future};
+use dioxus_signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock};
 
 use crate::{component_single::{command::RequestBevyComponentSingleton, BevyComponentSingleton}, traits::{ErasedSubGenericComponentSingletonMap}};
 

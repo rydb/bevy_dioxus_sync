@@ -1,11 +1,60 @@
-use bevy::pbr::{MeshMaterial3d, StandardMaterial};
+use std::fmt::Display;
+
 use bevy_color::Color;
+use bevy_derive::{Deref, DerefMut};
+use bevy_asset::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_dioxus_hooks::{asset_single::hook::use_bevy_asset_singleton, component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource};
 use bevy_dioxus_sync::DioxusElementMarker;
+use bevy_pbr::prelude::*;
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
+// use dioxus_signals::*;
+// use dioxus_core::Element;
+// use dioxus_core_macro::{component, rsx};
 
-use crate::bevy_scene_plugin::{CubeRotationSpeed, CubeTranslationSpeed, DynamicCube, FPS};
+#[derive(Component)]
+pub struct DynamicCube;
+
+#[derive(Resource, Clone, Debug, Deref, DerefMut)]
+pub struct CubeTranslationSpeed(pub f32);
+
+#[derive(Resource, Debug, Clone)]
+pub struct FPS(pub f32);
+
+impl Display for FPS {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Default for CubeTranslationSpeed {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
+impl Display for CubeTranslationSpeed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Resource, Clone, Debug, Deref, DerefMut)]
+pub struct CubeRotationSpeed(pub f32);
+
+impl Display for CubeRotationSpeed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Default for CubeRotationSpeed {
+    fn default() -> Self {
+        Self(2.0)
+    }
+}
+
 
 #[derive(Debug)]
 pub struct AppUi;
@@ -24,9 +73,9 @@ pub fn app_ui() -> Element {
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
 
-    const DEMO_CSS: Asset = asset!("./examples/minimal/ui.css");
+    // const DEMO_CSS: dioxus::prelude::Asset = asset!("./src/ui.css");
     rsx! {
-        document::Stylesheet { href: DEMO_CSS }
+        // document::Stylesheet { href: DEMO_CSS }
         style { {include_str!("./ui.css")} }
         div {
             id: "panel",

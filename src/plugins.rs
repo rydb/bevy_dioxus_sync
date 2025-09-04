@@ -7,7 +7,7 @@ use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus::prelude::*;
+use dioxus_core::VirtualDom;
 use dioxus_native_dom::DioxusDocument;
 
 use crate::{

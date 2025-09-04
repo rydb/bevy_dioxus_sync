@@ -7,7 +7,7 @@ use bevy_input::{
 };
 use blitz_dom::*;
 use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
-use dioxus::prelude::*;
+use dioxus_html::*;
 use dioxus_native::*;
 
 pub(crate) fn handle_keyboard_events(

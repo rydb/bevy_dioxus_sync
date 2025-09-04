@@ -10,4 +10,4 @@ bevy_app = {workspace = true}
 crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true, features = ["derive"]}
 bevy_log = {workspace = true}
-dioxus = {workspace = true}
+dioxus-signals = {workspace = true}

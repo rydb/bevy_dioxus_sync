@@ -15,4 +15,6 @@ async-std = {workspace = true}
 crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true}
 
-dioxus = {workspace = true}
+dioxus-signals = {workspace = true}
+dioxus-hooks = {workspace = true}
+dioxus-core = {workspace = true}

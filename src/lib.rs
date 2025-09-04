@@ -19,7 +19,7 @@ use crate::{
 
 use std::fmt::Debug;
 
-use dioxus::core::Element;
+use dioxus_core::Element;
 
 pub mod plugins;
 pub(crate) mod systems;

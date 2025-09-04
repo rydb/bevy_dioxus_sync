@@ -6,11 +6,9 @@ use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus::{
-    core::use_hook,
-    hooks::{use_context, use_future},
-    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
-};
+use dioxus_core::use_hook;
+use dioxus_hooks::{use_context, use_future};
+use dioxus_signals::{Signal, SignalSubscriberDrop, SyncSignal, SyncStorage, UnsyncStorage, WritableExt, WriteLock};
 
 use crate::{resource::command::RequestBevyResource, traits::ErasedSubGenericResourcecMap};
 
@@ -73,7 +71,7 @@ pub fn use_bevy_resource<T: Resource + Clone + Display>() -> SyncSignal<BevyRes<
         // let value = props.clone();
         let refresh_rate = refresh_rate.clone();
         async move {
-            let mut signal: Signal<BevyRes<T>, dioxus::prelude::SyncStorage> = signal.clone();
+            let mut signal: Signal<BevyRes<T>, SyncStorage> = signal.clone();
             loop {
                 sleep(std::time::Duration::from_millis(refresh_rate.0)).await;
 

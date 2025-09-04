@@ -6,7 +6,6 @@ use bevy_dioxus_sync::plugins::DioxusPlugin;
 use crate::bevy_scene_plugin::BevyScenePlugin;
 
 
-mod ui;
 mod bevy_scene_plugin;
 
 fn main() {

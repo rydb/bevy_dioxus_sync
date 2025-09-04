@@ -1,0 +1,10 @@
+[package]
+name = "minimal"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy = {workspace = true}
+bevy_dioxus_sync = {workspace = true}
+dioxus = {workspace = true, features = ["native"]}
+frontend = {path = "./frontend"}

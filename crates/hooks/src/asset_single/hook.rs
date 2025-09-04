@@ -6,11 +6,9 @@ use bevy_dioxus_interop::{BevyCommandQueueTx, BoxAnyTypeMap, InfoRefershRateMS};
 use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use dioxus::{
-    core::use_hook,
-    hooks::{use_context, use_future},
-    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
-};
+use dioxus_core::use_hook;
+use dioxus_hooks::{use_context, use_future};
+use dioxus_signals::{Signal, SignalSubscriberDrop, SyncSignal, SyncStorage, UnsyncStorage, WritableExt, WriteLock};
 
 use crate::{asset_single::{command::RequestBevyWrappedAsset, BevyWrappedAsset}, traits::ErasedSubGenericAssetsMap};
 
@@ -96,7 +94,7 @@ where
     use_future(move || {
         let refresh_rate = refresh_rate.clone();
         async move {
-            let mut signal: Signal<BevyWrappedAsset<T, U>, dioxus::prelude::SyncStorage> =
+            let mut signal: Signal<BevyWrappedAsset<T, U>, SyncStorage> =
                 signal.clone();
             loop {
                 sleep(std::time::Duration::from_millis(refresh_rate.0)).await;

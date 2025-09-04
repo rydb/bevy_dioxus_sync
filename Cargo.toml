@@ -9,20 +9,27 @@ edition = "2024"
 
 [workspace]
 members = [
-    "crates/*"
+    "crates/*",
+    "examples/*"
 ]
 resolver = "3"
 
 [workspace.dependencies]
-dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
-dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "80731da"}
+# TODO: disable mandatory tracing once: https://github.com/DioxusLabs/dioxus/issues/4641 is resolved
+dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false, features = ["tracing", "hot-reload", "net"]}
+dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus-signals = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus-hooks = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus-core = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus-html = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus-core-macro = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
 
+bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
 bevy_dioxus_hooks = {path = "./crates/hooks"}
 bevy_dioxus_interop = {path = "./crates/interop"}
 bevy_dioxus_events = {path = "./crates/events"}
-
 bevy = {version = "0.16"}
 bevy_ecs = {version = "0.16"}
 bevy_render = {version = "0.16"}
@@ -42,14 +49,15 @@ bevy_picking = {version = "0.16"}
 bevy_derive = {version = "0.16"}
 bevy_color = {version = "0.16"}
 bevy_sprite = {version = "0.16"}
+bevy_pbr = {version = "0.16"}
 bevy_core_pipeline = {version = "0.16"}
 vello = {version = "0.5"}
 rustc-hash = "1"
 bytemuck = "1.23"
-anyrender_vello = {version = "0.5"}
-blitz-net = { version = "=0.1.0" }
-blitz-paint = { version = "=0.1.0" }
-blitz-traits = { version = "=0.1.0" }
+anyrender_vello = {version = "0.5", default-features = false}
+blitz-net = { version = "=0.1.0", default-features = false}
+blitz-paint = { version = "=0.1.0", default-features = false}
+blitz-traits = { version = "=0.1.0", default-features = false}
 blitz-dom = { version = "=0.1.0", default-features = false }
 blitz-shell = { version = "=0.1.0", default-features = false }
 
@@ -75,11 +83,8 @@ crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true}
 
 blitz-dom = {workspace = true}
-dioxus = {workspace = true}
+dioxus-core = {workspace = true}
 dioxus-native-dom = {workspace = true}
-
-[dev-dependencies]
-bevy = {workspace = true, features = ["dynamic_linking"]}
-bevy_color = {workspace = true}
-bevy_transform = {workspace = true}
-# paste = "1.0"
+dioxus-signals = {workspace = true}
+dioxus-hooks = {workspace = true}
+dioxus-core-macro = {workspace = true}
