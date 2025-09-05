@@ -65,6 +65,8 @@ impl DioxusElementMarker for AppUi {
     }
 }
 
+pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
+
 #[component]
 pub fn app_ui() -> Element {
     let fps = use_bevy_resource::<FPS>();
@@ -74,6 +76,11 @@ pub fn app_ui() -> Element {
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
 
     // const DEMO_CSS: dioxus::prelude::Asset = asset!("./src/ui.css");
+
+
+    // .enumerate()
+    // .map(|(i, n)| format!("{:#}", QUAT_CHAR_INDEX[i], n) );
+
     rsx! {
         // document::Stylesheet { href: DEMO_CSS }
         style { {include_str!("./ui.css")} }
@@ -82,7 +89,11 @@ pub fn app_ui() -> Element {
             class: "catch-events",
             div {
                 id: "title",
-                h1 { "Dioxus In Bevy Example" }
+                h1 {
+                   u {  
+                    "Dioxus In Bevy Example"
+                   } 
+                }
             }
             div {
                 id: "buttons",
@@ -109,9 +120,23 @@ pub fn app_ui() -> Element {
                 }
             }
             div {
-                id: "cube-rotation",
+                id: "rotation-display",
                 label {
-                    {"Cube Rotation: ".to_string() + &cube_transform.read().read_component().map(|n| format!("{:#}", n.rotation)).unwrap_or("???".to_string())}
+                    {"Cube Rotation: ".to_string()}
+                }
+                label {
+                    class: "bevy-display",
+                    {
+                        let xyzw = &cube_transform.read().read_component().map(|n| n.rotation)
+                        .map(|n| n.to_array())
+                        .map(|n| {
+                            n.iter()
+                            .enumerate()
+                            .map(|(i, n)| format!("{:#}: {:.2} ", QUAT_CHAR_INDEX[i], n)).collect::<String>()
+                        }).unwrap_or("???".to_string());
+
+                        {xyzw.to_string()}
+                    }  
                 }
             }
             div {
@@ -122,7 +147,9 @@ pub fn app_ui() -> Element {
                     min: "0.0",
                     max: "10.0",
                     step: "0.1",
-                    value: "{cube_translation_speed}",
+                    value: {
+                        (&cube_translation_speed.read().read_resource().as_ref().map(|n| format!("{:.2}", n.0)).unwrap_or("???".to_string())).to_string()
+                    },
                     oninput: move |event| {
                         if let Ok(speed) = event.value().parse::<f32>() {
                             cube_translation_speed.peek().set_resource(CubeTranslationSpeed(speed));

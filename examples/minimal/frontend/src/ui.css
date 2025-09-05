@@ -25,6 +25,7 @@ html, body, #main {
     flex-direction: row;
     justify-content: space-evenly;
     align-items: center;
+    text-decoration: underline rgb(245, 60, 214) double 10px;
 }
 
 #buttons {
@@ -66,8 +67,18 @@ html, body, #main {
     display: flex;
     flex-direction: row;
     align-items: start;
-    padding: 20px;
+    padding: 1px;
     gap: 10px;
+    column-gap: 40px;
+}
+
+#rotation-display {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    padding: 1px;
+    gap: 10px;
+    column-gap: 40px;
 }
 
 input[type="number"] {
@@ -84,6 +95,22 @@ input[type="number"] {
     padding: 0 10px;
     outline: none;
     margin-left: auto;
+}
+
+.bevy-display {
+    width: 15em;
+    height: 1.5em;
+    line-height: 1.5em;
+    background: #444;
+    border: 2px solid #666;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 2px 3px;
+    outline: none;
+    margin-left: auto;
+
 }
 
 #footer {
