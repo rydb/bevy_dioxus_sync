@@ -76,7 +76,7 @@ html, body, #main {
     display: flex;
     flex-direction: row;
     align-items: start;
-    padding: 1px;
+    padding: 10px;
     gap: 10px;
     column-gap: 40px;
 }

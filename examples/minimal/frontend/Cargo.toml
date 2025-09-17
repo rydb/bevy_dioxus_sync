@@ -16,7 +16,7 @@ bevy_dioxus_hooks = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
 bevy_transform = {workspace = true}
 
-dioxus = {workspace = true, features = ["html", "signals", "macro", "native"]}
+dioxus = {workspace = true, features = ["html", "signals", "macro", "native", "asset", "document"]}
 # dioxus-signals = {workspace = true}
 # dioxus-core-macro = {workspace = true}
 # # dioxus-elements = {workspace = true}

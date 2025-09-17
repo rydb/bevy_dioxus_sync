@@ -16,14 +16,14 @@ resolver = "3"
 
 [workspace.dependencies]
 # TODO: disable mandatory tracing once: https://github.com/DioxusLabs/dioxus/issues/4641 is resolved
-dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false, features = ["tracing", "hot-reload", "net"]}
-dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
-dioxus-signals = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
-dioxus-hooks = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
-dioxus-core = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
-dioxus-html = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
-dioxus-core-macro = {git = "https://github.com/DioxusLabs/dioxus", rev = "5ebde96", default-features = false}
+dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus-signals = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus-hooks = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus-core = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus-html = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
+dioxus-core-macro = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
 
 bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
