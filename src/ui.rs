@@ -19,6 +19,8 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
 
     let _info_refresh_rate = use_context_provider(|| InfoRefershRateMS(refresh_rate_ms.into()));
     let _command_queue_tx = use_context_provider(|| BevyCommandQueueTx(props.command_queues_tx.clone()));
+    let main_window_ui = props.main_window_ui.clone();
+
     let register_updates = use_context_provider(|| props);
 
     let _resource_registers = use_context_provider(|| ResourceSignals::default());
@@ -54,8 +56,9 @@ pub fn dioxus_app(props: DioxusProps) -> Element {
             }
         }
     });
-
+    
     rsx! {
+        {main_window_ui.map(|n| n())},
         for (_, panel_kind) in dioxus_panels.0.read().clone() {
             {panel_kind.element_marker.as_ref().element()}
         }

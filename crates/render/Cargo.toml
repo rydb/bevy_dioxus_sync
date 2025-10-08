@@ -7,6 +7,7 @@ edition.workspace = true
 bevy_app = {workspace = true}
 bevy_render = {workspace = true}
 bevy_log = {workspace = true}
+bevy_mesh = {workspace = true}
 bevy_core_pipeline = {workspace = true}
 bevy_image = {workspace = true}
 bevy_asset = {workspace = true}
@@ -15,7 +16,9 @@ bevy_transform = {workspace = true}
 bevy_ecs = {workspace = true}
 bevy_derive = {workspace = true}
 bevy_math = {workspace = true}
+bevy_sprite_render = {workspace = true}
 bevy_window = {workspace = true}
+bevy_camera = {workspace = true}
 bevy_utils = {workspace = true}
 
 rustc-hash = {workspace = true}

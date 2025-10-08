@@ -1,15 +1,10 @@
 use bevy_ecs::{
-    component::{ComponentHooks, Immutable, StorageType},
-    prelude::*,
-    schedule::ScheduleLabel,
-    system::ScheduleSystem,
+    component::{Component, Immutable, StorageType}, 
 };
 use bevy_log::warn;
-use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use std::{
-    any::{Any, TypeId, type_name},
-    collections::HashMap,
+    any::{Any, type_name},
     sync::Arc,
 };
 
@@ -58,37 +53,6 @@ impl Component for DioxusPanel {
 
     /// to change the panel on this entity, insert a new one.
     type Mutability = Immutable;
-
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, hook| {
-            let Some(value) = world.entity(hook.entity).get::<Self>() else {
-                warn!(
-                    "could not get {:#} on {:#}",
-                    type_name::<Self>(),
-                    hook.entity
-                );
-                return;
-            };
-            let value = value.clone();
-            let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            // warn!(
-            //     "pushing panel update for {:#} to {:#?}",
-            //     hook.entity,
-            //     PanelUpdateKind::Add(value.clone())
-            // );
-            panel_updates.0.push(PanelUpdate {
-                key: hook.entity,
-                value: PanelUpdateKind::Add(value),
-            })
-        });
-        hooks.on_remove(|mut world, hook| {
-            let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            panel_updates.0.push(PanelUpdate {
-                key: hook.entity,
-                value: PanelUpdateKind::Remove,
-            })
-        });
-    }
 }
 pub struct ResourceUpdates {}
 

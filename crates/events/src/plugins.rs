@@ -1,7 +1,7 @@
 use bevy_app::Plugin;
 use bevy_app::PreUpdate;
 use bevy_ecs::schedule::IntoScheduleConfigs;
-use bevy_input::InputSystem;
+use bevy_input::InputSystems;
 
 use super::{
     keyboard::handle_keyboard_events, mouse::handle_mouse_events, window::handle_window_resize,
@@ -15,8 +15,8 @@ impl Plugin for DioxusEventSyncPlugin {
             PreUpdate,
             (
                 handle_window_resize,
-                handle_mouse_events.after(InputSystem),
-                handle_keyboard_events.after(InputSystem),
+                handle_mouse_events.after(InputSystems),
+                handle_keyboard_events.after(InputSystems),
             )
                 .chain(),
         );

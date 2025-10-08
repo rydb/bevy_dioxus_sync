@@ -6,10 +6,9 @@
 use bevy_asset::{Asset, Handle};
 use bevy_dioxus_interop::BoxAnyTypeMap;
 use bevy_ecs::{component::Component, resource::Resource};
-use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use std::{
-    any::{type_name, Any, TypeId}, collections::HashMap, fmt::Debug, ops::Deref, sync::Arc
+    any::TypeId, ops::Deref, 
 };
 
 pub trait ErasedSubGenericResourcecMap

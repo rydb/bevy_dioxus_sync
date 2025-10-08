@@ -1,11 +1,14 @@
+use std::time::Instant;
+
 use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
-use bevy_core_pipeline::core_2d::Camera2d;
+use bevy_camera::{Camera, Camera2d};
 use bevy_derive::Deref;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_log::debug;
 use bevy_math::prelude::*;
+use bevy_mesh::{Mesh, Mesh2d};
 use bevy_render::{
     Extract,
     prelude::*,
@@ -15,6 +18,7 @@ use bevy_render::{
     texture::GpuImage,
 };
 use bevy_sprite::prelude::*;
+use bevy_sprite_render::{ColorMaterial, MeshMaterial2d};
 use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
@@ -29,7 +33,10 @@ use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
-
+ 
+/// placeholder const for dioxus animations
+/// TODO: implement this
+pub const ANIMATION_TIME_PLACEHOLDER: f32 = 0.0;
 pub mod plugins;
 
 #[derive(Resource)]
@@ -130,6 +137,9 @@ impl render_graph::Node for TextureGetterNodeDriver {
     }
 }
 
+#[derive(Resource)]
+struct AnimationTime(Instant);
+
 fn update_ui(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
     waker: NonSendMut<std::task::Waker>,
@@ -137,6 +147,7 @@ fn update_ui(
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
     receiver: Res<MainWorldReceiver>,
+    animation_epoch: Res<AnimationTime>,
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
     while let Ok(texture) = receiver.try_recv() {
@@ -149,28 +160,20 @@ fn update_ui(
         dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
 
         // Refresh the document
-        dioxus_doc.resolve();
+        let animation_time = animation_epoch.0.elapsed().as_secs_f64();
+        dioxus_doc.resolve(animation_time);
 
-        // Create a `VelloScenePainter` to paint into
-        let mut custom_paint_sources =
-            FxHashMap::<u64, Box<dyn CustomPaintSource + 'static>>::default();
-        let mut scene_painter = VelloScenePainter {
-            inner: Scene::new(),
-            renderer: &mut vello_renderer,
-            custom_paint_sources: &mut custom_paint_sources,
-        };
+        // Create a `vello::Scene` to paint into
+        let mut scene = Scene::new();
 
         // Paint the document
         paint_scene(
-            &mut scene_painter,
+            &mut VelloScenePainter::new(&mut scene),
             &dioxus_doc,
             SCALE_FACTOR as f64,
             texture.width,
             texture.height,
         );
-
-        // Extract the `vello::Scene` from the `VelloScenePainter`
-        let scene = scene_painter.finish();
 
         // Render the `vello::Scene` to the Texture using the `VelloRenderer`
         vello_renderer
@@ -196,6 +199,7 @@ fn setup_ui(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut images: ResMut<Assets<Image>>,
     mut dioxus_doc: NonSendMut<DioxusDocument>,
+    mut animation_epoch: ResMut<AnimationTime>,
     windows: Query<&Window>,
 ) {
     let window = windows
@@ -208,8 +212,9 @@ fn setup_ui(
     debug!("Initial window size: {}x{}", width, height);
 
     // Set the initial viewport
+    animation_epoch.0 = Instant::now();
     dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-    dioxus_doc.resolve();
+    dioxus_doc.resolve(0.0);
 
     // Create Bevy Image from the texture data
     let image = create_ui_texture(width, height);

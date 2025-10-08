@@ -16,55 +16,59 @@ resolver = "3"
 
 [workspace.dependencies]
 # TODO: disable mandatory tracing once: https://github.com/DioxusLabs/dioxus/issues/4641 is resolved
-dioxus-native = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus-signals = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus-hooks = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus-core = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus-html = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-dioxus-core-macro = {git = "https://github.com/DioxusLabs/dioxus", rev = "eef4db67b1164934eb29b7ac4d4bcd693bba25a5", default-features = false}
-
+dioxus-native = {version = "0.7.0-rc.1", default-features = false}
+dioxus-native-dom = {version = "0.7.0-rc.1", default-features = false}
+dioxus = {version = "0.7.0-rc.1", default-features = false}
+dioxus-signals = {version = "0.7.0-rc.1", default-features = false}
+dioxus-hooks = {version = "0.7.0-rc.1", default-features = false}
+dioxus-core = {version = "0.7.0-rc.1", default-features = false}
+dioxus-html = {version = "0.7.0-rc.1", default-features = false}
+dioxus-core-macro = {version = "0.7.0-rc.1", default-features = false}
 bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
 bevy_dioxus_hooks = {path = "./crates/hooks"}
 bevy_dioxus_interop = {path = "./crates/interop"}
 bevy_dioxus_events = {path = "./crates/events"}
-bevy = {version = "0.16"}
-bevy_ecs = {version = "0.16"}
-bevy_render = {version = "0.16"}
-bevy_app = {version = "0.16"}
-bevy_transform = {version = "0.16"}
-bevy_mesh = {version = "0.16"}
-bevy_utils = {version = "0.16"}
-bevy_window = {version = "0.16"}
-bevy_math = {version = "0.16"}
-bevy_winit = {version = "0.16"}
-bevy_asset = {version = "0.16"}
-bevy_log = {version = "0.16"}
-bevy_input = {version = "0.16"}
-bevy_time = {version = "0.16"}
-bevy_image = {version = "0.16"}
-bevy_picking = {version = "0.16"}
-bevy_derive = {version = "0.16"}
-bevy_color = {version = "0.16"}
-bevy_sprite = {version = "0.16"}
-bevy_pbr = {version = "0.16"}
-bevy_core_pipeline = {version = "0.16"}
-vello = {version = "0.5"}
+bevy = {version = "0.17"}
+bevy_ecs = {version = "0.17"}
+bevy_render = {version = "0.17"}
+bevy_app = {version = "0.17"}
+bevy_transform = {version = "0.17"}
+bevy_mesh = {version = "0.17"}
+bevy_utils = {version = "0.17"}
+bevy_window = {version = "0.17"}
+bevy_math = {version = "0.17"}
+bevy_winit = {version = "0.17"}
+bevy_asset = {version = "0.17"}
+bevy_log = {version = "0.17"}
+bevy_input = {version = "0.17"}
+bevy_time = {version = "0.17"}
+bevy_image = {version = "0.17"}
+bevy_picking = {version = "0.17"}
+bevy_derive = {version = "0.17"}
+bevy_color = {version = "0.17"}
+bevy_sprite = {version = "0.17"}
+bevy_pbr = {version = "0.17"}
+bevy_core_pipeline = {version = "0.17"}
+bevy_tasks = {version = "0.17"}
+bevy_camera = {version = "0.17"}
+bevy_sprite_render = {version = "0.17"}
+vello = {version = "0.6"}
 rustc-hash = "1"
 bytemuck = "1.23"
-anyrender_vello = {version = "0.5", default-features = false}
-blitz-net = { version = "=0.1.0", default-features = false}
-blitz-paint = { version = "=0.1.0", default-features = false}
-blitz-traits = { version = "=0.1.0", default-features = false}
-blitz-dom = { version = "=0.1.0", default-features = false }
-blitz-shell = { version = "=0.1.0", default-features = false }
+
+anyrender_vello = {version = "0.6", default-features = false}
+blitz-net = { version = "=0.2", default-features = false}
+blitz-paint = { version = "=0.2", default-features = false}
+blitz-traits = { version = "=0.2", default-features = false}
+blitz-dom = { version = "=0.2", default-features = false }
+blitz-shell = { version = "=0.2", default-features = false }
+blitz-html = {version = "=0.2", default-features = false}
 
 async-std = "1.13"
 crossbeam-channel = "0.5"
-wgpu = "24"
-wgpu-types = "24"
+wgpu = "26"
+wgpu-types = "26"
 
 [dependencies]
 bevy_dioxus_render = {workspace = true}
@@ -77,12 +81,21 @@ bevy_log = {workspace = true}
 bevy_time = {workspace = true}
 bevy_app = {workspace = true}
 bevy_ecs = {workspace = true}
+bevy_tasks = {workspace = true}
+bevy_utils = {workspace = true}
+bevy_math = {workspace = true}
+bevy_derive = {workspace = true}
+bevy_asset = {workspace = true}
+bevy_image = {workspace = true}
+wgpu-types = {workspace = true}
 
 async-std = {workspace = true}
 crossbeam-channel = {workspace = true}
-bytemuck = {workspace = true}
 
 blitz-dom = {workspace = true}
+blitz-traits = {workspace = true}
+blitz-html = {workspace = true}
+
 dioxus-core = {workspace = true}
 dioxus-native-dom = {workspace = true}
 dioxus-signals = {workspace = true}

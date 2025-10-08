@@ -6,5 +6,5 @@ edition.workspace = true
 [dependencies]
 bevy = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
-dioxus = {workspace = true, features = ["native"]}
+dioxus = {workspace = true, default-features = false, features = ["native", "launch"]}
 frontend = {path = "./frontend"}

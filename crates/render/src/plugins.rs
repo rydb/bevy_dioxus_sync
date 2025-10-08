@@ -1,5 +1,7 @@
+use std::time::Instant;
+
 use bevy_app::prelude::*;
-use bevy_render::{RenderApp, renderer::RenderDevice};
+use bevy_render::{render_graph::RenderGraph, renderer::RenderDevice, RenderApp};
 use vello::RendererOptions;
 
 use crate::*;
@@ -8,6 +10,8 @@ pub struct DioxusRenderPlugin;
 
 impl Plugin for DioxusRenderPlugin {
     fn build(&self, app: &mut App) {
+        let epoch = AnimationTime(Instant::now());
+        app.insert_resource(epoch);
         app.add_systems(Startup, setup_ui)
             .add_systems(Update, update_ui);
     }
@@ -23,14 +27,12 @@ impl Plugin for DioxusRenderPlugin {
         // and receive the texture
         let (s, r) = crossbeam_channel::unbounded();
         app.insert_resource(MainWorldReceiver(r));
-        let render_app = app.sub_app_mut(bevy_render::RenderApp);
+        let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(bevy_render::ExtractSchedule, extract_texture_image);
         render_app.insert_resource(RenderWorldSender(s));
 
         // Add a render graph node to get the GPU texture
-        let mut graph = render_app
-            .world_mut()
-            .resource_mut::<bevy_render::render_graph::RenderGraph>();
+        let mut graph = render_app.world_mut().resource_mut::<RenderGraph>();
         graph.add_node(TextureGetterNode, TextureGetterNodeDriver);
         graph.add_node_edge(bevy_render::graph::CameraDriverLabel, TextureGetterNode);
     }

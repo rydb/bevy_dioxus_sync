@@ -12,7 +12,7 @@ use dioxus_native::*;
 
 pub(crate) fn handle_keyboard_events(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
-    mut keyboard_input_events: ResMut<Events<KeyboardInput>>,
+    mut keyboard_input_events: ResMut<Messages<KeyboardInput>>,
     mut keys: ResMut<ButtonInput<BevyKeyCode>>,
     mut last_mouse_state: Local<MouseState>,
 ) {
@@ -81,7 +81,7 @@ pub(crate) fn handle_keyboard_events(
         keys.reset_all();
     }
 
-    dioxus_doc.resolve();
+    // dioxus_doc.resolve();
 }
 
 fn bevy_key_to_blitz_key(key: &BevyKey) -> Key {

@@ -18,8 +18,8 @@ pub struct MouseState {
 
 pub(crate) fn handle_mouse_events(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
-    mut cursor_moved: EventReader<CursorMoved>,
-    mut mouse_button_input_events: ResMut<Events<MouseButtonInput>>,
+    mut cursor_moved: MessageReader<CursorMoved>,
+    mut mouse_button_input_events: ResMut<Messages<MouseButtonInput>>,
     mut mouse_buttons: ResMut<ButtonInput<MouseButton>>,
     mut last_mouse_state: Local<MouseState>,
 ) {
@@ -87,5 +87,5 @@ pub(crate) fn handle_mouse_events(
         mouse_buttons.reset_all();
     }
 
-    dioxus_doc.resolve();
+    // dioxus_doc.resolve();
 }

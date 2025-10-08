@@ -3,7 +3,7 @@ use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_log::debug;
 use bevy_math::prelude::*;
-use bevy_sprite::{ColorMaterial, MeshMaterial2d};
+use bevy_sprite_render::prelude::*;
 use bevy_transform::components::Transform;
 use bevy_window::WindowResized;
 use blitz_traits::shell::Viewport;
@@ -13,7 +13,7 @@ use bevy_dioxus_render::{COLOR_SCHEME, DioxusUiQuad, SCALE_FACTOR, TextureImage,
 
 pub(crate) fn handle_window_resize(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
-    mut resize_events: EventReader<WindowResized>,
+    mut resize_events: MessageReader<WindowResized>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -28,7 +28,7 @@ pub(crate) fn handle_window_resize(
 
         // Update the dioxus viewport
         dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-        dioxus_doc.resolve();
+        // dioxus_doc.resolve();
 
         // Create a new texture with the new size
         let new_image = create_ui_texture(width, height);
