@@ -1,9 +1,11 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::{any::type_name, marker::PhantomData, ops::Deref};
 
 use bevy_asset::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use crossbeam_channel::*;
+
+use crate::BevyFetchBackup;
 
 pub mod command;
 pub mod hook;
@@ -23,9 +25,9 @@ where
     T: Deref<Target = Handle<U>> + Component,
     U: Asset + Clone,
 {
-    value: Option<AssetWithHandle<T, U>>,
-    write: Sender<AssetWithHandle<T, U>>,
-    read: Receiver<AssetWithHandle<T, U>>,
+    value: Result<AssetWithHandle<T, U>, BevyFetchBackup>,
+    write: Option<Sender<AssetWithHandle<T, U>>>,
+    read: Option<Receiver<AssetWithHandle<T, U>>>,
 }
 
 impl<T, U> BevyWrappedAsset<T, U>
@@ -34,20 +36,25 @@ where
     U: Asset + Clone,
 {
     pub fn set_asset(&self, value: U) {
-        let Some(old_value) = &self.value else {
+        let Ok(old_value) = &self.value else {
             warn!("could not write asset as initial handle is not initialized");
             return;
         };
-        let _ = self
-            .write
+        if let Some(send_channel) = &self.write {
+            let _ = send_channel
             .send(AssetWithHandle {
                 asset: value,
                 handle: old_value.handle.clone(),
                 new_type: PhantomData::default(),
             })
             .inspect_err(|err| warn!("{:#}", err));
+        } else {
+            warn!("no send channel for {:#}, skipping", type_name::<T>());
+            return
+        }
+        
     }
-    pub fn read_asset(&self) -> &Option<AssetWithHandle<T, U>> {
+    pub fn read_asset(&self) -> &Result<AssetWithHandle<T, U>, BevyFetchBackup> {
         &self.value
     }
 }

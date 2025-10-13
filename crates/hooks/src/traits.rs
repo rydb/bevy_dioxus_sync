@@ -7,6 +7,7 @@ use bevy_asset::{Asset, Handle};
 use bevy_dioxus_interop::BoxAnyTypeMap;
 use bevy_ecs::{component::Component, resource::Resource};
 use bytemuck::TransparentWrapper;
+use dioxus_signals::SyncSignal;
 use std::{
     any::TypeId, ops::Deref, 
 };
@@ -133,3 +134,11 @@ where
         map.extend(value);
     }
 }
+
+
+// pub trait BevySignalSource 
+//     type Signal;
+//     type SignalHolder;
+// {
+//     fn request_signal() -> SyncSignal<>
+// }

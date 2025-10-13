@@ -75,6 +75,12 @@ pub struct BevyCommandQueueTx(pub Sender<CommandQueue>);
 #[derive(Clone)]
 pub struct InfoRefershRateMS(pub u64);
 
+impl Default for InfoRefershRateMS {
+    fn default() -> Self {
+        Self(30)
+    }
+}
+
 pub fn read_dioxus_command_queues(world: &mut World) {
     let receiver = world
         .get_resource_mut::<DioxusCommandQueueRx>()

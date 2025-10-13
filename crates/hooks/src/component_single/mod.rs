@@ -4,6 +4,8 @@ use bevy_ecs::component::Component;
 use bevy_log::warn;
 use crossbeam_channel::{Receiver, Sender};
 
+use crate::BevyFetchBackup;
+
 pub mod command;
 pub mod hook;
 // pub struct BevyComponent<T>
@@ -22,9 +24,9 @@ where
     T: Component + Clone,
     U: Component,
 {
-    value: Option<T>,
-    write: Sender<T>,
-    read: Receiver<T>,
+    value: Result<T, BevyFetchBackup>,
+    write: Option<Sender<T>>,
+    read: Option<Receiver<T>>,
     _marker: PhantomData<U>,
 }
 
@@ -34,9 +36,11 @@ where
     U: Component,
 {
     pub fn set_component(&self, value: T) {
-        let _ = self.write.send(value).inspect_err(|err| warn!("{:#}", err));
+        if let Some(write) = &self.write {
+            let _ = write.send(value).inspect_err(|err| warn!("{:#}", err));
+        }
     }
-    pub fn read_component(&self) -> &Option<T> {
+    pub fn read_component(&self) -> &Result<T, BevyFetchBackup> {
         &self.value
     }
 }

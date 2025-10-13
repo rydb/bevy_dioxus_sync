@@ -24,15 +24,33 @@ pub struct DioxusPlugin {
 
     pub main_window_ui: Option<fn() -> Element>
 }
-/// props for [`DioxusPlugin`]'s dioxus app.
 #[derive(Clone)]
-pub struct DioxusProps {
+pub struct DioxusPropsNative {
+    pub fps: u16,
+    pub main_window_ui: Option<fn() -> Element>
+}
+
+#[derive(Clone)]
+pub struct DioxusPropsNativeBevy {
+    pub(crate) dioxus_props: DioxusPropsNative,
     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
     pub(crate) command_queues_tx: Sender<CommandQueue>,
-    pub(crate) fps: u16,
-    /// initial
-    pub(crate) main_window_ui: Option<fn() -> Element>
 }
+
+#[derive(Clone)]
+pub enum DioxusAppKind {
+    NativeBevy(DioxusPropsNativeBevy),
+    NativeOnly(DioxusPropsNative)
+}
+
+/// props for [`DioxusPlugin`]'s dioxus app.
+// #[derive(Clone)]
+// pub struct DioxusProps {
+//     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
+//     pub(crate) command_queues_tx: Sender<CommandQueue>,
+//     pub(crate) fps: u16,
+//     pub(crate) main_window_ui: Option<fn() -> Element>
+// }
 
 
 
@@ -100,11 +118,14 @@ impl Plugin for DioxusPlugin {
         
         let bevy_dioxus_interop_plugin = DioxusBevyInteropPlugin::new();
         let dioxus_panels_plugin = DioxusPanelsPlugin::new();
-        let props = DioxusProps {
+        let props = DioxusPropsNativeBevy {
             dioxus_panel_updates: dioxus_panels_plugin.dioxus_panel_updates_rx.clone(),
             command_queues_tx: bevy_dioxus_interop_plugin.command_tx.clone(),
-            fps: self.bevy_info_refresh_fps,
-            main_window_ui: self.main_window_ui
+            dioxus_props: DioxusPropsNative {
+                fps: self.bevy_info_refresh_fps,
+                main_window_ui: self.main_window_ui
+            }
+
         };
         app.add_plugins(bevy_dioxus_interop_plugin);
         app.add_plugins(DioxusRenderPlugin);
@@ -113,7 +134,7 @@ impl Plugin for DioxusPlugin {
 
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size
-        let vdom = VirtualDom::new_with_props(dioxus_app, props);
+        let vdom = VirtualDom::new_with_props(dioxus_app, DioxusAppKind::NativeBevy(props));
         // FIXME add a NetProvider
         let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig {
             ..default()

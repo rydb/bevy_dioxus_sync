@@ -79,7 +79,7 @@ pub fn app_ui() -> Element {
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
 
     rsx! {
-        style { {include_str!("./ui.css")} }
+       style { {include_str!("./ui.css")} }
         // document::Stylesheet { href: asset!("/src/ui.css") }
         div {
             id: "panel",
@@ -126,7 +126,7 @@ pub fn app_ui() -> Element {
                 label {
                     class: "bevy-display",
                     {
-                        let xyzw = &cube_transform.read().read_component().map(|n| n.rotation)
+                        let xyzw = &cube_transform.read().read_component().as_ref().map(|n| n.rotation)
                         .map(|n| n.to_array())
                         .map(|n| {
                             n.iter()
@@ -176,6 +176,7 @@ pub fn app_ui() -> Element {
                 id: "footer",
                 p { "Bevy framerate: {fps}" }
             }
+            h1 {"byee"}
         }
     }
 }
