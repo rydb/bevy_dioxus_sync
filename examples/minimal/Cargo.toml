@@ -4,8 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy = {workspace = true}
+bevy = {workspace = true, features = ["trace_tracy"]}
 bevy_dioxus_sync = {workspace = true}
-dioxus = {workspace = true, default-features = false, features = ["native", "launch"]}
-dioxus-desktop = {workspace = true}
+dioxus = {workspace = true, default-features = false, features = ["native", "launch", "devtools"]}
+# dioxus-desktop = {workspace = true}
 frontend = {path = "./frontend"}

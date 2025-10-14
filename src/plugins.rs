@@ -43,17 +43,6 @@ pub enum DioxusAppKind {
     NativeOnly(DioxusPropsNative)
 }
 
-/// props for [`DioxusPlugin`]'s dioxus app.
-// #[derive(Clone)]
-// pub struct DioxusProps {
-//     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
-//     pub(crate) command_queues_tx: Sender<CommandQueue>,
-//     pub(crate) fps: u16,
-//     pub(crate) main_window_ui: Option<fn() -> Element>
-// }
-
-
-
 /// plugin for managing dioxus plugins
 pub struct DioxusPanelsPlugin {
     dioxus_panel_updates_tx: Sender<DioxusPanelUpdates>, 
@@ -71,8 +60,6 @@ impl DioxusPanelsPlugin {
 
 impl Plugin for DioxusPanelsPlugin {
     fn build(&self, app: &mut App) {
-
-        
         app.init_resource::<DioxusPanelUpdates>();
         app.insert_resource(DioxusPanelUpdatesSender(self.dioxus_panel_updates_tx.clone()));
 
@@ -89,11 +76,6 @@ impl Plugin for DioxusPanelsPlugin {
             };
             let value = value.clone();
             let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            // warn!(
-            //     "pushing panel update for {:#} to {:#?}",
-            //     hook.entity,
-            //     PanelUpdateKind::Add(value.clone())
-            // );
             panel_updates.0.push(PanelUpdate {
                 key: hook.entity,
                 value: PanelUpdateKind::Add(value),
@@ -106,7 +88,10 @@ impl Plugin for DioxusPanelsPlugin {
                 value: PanelUpdateKind::Remove,
             })
         });
-        ;
+        app.add_systems(
+            PreUpdate,
+            push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>),
+        );
     }
 }
 
@@ -141,20 +126,8 @@ impl Plugin for DioxusPlugin {
         });
         dioxus_doc.initial_build();
         dioxus_doc.resolve(0.0);
-
-        // Dummy waker
-        struct NullWake;
-        impl std::task::Wake for NullWake {
-            fn wake(self: std::sync::Arc<Self>) {}
-        }
-        let waker = std::task::Waker::from(std::sync::Arc::new(NullWake));
-
         app.insert_non_send_resource(dioxus_doc);
-        app.insert_non_send_resource(waker);
-        app.add_systems(
-            PreUpdate,
-            push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>),
-        );
+
 
     }
 }

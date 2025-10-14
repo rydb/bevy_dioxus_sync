@@ -4,18 +4,27 @@ use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use crossbeam_channel::{Receiver, Sender};
 
+use crate::DioxusTxrX;
+
 pub enum InsertDefaultResource<T: Resource + Clone> {
     No,
     Yes(T),
 }
 
 /// Command to register dioxus bevy interop for a given resource.
-pub(crate) struct RequestBevyResource<T: Resource + Clone> {
+#[derive(Clone)]
+pub struct RequestBevyResource<T: Resource + Clone> {
     // default_resource: InsertDefaultResource<T>,
     pub(crate) dioxus_tx: Sender<T>,
     pub(crate) dioxus_rx: Receiver<T>,
     pub(crate) bevy_tx: Sender<T>,
     pub(crate) bevy_rx: Receiver<T>,
+}
+
+impl<T:  Resource + Clone> Into<DioxusTxrX<T>> for RequestBevyResource<T> {
+    fn into(self) -> DioxusTxrX<T> {
+        DioxusTxrX { dioxus_tx: self.dioxus_tx, dioxus_rx: self.dioxus_rx }
+    }
 }
 
 impl<T: Resource + Clone> RequestBevyResource<T> {

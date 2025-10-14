@@ -11,9 +11,22 @@ pub struct DioxusRenderPlugin;
 impl Plugin for DioxusRenderPlugin {
     fn build(&self, app: &mut App) {
         let epoch = AnimationTime(Instant::now());
+        
+        
+        // Dummy waker
+        struct NullWake;
+        impl std::task::Wake for NullWake {
+            fn wake(self: std::sync::Arc<Self>) {}
+        }
+        let waker = std::task::Waker::from(std::sync::Arc::new(NullWake));
+
+        app.insert_non_send_resource(waker);
+
         app.insert_resource(epoch);
-        app.add_systems(Startup, setup_ui)
-            .add_systems(Update, update_ui);
+        app
+        .add_systems(Startup, setup_ui)
+        .add_systems(Update, update_ui)
+        ;
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer

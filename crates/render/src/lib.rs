@@ -6,7 +6,7 @@ use bevy_camera::{Camera, Camera2d};
 use bevy_derive::Deref;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
-use bevy_log::debug;
+use bevy_log::{debug, warn};
 use bevy_math::prelude::*;
 use bevy_mesh::{Mesh, Mesh2d};
 use bevy_render::{
@@ -140,6 +140,7 @@ impl render_graph::Node for TextureGetterNodeDriver {
 #[derive(Resource)]
 struct AnimationTime(Instant);
 
+#[allow(clippy::too_many_arguments)]
 fn update_ui(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
     waker: NonSendMut<std::task::Waker>,
@@ -156,8 +157,9 @@ fn update_ui(
 
     if let (Some(texture), Some(mut vello_renderer)) = ((*cached_texture).as_ref(), vello_renderer)
     {
+        let context = std::task::Context::from_waker(&waker);
         // Poll the vdom
-        dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
+        dioxus_doc.poll(Some(context));
 
         // Refresh the document
         let animation_time = animation_epoch.0.elapsed().as_secs_f64();
@@ -192,6 +194,8 @@ fn update_ui(
             .expect("failed to render to texture");
     }
 }
+
+
 
 fn setup_ui(
     mut commands: Commands,
