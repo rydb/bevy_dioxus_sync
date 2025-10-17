@@ -33,6 +33,7 @@ pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
 
 pub type BoxAnyTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
 
+pub type BoxAnySignalTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
 
 #[derive(Clone, Default, Debug, TransparentWrapper)]
 #[repr(transparent)]
@@ -50,11 +51,26 @@ impl ErasedSubGenericMap for RxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Receiver<T>;
 }
 
-pub struct BevyDioxusIO<B, D = B> {
-    pub bevy_tx: Sender<B>,
-    pub bevy_rx: Receiver<D>,
-    pub dioxus_tx: Sender<D>,
-    pub dioxus_rx: Receiver<B>,
+#[derive(Clone)]
+pub struct BevyDioxusIO<A, B = A> {
+    pub bevy_tx: Sender<A>,
+    pub bevy_rx: Receiver<B>,
+    pub dioxus_tx: Sender<B>,
+    pub dioxus_rx: Receiver<A>,
+}
+
+impl<A, B> Default for BevyDioxusIO<A, B> {
+    fn default() -> Self {
+        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<A>();
+        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<B>();
+
+        Self {
+            bevy_tx,
+            bevy_rx,
+            dioxus_tx,
+            dioxus_rx,
+        }
+    }
 }
 
 pub fn add_systems_through_world<T>(

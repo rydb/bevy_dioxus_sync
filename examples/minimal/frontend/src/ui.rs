@@ -3,7 +3,7 @@ use std::fmt::Display;
 use bevy_color::Color;
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::*;
-use bevy_dioxus_hooks::{asset_single::hook::use_bevy_asset_singleton, component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource};
+use bevy_dioxus_hooks::{component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource};
 use bevy_dioxus_sync::DioxusElementMarker;
 use bevy_pbr::prelude::*;
 use bevy_transform::components::Transform;
