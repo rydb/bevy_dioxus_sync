@@ -3,16 +3,16 @@ use std::fmt::Display;
 use bevy_color::Color;
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::*;
-use bevy_dioxus_hooks::{component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource};
+use bevy_dioxus_hooks::{asset::use_bevy_component_asset_single, component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource, BevyValue};
 use bevy_dioxus_sync::DioxusElementMarker;
 use bevy_pbr::prelude::*;
 use bevy_transform::components::Transform;
-use dioxus::prelude::*;
+use dioxus::{core::SuperInto, prelude::*};
 // use dioxus_signals::*;
 // use dioxus_core::Element;
 // use dioxus_core_macro::{component, rsx};
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct DynamicCube;
 
 #[derive(Resource, Clone, Debug, Deref, DerefMut)]
@@ -72,12 +72,12 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 
 #[component]
 pub fn app_ui() -> Element {
-    let fps = use_bevy_resource::<FPS>();
-    // let cube_color = use_bevy_asset_singleton::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
+    // let fps  = use_bevy_resource::<FPS>();
+    let cube_color = use_bevy_component_asset_single::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
+    // let x = cube_color.peek()
     // let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
     // let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
     // let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
-
     rsx! {
        style { {include_str!("./ui.css")} }
     //     // document::Stylesheet { href: asset!("/src/ui.css") }
@@ -94,30 +94,30 @@ pub fn app_ui() -> Element {
     //                {"example menu "}
     //             }
     //         }
-    //         div {
-    //             id: "buttons",
-    //             button {
-    //                 id: "button-red",
-    //                 class: "color-button",
-    //                 onclick: move |_| {
-    //                     cube_color.peek().set_asset(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
-    //                 },
-    //             }
-    //             button {
-    //                 id: "button-green",
-    //                 class: "color-button",
-    //                 onclick: move |_| {
-    //                     cube_color.peek().set_asset(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
-    //                 },
-    //             }
-    //             button {
-    //                 id: "button-blue",
-    //                 class: "color-button",
-    //                 onclick: move |_| {
-    //                     cube_color.peek().set_asset(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
-    //                 },
-    //             }
-    //         }
+            // div {
+            //     id: "buttons",
+            //     button {
+            //         id: "button-red",
+            //         class: "color-button",
+            //         onclick: move |_| {
+            //             cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
+            //         },
+            //     }
+            //     button {
+            //         id: "button-green",
+            //         class: "color-button",
+            //         onclick: move |_| {
+            //             cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
+            //         },
+            //     }
+            //     button {
+            //         id: "button-blue",
+            //         class: "color-button",
+            //         onclick: move |_| {
+            //             cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
+            //         },
+            //     }
+            // }
     //         div {
     //             id: "rotation-display",
     //             label {
@@ -172,10 +172,10 @@ pub fn app_ui() -> Element {
     //                 }
     //             }
     //         }
-            div {
-                id: "footer",
-                p { "Bevy framerate: {fps}" }
-            }
+            // div {
+            //     id: "footer",
+            //     p { "Bevy framerate: {fps}" }
+            // }
     //     }
     }
 }

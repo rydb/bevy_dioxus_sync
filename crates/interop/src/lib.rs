@@ -51,18 +51,30 @@ impl ErasedSubGenericMap for RxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Receiver<T>;
 }
 
-#[derive(Clone)]
-pub struct BevyDioxusIO<A, B = A> {
-    pub bevy_tx: Sender<A>,
-    pub bevy_rx: Receiver<B>,
-    pub dioxus_tx: Sender<B>,
-    pub dioxus_rx: Receiver<A>,
+// pub struct InterOpInfo<T, AdditionalInfo = ()> {
+//     index: T,
+//     additional_info: AdditionalInfo
+// }
+/// an info packet for communication between bevy/dioxus
+pub struct InfoPacket<T, U, V> {
+    pub update: T,
+    pub index: Option<U>,
+    pub additional_info: Option<V>
 }
 
-impl<A, B> Default for BevyDioxusIO<A, B> {
+
+#[derive(Clone)]
+pub struct BevyDioxusIO<A, Index, AdditionalInfo = (), C = A> {
+    pub bevy_tx: Sender<InfoPacket<A, Index, AdditionalInfo>>,
+    pub bevy_rx: Receiver<InfoPacket<C, Index, AdditionalInfo>>,
+    pub dioxus_tx: Sender<InfoPacket<C, Index, AdditionalInfo>>,
+    pub dioxus_rx: Receiver<InfoPacket<A, Index, AdditionalInfo>>,
+}
+
+impl<A, Index, C, AdditionalInfo> Default for BevyDioxusIO<A, Index, AdditionalInfo, C> {
     fn default() -> Self {
-        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<A>();
-        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<B>();
+        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<InfoPacket<A, Index, AdditionalInfo>>();
+        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<InfoPacket<C, Index, AdditionalInfo>>();
 
         Self {
             bevy_tx,
