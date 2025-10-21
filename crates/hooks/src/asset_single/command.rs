@@ -92,7 +92,6 @@ fn send_asset_singleton<U, V>(
 {
 
     let Ok((_, handle, _)) = handle.single()
-    //.inspect_err(|err| warn!("could not get singleton: {:#} ", err))
     else {
         return;
     };

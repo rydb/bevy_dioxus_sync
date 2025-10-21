@@ -1,7 +1,7 @@
 use std::{any::{type_name, Any, TypeId}, collections::HashMap, marker::PhantomData, ops::Deref};
 
 use bevy_asset::{io::AssetSourceId, Asset, AssetEvent, AssetId, Assets, Handle, UntypedAssetId};
-use bevy_dioxus_interop::{add_systems_through_world, BevyDioxusIO, BevyRxChannel, BevyTxChannel};
+use bevy_dioxus_interop::{add_systems_through_world, BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket};
 use bevy_ecs::prelude::*;
 use bevy_app::prelude::*;
 use bevy_log::warn;
@@ -14,8 +14,6 @@ use dioxus_signals::{Signal, SyncSignal};
 use crate::{resource::command::RequestBevyResource, use_bevy_value, AdditionalInfo, BevyValue, BoxGenericTypeMap, Channels, DioxusTxRx, RequestA, SignalsErasedMap};
 
 pub type UntypedSendAsset = Box<dyn Any + Send + Sync>;
-
-type UntypedAssetMap = HashMap<UntypedAssetId, UntypedSendAsset>;
 
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
@@ -36,14 +34,14 @@ pub enum AssetRequestFilter<T, U> {
 
 #[derive(TransparentWrapper, Clone)]
 #[repr(transparent)]
-#[transparent(BevyDioxusIO<U, UntypedAssetId>)]
+#[transparent(BevyDioxusIO<AssetValue<U>, AssetInfoIndex, AssetAdditionalInfo>)]
 pub struct RequestScopedAssetWithMarker<
     T: Deref<Target = Handle<U>> + Component + Clone, 
     U: Asset + Clone, 
     V: Component + Clone
 > 
 {
-    pub(crate) channels: BevyDioxusIO<U, UntypedAssetId>,
+    pub(crate) channels: BevyDioxusIO<AssetValue<U>, AssetInfoIndex, AssetAdditionalInfo>,
     _handle_check_phantom: PhantomData<V>,
     _marker_filter_phantom: PhantomData<T>
 }
@@ -64,25 +62,32 @@ impl<T, U, V> Command for RequestScopedAssetWithMarker<T, U, V>
     }
 }
 
-pub type AssetTxRxInfo<U> = (U, UntypedAssetId);
+type AssetInfoIndex = UntypedAssetId;
+type AssetValue<T> = T;
+type AssetAdditionalInfo = UntypedAssetId;
+type AssetInfoPacket<T> = InfoPacket<AssetValue<T>, AssetInfoIndex, AssetAdditionalInfo>;
 
 fn receive_asset_updates<U>(
-    bevy_rx: ResMut<BevyRxChannel<AssetTxRxInfo<U>>>,
+    bevy_rx: ResMut<BevyRxChannel<AssetInfoPacket<U>>>,
     mut assets: ResMut<Assets<U>>,
 ) 
     where
         U: Asset + Clone
 {
-    let Ok((new_asset, id)) = bevy_rx.0.try_recv() else {
+    let Ok(packet) = bevy_rx.0.try_recv() else {
         return;
     };
-    let _ = assets.insert(id.try_typed().unwrap(), new_asset).inspect_err(|err| warn!("{err}"));
+    let Some(index) = packet.index else {
+        warn!("asset update received, but index not given with packet update?");
+        return;
+    };
+    let _ = assets.insert(index.typed(), packet.update).inspect_err(|err| warn!("{err}"));
 
 }
 
 fn send_asset_updates_singleton<T, U, V>(
     handle: Query<(Entity, &T, &V), Changed<T>>,
-    bevy_tx: ResMut<BevyTxChannel<(U, Option<UntypedAssetId>)>>,
+    bevy_tx: ResMut<BevyTxChannel<AssetInfoPacket<U>>>,
     assets: ResMut<Assets<U>>,
 ) 
     where
@@ -91,8 +96,8 @@ fn send_asset_updates_singleton<T, U, V>(
         V: Component + Clone
 {
 
-    let Ok((e, handle, u)) = handle.single()
-    .inspect_err(|err| warn!("could not get singleton: {:#} ", err))
+    let Ok((_e, handle, _u)) = handle.single()
+    //.inspect_err(|err| warn!("could not get singleton: {:#} ", err))
     else {
         return;
     };
@@ -102,10 +107,12 @@ fn send_asset_updates_singleton<T, U, V>(
         warn!("could not get asset from {:#?}", handle);
         return;
     };
-
+    warn!("sending asset update..");
     let _ = bevy_tx
         .0
-        .send((asset.clone(), Some(handle.id().untyped())))
+        .send(
+            InfoPacket { update: asset.clone(), index: Some(handle.id().untyped()), additional_info: Some(handle.id().untyped()) }
+        )
         .inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<U>(), err));
 }
 
@@ -119,31 +126,27 @@ impl<T, U, V> Default for RequestScopedAssetWithMarker<T, U, V>
         fn default() -> Self {
         Self {
             channels: BevyDioxusIO::default(),
-            ..default()
+            _handle_check_phantom: PhantomData,
+            _marker_filter_phantom: PhantomData,
+            
         }
     }
 }
 
-pub type BevyAsset<T> = BevyValue<T, UntypedAssetId>;
+pub type BevyAsset<T> = BevyValue<T, UntypedAssetId, UntypedAssetId>;
 
 impl SignalsErasedMap for BevyAssets {
-    type Value<T: Clone + Send + Sync + 'static> = SyncSignal<BevyAsset<T>>;
     type Index = UntypedAssetId;
+    type AdditionalInfo = UntypedAssetId;
 }
 
-// pub fn request_bevy_asset_id<T, U>(filter: AssetRequestFilter::<T, U>) -> UntypedAssetId{
-
-// }
-
-// pub fn request_bevy_index_singleton<T, U>
-
 /// use a bevy component thats a newtype handle around an asset. Looks for a singleton with the given marker component.
-pub fn use_bevy_component_asset_single<T, U, V>() -> SyncSignal<BevyAsset<U>>
+pub fn use_bevy_component_asset_single<T, U, V>() -> SyncSignal<BevyValue<U, UntypedAssetId, UntypedAssetId>>
     where
         T: Deref<Target = Handle<U>> + Component + Clone, 
         U: Asset + Clone, 
-        V: Component + Clone
+        V: Component + Clone,
     {
-        use_bevy_value::<U, BevyAssetsRegistry, BevyAssets, RequestScopedAssetWithMarker<T, U, V>>(None)
+        use_bevy_value::<U, BevyAssetsRegistry, BevyAssets, RequestScopedAssetWithMarker<T, U, V>, UntypedAssetId, UntypedAssetId>(None)
 
 }

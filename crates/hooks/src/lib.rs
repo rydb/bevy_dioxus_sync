@@ -1,7 +1,7 @@
 use std::{any::{type_name, Any, TypeId}, collections::HashMap, fmt::Display, hash::Hash, ops::Deref};
 
 use async_std::task::sleep;
-use bevy_dioxus_interop::{BevyCommandQueueTx, BevyDioxusIO, BoxAnyTypeMap, InfoPacket, InfoRefershRateMS};
+use bevy_dioxus_interop::{BevyCommandQueueTx, BevyDioxusIO, BevyTxChannel, BoxAnyTypeMap, InfoPacket, InfoRefershRateMS};
 use bevy_ecs::{system::Command, world::CommandQueue};
 use bevy_log::{tracing::Value, warn};
 use bytemuck::TransparentWrapper;
@@ -49,7 +49,7 @@ impl Display for BevyFetchBackup{
     }
 }
 
-pub struct BevyValue<T: Clone + 'static, Index, U = ()> {
+pub struct BevyValue<T: Clone + 'static, Index, U> {
     pub(crate) writer: Option<Sender<InfoPacket<T, Index, U>>>,
     pub(crate) reader: Option<Receiver<InfoPacket<T, Index, U>>>,
     pub(crate) value: Result<T, BevyFetchBackup>,
@@ -57,7 +57,7 @@ pub struct BevyValue<T: Clone + 'static, Index, U = ()> {
     pub(crate) index: Option<Index>
 }
 
-impl<T: Clone + 'static, U: Clone> BevyValue<T, U> {
+impl<T: Clone + 'static, Index: Clone, U: Clone> BevyValue<T, Index, U> {
     pub fn set_value(&self, value: T) {
         if let Some(send_channel) = &self.writer {
             let _ = send_channel.send(
@@ -75,7 +75,7 @@ impl<T: Clone + 'static, U: Clone> BevyValue<T, U> {
     }
 }
 
-impl<T, U> Display for BevyValue<T, U>
+impl<T, Index, U> Display for BevyValue<T, Index, U>
     where
         T: Display + Clone
 {
@@ -89,93 +89,119 @@ impl<T, U> Display for BevyValue<T, U>
 
 pub type BoxGenericTypeMap<Index> = HashMap<Index, Box<dyn Any + Send + Sync>>;
 
+// pub trait SignalsErasedMap 
+//     where
+//         Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
+// {
+//     type Value<T: Clone + Send + Sync + 'static>: Clone + 'static + Send + Sync;
+//     type Index: Hash + Eq + Clone + Send + Sync;
+//     fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value::<T>, index: Self::Index)
+//     {
+//         let map = TransparentWrapper::peel_mut(self);
+//         let erased = Box::new(value);
+//         map.insert(index, erased);
+//     }
+
+//     fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>>
+//     {
+//         let map = TransparentWrapper::peel_mut(self);
+
+//         let value = map.get_mut(&index)?;
+
+//         value.downcast_mut::<Self::Value<T>>()
+//     }
+//     // fn extend(&mut self, value: Self) {
+//     //     let map = TransparentWrapper::peel_mut(self);
+//     //     let value = TransparentWrapper::peel(value);
+//     //     map.extend(value);
+//     // }        
+// }
+
+pub type SignalErasedMapValue<T, Index, AdditionalInfo> = SyncSignal<BevyValue<T, Index, AdditionalInfo>>;
+
 pub trait SignalsErasedMap 
     where
         Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
 {
-    type Value<T: Clone + Send + Sync + 'static>: Clone + 'static + Send + Sync;
-    type Index: Hash + Eq + Clone + Send + Sync;
-    fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value::<T>, index: Self::Index)
+    // type Value: Clone + 'static + Send + Sync;
+    type Index: Hash + Eq + Clone + Send + Sync + 'static;
+    type AdditionalInfo: Send + Sync + 'static;
+    fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>, index: Self::Index)
     {
         let map = TransparentWrapper::peel_mut(self);
         let erased = Box::new(value);
         map.insert(index, erased);
     }
 
-    fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>>
+    fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>>
     {
         let map = TransparentWrapper::peel_mut(self);
 
         let value = map.get_mut(&index)?;
 
-        value.downcast_mut::<Self::Value<T>>()
+        value.downcast_mut::<SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>>()
     }
-    // fn extend(&mut self, value: Self) {
-    //     let map = TransparentWrapper::peel_mut(self);
-    //     let value = TransparentWrapper::peel(value);
-    //     map.extend(value);
-    // }        
 }
 
-// impl SyncSignalErasedMap {
-//     type Generic<T>;
-//     type Index;
-//     fn insert<T: 'static + Send + Sync + Clone>(&mut self, value: Self::Generic::<T>)
-//     {
-//         let map = TransparentWrapper::peel_mut(self);
+
+// pub trait SignalsErasedMap {
+//     type Index: Hash + Eq + Clone + Send + Sync;
+    
+//     // Remove the complex bounds from the associated type
+//     type Value<T>: Clone + Send + Sync where T: Clone + Send + Sync + 'static;
+    
+//     fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value<T>, index: Self::Index);
+//     fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>>;
+// }
+
+
+// impl<Index> SignalsErasedMap for BoxGenericTypeMap<Index> 
+// where 
+//     Index: Hash + Eq + Clone + Send + Sync + 'static 
+// {
+//     type Index = Index;
+//     type Value<T> = SyncSignal<BevyValue<T, Index>> where T: Clone + Send + Sync + 'static;
+    
+//     fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value<T>, index: Self::Index) {
 //         let erased = Box::new(value);
-//         map.insert(TypeId::of::<T>(), erased);
+//         self.insert(index, erased);
 //     }
 
-//     fn get<T: 'static + Clone>(&mut self) -> Option<&mut SyncSignal<BevyValue<T>>>
-//     {
-//         let map = TransparentWrapper::peel_mut(self);
-
-//         let value = map.get_mut(&TypeId::of::<T>())?;
-
-//         value.downcast_mut::<SyncSignal<BevyValue<T>>>()
-//     }
-//     fn extend(&mut self, value: Self) {
-//         let map = TransparentWrapper::peel_mut(self);
-//         let value = TransparentWrapper::peel(value);
-//         map.extend(value);
-//     }    
+//     fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>> {
+//         self.get_mut(index)?.downcast_mut()
+//     }  
 // }
 
 // pub fn request_bevy_index<T: SignalsErasedMap<Index = U>, U>() -> U {
 
 // } 
 
-pub fn use_bevy_value<T, U, V, W>(index: Option<V::Index>) -> SyncSignal<BevyValue<T, V::Index>> 
+pub fn use_bevy_value<T, U, V, W, Index, AdditionalInfo>(index: Option<Index>) -> SyncSignal<BevyValue<T, Index, AdditionalInfo>> 
     where
         T: Send + Sync + Clone + 'static,
         U: Clone + 'static + TransparentWrapper<Signal<V>>,
-        V: 'static + SignalsErasedMap<Value<T> = SyncSignal<BevyValue<T, <V as SignalsErasedMap>::Index>>>,
-        W: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, <V as SignalsErasedMap>::Index>>, //DioxusTxRx<A = T, AdditionalInfo = X>,
+        V: TransparentWrapper<BoxGenericTypeMap<Index>> + SignalsErasedMap<Index = Index, AdditionalInfo = AdditionalInfo> + 'static,
+        W: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, Index, AdditionalInfo>>,
+        Index: Send + Sync + 'static + Clone,
+        AdditionalInfo: Send + Sync + 'static
 {
     let refresh_rate = try_use_context::<InfoRefershRateMS>();
     let command_queue_tx = try_use_context::<BevyCommandQueueTx>();
     let mut signals_register = use_context::<U>();
 
-    warn!("made it past contexts");
     let signal = use_hook(|| {
         let mut map_erased: WriteLock<'_, V, UnsyncStorage, SignalSubscriberDrop<V, UnsyncStorage>> = TransparentWrapper::peel_mut(&mut signals_register).write();
         let mut value = None;
-        warn!("requested map and value");
         if let Some(index) = index.clone() {
             value = map_erased.get_typed::<T>(&index);
         } 
-        warn!("got value");
         let signal = if let Some(signal) = value {
-            warn!("getting signal from clone");
             signal.clone()
         } else {
-            warn!("requesting signal");
-            request_bevy_signal::<T, V, W>(command_queue_tx, map_erased, index.clone(),W::default())
+            request_bevy_signal::<T, V, W, Index, AdditionalInfo>(command_queue_tx, map_erased, index.clone(),W::default())
         };
         signal
     });
-    warn!("made it past signal");
     use_future(move || {
         let mut refresh_rate = refresh_rate.clone();
         let index_known = index.is_some();
@@ -191,9 +217,7 @@ pub fn use_bevy_value<T, U, V, W>(index: Option<V::Index>) -> SyncSignal<BevyVal
             };
             let mut map_erased = map_erased.clone();
             let refresh_rate = refresh_rate.take().unwrap_or_default().0;
-            warn!("made it past async move");
             loop {
-                warn!("made it to loop");
                 while let Ok(packet) = reader.try_recv() {
                     let mut register_signal = None;
                     if index_known == false {
@@ -212,7 +236,6 @@ pub fn use_bevy_value<T, U, V, W>(index: Option<V::Index>) -> SyncSignal<BevyVal
                 }
 
                 sleep(std::time::Duration::from_millis(refresh_rate)).await;
-                warn!("finished loop")
             }
         }
         }
@@ -220,19 +243,22 @@ pub fn use_bevy_value<T, U, V, W>(index: Option<V::Index>) -> SyncSignal<BevyVal
     signal
 }
 
+
 type RequestA<T> = <T as DioxusTxRx>::A;
 type AdditionalInfo<T> = Option<<T as DioxusTxRx>::AdditionalInfo>;
+type Index<T> = T;
 
-type Channels<T> = BevyDioxusIO<RequestA<T>, AdditionalInfo<T>>;
+type Channels<T> = BevyDioxusIO<RequestA<T>, Index<T>, AdditionalInfo<T>>;
 
 
 pub trait DioxusTxRx
     where
         Self:
-            TransparentWrapper<Channels<Self>>
+            TransparentWrapper<Channels<Self>> + Sized
 {
     type A: Send + Sync + Clone + 'static;
     type AdditionalInfo: Send + Sync;
+    type Index: Send + Sync;
 }
 
 pub enum IndexInitialized {
@@ -240,16 +266,18 @@ pub enum IndexInitialized {
     Yes,
 }
 
-fn request_bevy_signal<T, U, V>(
+fn request_bevy_signal<T, U, V, Index, AdditionalInfo>(
     command_queue_tx: Option<BevyCommandQueueTx>,
     mut signal_registry: WriteLock<'_, U, UnsyncStorage, SignalSubscriberDrop<U, UnsyncStorage>>,
-    index: Option<U::Index>,
+    index: Option<Index>,
     request: V,
-) -> SyncSignal<BevyValue<T, U::Index>> 
+) -> SyncSignal<BevyValue<T, Index, AdditionalInfo>> 
     where
         T: Send + Sync + Clone,
-        U: SignalsErasedMap<Value<T> = SyncSignal<BevyValue<T, <U as SignalsErasedMap>::Index>>>,
-        V: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, U::Index>>,
+        U: TransparentWrapper<BoxGenericTypeMap<Index>> + SignalsErasedMap<Index = Index, AdditionalInfo = AdditionalInfo>,
+        V: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, Index, AdditionalInfo>>,
+        Index: Send + Sync + 'static,
+        AdditionalInfo: Send + Sync + 'static
 {
     warn!("made it to request signal");
     if let Some(command_queue_tx) = command_queue_tx {

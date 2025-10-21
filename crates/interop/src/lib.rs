@@ -64,7 +64,7 @@ pub struct InfoPacket<T, U, V> {
 
 
 #[derive(Clone)]
-pub struct BevyDioxusIO<A, Index, AdditionalInfo = (), C = A> {
+pub struct BevyDioxusIO<A, Index, AdditionalInfo, C = A> {
     pub bevy_tx: Sender<InfoPacket<A, Index, AdditionalInfo>>,
     pub bevy_rx: Receiver<InfoPacket<C, Index, AdditionalInfo>>,
     pub dioxus_tx: Sender<InfoPacket<C, Index, AdditionalInfo>>,

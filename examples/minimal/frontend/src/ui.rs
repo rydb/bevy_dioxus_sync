@@ -72,7 +72,7 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 
 #[component]
 pub fn app_ui() -> Element {
-    // let fps  = use_bevy_resource::<FPS>();
+    let fps  = use_bevy_resource::<FPS>();
     let cube_color = use_bevy_component_asset_single::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
     // let x = cube_color.peek()
     // let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
@@ -94,30 +94,30 @@ pub fn app_ui() -> Element {
     //                {"example menu "}
     //             }
     //         }
-            // div {
-            //     id: "buttons",
-            //     button {
-            //         id: "button-red",
-            //         class: "color-button",
-            //         onclick: move |_| {
-            //             cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
-            //         },
-            //     }
-            //     button {
-            //         id: "button-green",
-            //         class: "color-button",
-            //         onclick: move |_| {
-            //             cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
-            //         },
-            //     }
-            //     button {
-            //         id: "button-blue",
-            //         class: "color-button",
-            //         onclick: move |_| {
-            //             cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
-            //         },
-            //     }
-            // }
+            div {
+                id: "buttons",
+                button {
+                    id: "button-red",
+                    class: "color-button",
+                    onclick: move |_| {
+                        cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)))
+                    },
+                }
+                button {
+                    id: "button-green",
+                    class: "color-button",
+                    onclick: move |_| {
+                        cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
+                    },
+                }
+                button {
+                    id: "button-blue",
+                    class: "color-button",
+                    onclick: move |_| {
+                        cube_color.peek().set_value(StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
+                    },
+                }
+            }
     //         div {
     //             id: "rotation-display",
     //             label {
@@ -172,10 +172,10 @@ pub fn app_ui() -> Element {
     //                 }
     //             }
     //         }
-            // div {
-            //     id: "footer",
-            //     p { "Bevy framerate: {fps}" }
-            // }
+            div {
+                id: "footer",
+                p { "Bevy framerate: {fps}" }
+            }
     //     }
     }
 }
