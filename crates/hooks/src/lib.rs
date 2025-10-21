@@ -89,34 +89,6 @@ impl<T, Index, U> Display for BevyValue<T, Index, U>
 
 pub type BoxGenericTypeMap<Index> = HashMap<Index, Box<dyn Any + Send + Sync>>;
 
-// pub trait SignalsErasedMap 
-//     where
-//         Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
-// {
-//     type Value<T: Clone + Send + Sync + 'static>: Clone + 'static + Send + Sync;
-//     type Index: Hash + Eq + Clone + Send + Sync;
-//     fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value::<T>, index: Self::Index)
-//     {
-//         let map = TransparentWrapper::peel_mut(self);
-//         let erased = Box::new(value);
-//         map.insert(index, erased);
-//     }
-
-//     fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>>
-//     {
-//         let map = TransparentWrapper::peel_mut(self);
-
-//         let value = map.get_mut(&index)?;
-
-//         value.downcast_mut::<Self::Value<T>>()
-//     }
-//     // fn extend(&mut self, value: Self) {
-//     //     let map = TransparentWrapper::peel_mut(self);
-//     //     let value = TransparentWrapper::peel(value);
-//     //     map.extend(value);
-//     // }        
-// }
-
 pub type SignalErasedMapValue<T, Index, AdditionalInfo> = SyncSignal<BevyValue<T, Index, AdditionalInfo>>;
 
 pub trait SignalsErasedMap 
@@ -194,7 +166,6 @@ pub fn use_bevy_value<T, U, V, W>(index: Option<V::Index>) -> SyncSignal<BevyVal
                     let mut asset = signal.write();
 
                     if let Some(index) = register_signal {
-                        warn!("updated index for: {:#}", type_name::<V>());
                         asset.index = Some(index.clone());
                     }
                     asset.value = Ok(packet.update);
@@ -242,7 +213,6 @@ fn request_bevy_signal<T, U, V>(
         U: TransparentWrapper<BoxGenericTypeMap<U::Index>> + SignalsErasedMap,
         V: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, U::Index, U::AdditionalInfo>>,
 {
-    warn!("made it to request signal");
     if let Some(command_queue_tx) = command_queue_tx {
         let mut commands = CommandQueue::default();
 
@@ -269,7 +239,6 @@ fn request_bevy_signal<T, U, V>(
         let _ = command_queue_tx.0
             .send(commands)
             .inspect_err(|err| warn!("{:#}", err));
-        warn!("finished request signal in known state");
 
         return new_signal;
     } else {
@@ -280,8 +249,6 @@ fn request_bevy_signal<T, U, V>(
             additional_info: None,
             index: None,
         });
-        warn!("finished request signal in unknown state");
-
         new_signal
     }
 
