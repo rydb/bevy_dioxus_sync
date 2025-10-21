@@ -1,39 +1,41 @@
 use bevy_app::Update;
-use bevy_dioxus_interop::{add_systems_through_world, BevyRxChannel, BevyTxChannel};
+use bevy_dioxus_interop::{add_systems_through_world, BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket};
 use bevy_ecs::{component::Mutable, prelude::*};
 use bevy_log::warn;
-use std::marker::PhantomData;
+use bevy_utils::default;
+use bytemuck::TransparentWrapper;
+use std::{any::TypeId, marker::PhantomData};
 
 use crossbeam_channel::{Receiver, Sender};
 
+type ComponentValue<T> = T;
+type ComponentIndex = TypeId;
+type ComponentAdditionalInfo = ();
+
+type ComponentInfoPacket<T> = InfoPacket<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>;
+
 /// Command to register dioxus bevy interop for a given resource.
-pub(crate) struct RequestBevyComponentSingleton<T, U>
-where
+#[derive(TransparentWrapper, Clone)]
+#[repr(transparent)]
+#[transparent(BevyDioxusIO<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>)]
+pub(crate) struct RequestBevyComponentSingleton<
     T: Component<Mutability = Mutable> + Clone,
-    U: Component,
+    U: Component + Clone,
+>
 {
-    pub(crate) dioxus_tx: Sender<T>,
-    pub(crate) dioxus_rx: Receiver<T>,
-    pub(crate) bevy_tx: Sender<T>,
-    pub(crate) bevy_rx: Receiver<T>,
+    pub(crate) channels: BevyDioxusIO<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>,
     singleton_marker: PhantomData<U>,
 }
 
-impl<T, U> RequestBevyComponentSingleton<T, U>
+impl<T, U> Default for RequestBevyComponentSingleton<T, U> 
 where
     T: Component<Mutability = Mutable> + Clone,
-    U: Component,
+    U: Component + Clone,
 {
-    pub fn new() -> Self {
-        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<T>();
-        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<T>();
-
+    fn default() -> Self {
         Self {
-            dioxus_tx,
-            dioxus_rx,
-            bevy_tx,
-            bevy_rx,
-            singleton_marker: PhantomData::default(),
+            channels: BevyDioxusIO::default(),
+            singleton_marker: PhantomData,
         }
     }
 }
@@ -41,11 +43,11 @@ where
 impl<T, U> Command for RequestBevyComponentSingleton<T, U>
 where
     T: Component<Mutability = Mutable> + Clone,
-    U: Component,
+    U: Component + Clone,
 {
     fn apply(self, world: &mut World) -> () {
-        world.insert_resource(BevyTxChannel(self.bevy_tx));
-        world.insert_resource(BevyRxChannel(self.bevy_rx));
+        world.insert_resource(BevyTxChannel(self.channels.bevy_tx));
+        world.insert_resource(BevyRxChannel(self.channels.bevy_rx));
 
         add_systems_through_world(world, Update, send_component_singleton::<T, U>);
         add_systems_through_world(world, Update, receive_component_update::<T, U>);
@@ -54,7 +56,7 @@ where
 
 fn send_component_singleton<T, U>(
     singleton: Query<(&T, &U), Changed<T>>,
-    bevy_tx: ResMut<BevyTxChannel<T>>,
+    bevy_tx: ResMut<BevyTxChannel<ComponentInfoPacket<T>>>,
 ) where
     T: Component + Clone,
     U: Component,
@@ -64,13 +66,15 @@ fn send_component_singleton<T, U>(
     };
     let _ = bevy_tx
         .0
-        .send(value.clone())
+        .send(
+            InfoPacket { update: value.clone(), index: Some(TypeId::of::<T>()), additional_info: None }
+        )
         .inspect_err(|err| warn!("{:#}", err));
 }
 
 fn receive_component_update<T, U>(
     mut singleton: Query<&mut T, With<U>>,
-    bevy_rx: ResMut<BevyRxChannel<T>>,
+    bevy_rx: ResMut<BevyRxChannel<ComponentInfoPacket<T>>>,
 ) where
     T: Component<Mutability = Mutable> + Clone,
     U: Component,
@@ -82,5 +86,5 @@ fn receive_component_update<T, U>(
         return;
     };
 
-    *singleton = new_value
+    *singleton = new_value.update
 }

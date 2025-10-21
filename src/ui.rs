@@ -3,7 +3,7 @@ use std::collections::HashMap;
 // use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
 use crate::{plugins::{DioxusAppKind}, systems::PanelUpdateKind, DioxusPanel};
 use async_std::task::sleep;
-use bevy_dioxus_hooks::{asset::BevyAssetsRegistry, component_single::hook::BevyComponentSignletonSignals, resource::hook::ResourceRegistry};
+use bevy_dioxus_hooks::{asset::BevyAssetsRegistry, component_single::hook::BevyComponentsRegistry, resource::hook::ResourceRegistry};
 use bevy_dioxus_interop::{BevyCommandQueueTx, InfoRefershRateMS};
 use bevy_ecs::entity::Entity;
 use dioxus_core::Element;
@@ -69,7 +69,7 @@ pub fn dioxus_app(app_kind: DioxusAppKind) -> Element {
     // let component_signals = use_context_provider(|| BevyComponentsSignals::default());
     // let _asset_singletons = use_context_provider(|| BevyAssetsSignals::default());
     let _asset_registers = use_context_provider(|| BevyAssetsRegistry::default());
-    let _component_singletons = use_context_provider(|| BevyComponentSignletonSignals::default());
+    let _component_registers = use_context_provider(|| BevyComponentsRegistry::default());
 
 
 

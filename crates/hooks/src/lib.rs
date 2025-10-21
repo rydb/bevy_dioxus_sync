@@ -143,47 +143,12 @@ pub trait SignalsErasedMap
     }
 }
 
-
-// pub trait SignalsErasedMap {
-//     type Index: Hash + Eq + Clone + Send + Sync;
-    
-//     // Remove the complex bounds from the associated type
-//     type Value<T>: Clone + Send + Sync where T: Clone + Send + Sync + 'static;
-    
-//     fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value<T>, index: Self::Index);
-//     fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>>;
-// }
-
-
-// impl<Index> SignalsErasedMap for BoxGenericTypeMap<Index> 
-// where 
-//     Index: Hash + Eq + Clone + Send + Sync + 'static 
-// {
-//     type Index = Index;
-//     type Value<T> = SyncSignal<BevyValue<T, Index>> where T: Clone + Send + Sync + 'static;
-    
-//     fn insert_typed<T: Clone + Send + Sync + 'static>(&mut self, value: Self::Value<T>, index: Self::Index) {
-//         let erased = Box::new(value);
-//         self.insert(index, erased);
-//     }
-
-//     fn get_typed<T: Clone + Send + Sync + 'static>(&mut self, index: &Self::Index) -> Option<&mut Self::Value<T>> {
-//         self.get_mut(index)?.downcast_mut()
-//     }  
-// }
-
-// pub fn request_bevy_index<T: SignalsErasedMap<Index = U>, U>() -> U {
-
-// } 
-
-pub fn use_bevy_value<T, U, V, W, Index, AdditionalInfo>(index: Option<Index>) -> SyncSignal<BevyValue<T, Index, AdditionalInfo>> 
+pub fn use_bevy_value<T, U, V, W>(index: Option<V::Index>) -> SyncSignal<BevyValue<T, V::Index, V::AdditionalInfo>> 
     where
         T: Send + Sync + Clone + 'static,
         U: Clone + 'static + TransparentWrapper<Signal<V>>,
-        V: TransparentWrapper<BoxGenericTypeMap<Index>> + SignalsErasedMap<Index = Index, AdditionalInfo = AdditionalInfo> + 'static,
-        W: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, Index, AdditionalInfo>>,
-        Index: Send + Sync + 'static + Clone,
-        AdditionalInfo: Send + Sync + 'static
+        V: TransparentWrapper<BoxGenericTypeMap<V::Index>> + SignalsErasedMap + 'static,
+        W: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, V::Index, V::AdditionalInfo>>,
 {
     let refresh_rate = try_use_context::<InfoRefershRateMS>();
     let command_queue_tx = try_use_context::<BevyCommandQueueTx>();
@@ -198,7 +163,7 @@ pub fn use_bevy_value<T, U, V, W, Index, AdditionalInfo>(index: Option<Index>) -
         let signal = if let Some(signal) = value {
             signal.clone()
         } else {
-            request_bevy_signal::<T, V, W, Index, AdditionalInfo>(command_queue_tx, map_erased, index.clone(),W::default())
+            request_bevy_signal::<T, V, W>(command_queue_tx, map_erased, index.clone(),W::default())
         };
         signal
     });
@@ -266,18 +231,16 @@ pub enum IndexInitialized {
     Yes,
 }
 
-fn request_bevy_signal<T, U, V, Index, AdditionalInfo>(
+fn request_bevy_signal<T, U, V>(
     command_queue_tx: Option<BevyCommandQueueTx>,
     mut signal_registry: WriteLock<'_, U, UnsyncStorage, SignalSubscriberDrop<U, UnsyncStorage>>,
-    index: Option<Index>,
+    index: Option<U::Index>,
     request: V,
-) -> SyncSignal<BevyValue<T, Index, AdditionalInfo>> 
+) -> SyncSignal<BevyValue<T, U::Index, U::AdditionalInfo>> 
     where
         T: Send + Sync + Clone,
-        U: TransparentWrapper<BoxGenericTypeMap<Index>> + SignalsErasedMap<Index = Index, AdditionalInfo = AdditionalInfo>,
-        V: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, Index, AdditionalInfo>>,
-        Index: Send + Sync + 'static,
-        AdditionalInfo: Send + Sync + 'static
+        U: TransparentWrapper<BoxGenericTypeMap<U::Index>> + SignalsErasedMap,
+        V: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, U::Index, U::AdditionalInfo>>,
 {
     warn!("made it to request signal");
     if let Some(command_queue_tx) = command_queue_tx {

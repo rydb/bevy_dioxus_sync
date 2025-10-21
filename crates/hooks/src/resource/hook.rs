@@ -43,5 +43,5 @@ impl SignalsErasedMap for BevyResources {
 
 /// requests a resource from bevy.
 pub fn use_bevy_resource<T: Resource + Send + Sync + Clone>() -> SyncSignal<BevyValue<T, TypeId, ()>> {
-    use_bevy_value::<T, ResourceRegistry, BevyResources, RequestBevyResource<T>, TypeId, ()>(Some(TypeId::of::<T>()))
+    use_bevy_value::<T, ResourceRegistry, BevyResources, RequestBevyResource<T>>(Some(TypeId::of::<T>()))
 }

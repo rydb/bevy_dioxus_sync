@@ -147,6 +147,5 @@ pub fn use_bevy_component_asset_single<T, U, V>() -> SyncSignal<BevyValue<U, Unt
         U: Asset + Clone, 
         V: Component + Clone,
     {
-        use_bevy_value::<U, BevyAssetsRegistry, BevyAssets, RequestScopedAssetWithMarker<T, U, V>, UntypedAssetId, UntypedAssetId>(None)
-
+        use_bevy_value::<U, BevyAssetsRegistry, BevyAssets, RequestScopedAssetWithMarker<T, U, V>>(None)
 }
