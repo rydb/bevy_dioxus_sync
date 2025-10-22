@@ -2,13 +2,11 @@ use std::any::TypeId;
 
 use bevy_ecs::prelude::*;
 use bytemuck::TransparentWrapper;
-use dioxus_signals::{
-    Signal, SyncSignal,
-};
+use dioxus_signals::{Signal, SyncSignal};
 
 use crate::{
-    BevyValue, BoxGenericTypeMap, SignalsErasedMap,
-    resource::command::RequestBevyResource, use_bevy_value,
+    BevyValue, BoxGenericTypeMap, SignalsErasedMap, resource::command::RequestBevyResource,
+    use_bevy_value,
 };
 
 /// Dioxus signals of Dioxus copies of Bevy resources.

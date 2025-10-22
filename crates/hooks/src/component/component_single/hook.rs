@@ -2,16 +2,14 @@ use std::any::TypeId;
 
 use bevy_ecs::{component::Mutable, prelude::*};
 use bytemuck::TransparentWrapper;
-use dioxus_signals::{
-    Signal, SyncSignal,
-};
+use dioxus_signals::{Signal, SyncSignal};
 
 use crate::{
     BevyValue, BoxGenericTypeMap, SignalsErasedMap,
-    component_single::command::RequestBevyComponentSingleton,
-    use_bevy_value,
+    component::component_single::command::RequestBevyComponentSingleton, use_bevy_value,
 };
 
+/// hook to interface with a singular bevy component, [`T`], with a marker [`U`]
 pub fn use_bevy_component_singleton<T, U>() -> SyncSignal<BevyValue<T, TypeId, ()>>
 where
     T: Component<Mutability = Mutable> + Clone,

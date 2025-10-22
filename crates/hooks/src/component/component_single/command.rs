@@ -7,7 +7,6 @@ use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use std::{any::TypeId, marker::PhantomData};
 
-
 type ComponentValue<T> = T;
 type ComponentIndex = TypeId;
 type ComponentAdditionalInfo = ();

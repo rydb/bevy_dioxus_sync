@@ -1,113 +1,32 @@
-//! TODO: Find better alternative to copying one trait bound across each generic map.
-//!
-//! can't get assocaited types to have "stricter impl's" then their oriignal definition, so this
-//! is what we do to side step that...
-
-use bevy_asset::{Asset, Handle};
-use bevy_dioxus_interop::BoxAnyTypeMap;
-use bevy_ecs::component::Component;
+use crate::{BoxGenericTypeMap, SignalErasedMapValue};
 use bytemuck::TransparentWrapper;
-use std::{any::TypeId, ops::Deref};
+use std::hash::Hash;
 
-pub trait ErasedSubGenericComponentsMap
+pub trait SignalsErasedMap
 where
-    Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
+    Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
 {
-    type Generic<T: Clone + Component + Send + Sync>: Send + Sync + Clone + 'static;
-    fn insert<T: Clone + Component + Send + Sync + 'static>(&mut self, value: Self::Generic<T>) {
-        let map = TransparentWrapper::peel_mut(self);
-        let erased = Box::new(value);
-        map.insert(TypeId::of::<T>(), erased);
-    }
-
-    fn get<T: Clone + Component + Send + Sync + 'static>(
+    // type Value: Clone + 'static + Send + Sync;
+    type Index: Hash + Eq + Clone + Send + Sync + 'static;
+    type AdditionalInfo: Send + Sync + 'static;
+    fn insert_typed<T: Clone + Send + Sync + 'static>(
         &mut self,
-    ) -> Option<&mut Self::Generic<T>> {
-        let map = TransparentWrapper::peel_mut(self);
-
-        let value = map.get_mut(&TypeId::of::<T>())?;
-
-        value.downcast_mut::<Self::Generic<T>>()
-    }
-    fn extend(&mut self, value: Self) {
-        let map = TransparentWrapper::peel_mut(self);
-        let value = TransparentWrapper::peel(value);
-        map.extend(value);
-    }
-}
-
-pub trait ErasedSubGenericComponentSingletonMap
-where
-    Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
-{
-    type Generic<T: Component + Clone, U: Component>: Send + Sync + Clone + 'static;
-    fn insert<T, U>(&mut self, value: Self::Generic<T, U>)
-    where
-        T: Component + Clone + Send + Sync + 'static,
-        U: Component,
-    {
+        value: SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>,
+        index: Self::Index,
+    ) {
         let map = TransparentWrapper::peel_mut(self);
         let erased = Box::new(value);
-        map.insert(TypeId::of::<T>(), erased);
+        map.insert(index, erased);
     }
 
-    fn get<T, U>(&mut self) -> Option<&mut Self::Generic<T, U>>
-    where
-        T: Component + Clone + Send + Sync + 'static,
-        U: Component,
-    {
+    fn get_typed<T: Clone + Send + Sync + 'static>(
+        &mut self,
+        index: &Self::Index,
+    ) -> Option<&mut SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>> {
         let map = TransparentWrapper::peel_mut(self);
 
-        let value = map.get_mut(&TypeId::of::<T>())?;
+        let value = map.get_mut(&index)?;
 
-        value.downcast_mut::<Self::Generic<T, U>>()
-    }
-    fn extend(&mut self, value: Self) {
-        let map = TransparentWrapper::peel_mut(self);
-        let value = TransparentWrapper::peel(value);
-        map.extend(value);
+        value.downcast_mut::<SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>>()
     }
 }
-
-pub trait ErasedSubGenericAssetsMap
-where
-    Self: TransparentWrapper<BoxAnyTypeMap> + Sized,
-{
-    type Generic<T: Deref<Target = Handle<U>> + Component, U: Asset + Clone>: Send
-        + Sync
-        + Clone
-        + 'static;
-    fn insert<T, U>(&mut self, value: Self::Generic<T, U>)
-    where
-        T: Deref<Target = Handle<U>> + Component + 'static,
-        U: Asset + Clone + Send + Sync + 'static,
-    {
-        let map = TransparentWrapper::peel_mut(self);
-        let erased = Box::new(value);
-        map.insert(TypeId::of::<T>(), erased);
-    }
-
-    fn get<T, U>(&mut self) -> Option<&mut Self::Generic<T, U>>
-    where
-        T: Deref<Target = Handle<U>> + Component + 'static,
-        U: Asset + Clone + Send + Sync + 'static,
-    {
-        let map = TransparentWrapper::peel_mut(self);
-
-        let value = map.get_mut(&TypeId::of::<T>())?;
-
-        value.downcast_mut::<Self::Generic<T, U>>()
-    }
-    fn extend(&mut self, value: Self) {
-        let map = TransparentWrapper::peel_mut(self);
-        let value = TransparentWrapper::peel(value);
-        map.extend(value);
-    }
-}
-
-// pub trait BevySignalSource
-//     type Signal;
-//     type SignalHolder;
-// {
-//     fn request_signal() -> SyncSignal<>
-// }

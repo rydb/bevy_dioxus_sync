@@ -2,13 +2,10 @@ use std::{
     any::{Any, type_name},
     collections::HashMap,
     fmt::Display,
-    hash::Hash,
 };
 
 use async_std::task::sleep;
-use bevy_dioxus_interop::{
-    BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS,
-};
+use bevy_dioxus_interop::{BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS};
 use bevy_ecs::{system::Command, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
@@ -19,20 +16,16 @@ use dioxus_signals::{
     Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock,
 };
 
-// pub mod asset_handle;
-// pub mod asset_single;
 pub mod asset;
-pub mod component_single;
+pub mod component;
 pub mod resource;
 
 pub mod traits;
+pub use traits::*;
 
-/// What dioxus shows incase the unerlying can't be fetched.
 pub enum BevyFetchBackup {
     /// Return value as unknown as it couldn't be fetched
     Unknown,
-    /// Return lorem ipsum block
-    LoremIpsum,
     /// Return value for when the value exists in bevy, but dioxus hasn't received it yet.
     Uninitialized,
 }
@@ -46,10 +39,8 @@ impl Default for BevyFetchBackup {
 impl Display for BevyFetchBackup {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let string = match self {
-            BevyFetchBackup::Unknown => "Unable to receive value",
-            // todo: Implement this properly.
-            BevyFetchBackup::LoremIpsum => "Lorem Ipsum",
-            BevyFetchBackup::Uninitialized => "waiting for value from bevy....",
+            BevyFetchBackup::Unknown => format!("Unable to receive {}", type_name::<Self>()),
+            BevyFetchBackup::Uninitialized => "waiting for value from bevy....".to_string(),
         };
         write!(f, "{}", string)
     }
@@ -99,35 +90,6 @@ pub type BoxGenericTypeMap<Index> = HashMap<Index, Box<dyn Any + Send + Sync>>;
 
 pub type SignalErasedMapValue<T, Index, AdditionalInfo> =
     SyncSignal<BevyValue<T, Index, AdditionalInfo>>;
-
-pub trait SignalsErasedMap
-where
-    Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
-{
-    // type Value: Clone + 'static + Send + Sync;
-    type Index: Hash + Eq + Clone + Send + Sync + 'static;
-    type AdditionalInfo: Send + Sync + 'static;
-    fn insert_typed<T: Clone + Send + Sync + 'static>(
-        &mut self,
-        value: SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>,
-        index: Self::Index,
-    ) {
-        let map = TransparentWrapper::peel_mut(self);
-        let erased = Box::new(value);
-        map.insert(index, erased);
-    }
-
-    fn get_typed<T: Clone + Send + Sync + 'static>(
-        &mut self,
-        index: &Self::Index,
-    ) -> Option<&mut SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>> {
-        let map = TransparentWrapper::peel_mut(self);
-
-        let value = map.get_mut(&index)?;
-
-        value.downcast_mut::<SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>>()
-    }
-}
 
 pub fn use_bevy_value<T, U, V, W>(
     index: Option<V::Index>,
@@ -202,26 +164,6 @@ where
         }
     });
     signal
-}
-
-type RequestA<T> = <T as DioxusTxRx>::A;
-type AdditionalInfo<T> = Option<<T as DioxusTxRx>::AdditionalInfo>;
-type Index<T> = T;
-
-type Channels<T> = BevyDioxusIO<RequestA<T>, Index<T>, AdditionalInfo<T>>;
-
-pub trait DioxusTxRx
-where
-    Self: TransparentWrapper<Channels<Self>> + Sized,
-{
-    type A: Send + Sync + Clone + 'static;
-    type AdditionalInfo: Send + Sync;
-    type Index: Send + Sync;
-}
-
-pub enum IndexInitialized {
-    No,
-    Yes,
 }
 
 fn request_bevy_signal<T, U, V>(

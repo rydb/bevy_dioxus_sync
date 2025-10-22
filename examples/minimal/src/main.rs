@@ -2,14 +2,13 @@
 
 use bevy::prelude::*;
 use bevy_dioxus_sync::plugins::DioxusPlugin;
-use frontend::ui::app_ui;
 
-use crate::bevy_scene_plugin::BevyScenePlugin;
+use crate::{backend::bevy_scene_plugin::BevyScenePlugin, frontend::app_ui};
 
-mod bevy_scene_plugin;
+pub mod backend;
+pub mod frontend;
 
 pub fn main() {
-    println!("running bevy plugin");
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DioxusPlugin {

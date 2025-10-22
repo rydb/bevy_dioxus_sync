@@ -1,74 +1,25 @@
-use std::fmt::Display;
-
+use crate::backend::*;
 use bevy_color::Color;
-use bevy_derive::{Deref, DerefMut};
 use bevy_dioxus_hooks::{
     asset::use_bevy_component_asset_single,
-    component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource,
+    component::component_single::hook::use_bevy_component_singleton,
+    resource::hook::use_bevy_resource,
 };
-use bevy_dioxus_sync::DioxusElementMarker;
-use bevy_ecs::prelude::*;
 use bevy_pbr::prelude::*;
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
-// use dioxus_signals::*;
-// use dioxus_core::Element;
-// use dioxus_core_macro::{component, rsx};
 
-#[derive(Component, Clone)]
-pub struct DynamicCube;
+// TODO: uncomment when bevy_dioxus_panels in ready
+// #[derive(Debug)]
+// pub struct AppUi;
 
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
-pub struct CubeTranslationSpeed(pub f32);
-
-#[derive(Resource, Debug, Clone)]
-pub struct FPS(pub f32);
-
-impl Display for FPS {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Default for CubeTranslationSpeed {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
-
-impl Display for CubeTranslationSpeed {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
-pub struct CubeRotationSpeed(pub f32);
-
-impl Display for CubeRotationSpeed {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Default for CubeRotationSpeed {
-    fn default() -> Self {
-        Self(2.0)
-    }
-}
-
-#[derive(Debug)]
-pub struct AppUi;
-
-impl DioxusElementMarker for AppUi {
-    fn element(&self) -> Element {
-        app_ui()
-    }
-}
+// impl DioxusElementMarker for AppUi {
+//     fn element(&self) -> Element {
+//         app_ui()
+//     }
+// }
 
 pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
-
-// static CSS: dioxus::prelude::Asset = asset!("./ui.css");
 
 #[component]
 pub fn app_ui() -> Element {
@@ -79,8 +30,7 @@ pub fn app_ui() -> Element {
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
     rsx! {
-        // style { {include_str!("./ui.css")} }
-        document::Stylesheet { href: asset!("/src/ui.css") }
+        document::Stylesheet { href: asset!("src/frontend/ui.css") }
         div {
             id: "panel",
             class: "catch-events",

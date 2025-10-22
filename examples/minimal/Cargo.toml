@@ -5,6 +5,39 @@ edition.workspace = true
 
 [dependencies]
 bevy = {workspace = true, features = ["trace_tracy"]}
+bevy_ecs = {workspace = true}
+bevy_app = {workspace = true}
+bevy_color = {workspace = true}
+bevy_asset = {workspace = true}
+bevy_pbr = {workspace = true}
+bevy_transform = {workspace = true}
+bevy_derive = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
-dioxus = {workspace = true, default-features = false, features = ["native", "launch", "devtools"]}
-frontend = {path = "./frontend"}
+bevy_dioxus_hooks = {workspace = true}
+
+dioxus = {workspace = true, default-features = false, features = ["html", "signals", "macro", "native", "asset", "document", "launch", "devtools"]}
+
+# [package]
+# name = "frontend"
+# version.workspace = true
+# edition.workspace = true
+
+
+# [dependencies]
+# bevy_ecs = {workspace = true}
+# bevy_app = {workspace = true}
+# bevy_color = {workspace = true}
+# bevy_asset = {workspace = true}
+# bevy_pbr = {workspace = true}
+# bevy_derive = {workspace = true}
+
+# bevy_dioxus_hooks = {workspace = true}
+# bevy_dioxus_sync = {workspace = true}
+# bevy_transform = {workspace = true}
+
+# dioxus = {workspace = true, default-features = false, features = ["html", "signals", "macro", "native", "asset", "document"]}
+# # dioxus-signals = {workspace = true}
+# # dioxus-core-macro = {workspace = true}
+# # # dioxus-elements = {workspace = true}
+# # dioxus-core = {workspace = true}
+# # dioxus = {workspace = true,features = ["desktop"]}

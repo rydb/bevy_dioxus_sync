@@ -1,6 +1,7 @@
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
-use frontend::ui::{CubeRotationSpeed, CubeTranslationSpeed, DynamicCube, FPS};
+
+use crate::backend::*;
 
 #[derive(Component)]
 pub struct OrbitCamera {

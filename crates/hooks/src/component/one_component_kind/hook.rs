@@ -4,11 +4,6 @@ use async_std::task::sleep;
 use bevy_ecs::{prelude::*, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use dioxus::{
-    core::use_hook,
-    hooks::{use_context, use_future},
-    signals::{Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock},
-};
 
 use crate::{
     BoxAnyTypeMap,

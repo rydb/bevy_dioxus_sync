@@ -14,9 +14,7 @@ use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use dioxus_signals::{Signal, SyncSignal};
 
-use crate::{
-    BevyValue, BoxGenericTypeMap, SignalsErasedMap, use_bevy_value,
-};
+use crate::{BevyValue, BoxGenericTypeMap, SignalsErasedMap, use_bevy_value};
 
 pub type UntypedSendAsset = Box<dyn Any + Send + Sync>;
 
@@ -138,7 +136,7 @@ impl SignalsErasedMap for BevyAssets {
     type AdditionalInfo = UntypedAssetId;
 }
 
-/// use a bevy component thats a newtype handle around an asset. Looks for a singleton with the given marker component.
+/// interface with a singular bevy asset, [`U`]. Selects the asset based on its handle newtype, [`T`] and a marker component, [`V`].
 pub fn use_bevy_component_asset_single<T, U, V>()
 -> SyncSignal<BevyValue<U, UntypedAssetId, UntypedAssetId>>
 where

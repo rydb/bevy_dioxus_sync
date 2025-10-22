@@ -8,7 +8,6 @@ use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 
-
 // #[derive(TransparentWrapper, Clone)]
 // #[repr(transparent)]
 // pub struct RequestBevyResource<T: Resource + Clone>(pub(crate) Channels<RequestBevyResource<T>>);

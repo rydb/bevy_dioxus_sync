@@ -54,11 +54,6 @@ impl ErasedSubGenericMap for RxChannelRegistry {
     type Generic<T: Send + Sync + 'static> = Receiver<T>;
 }
 
-// pub struct InterOpInfo<T, AdditionalInfo = ()> {
-//     index: T,
-//     additional_info: AdditionalInfo
-// }
-/// an info packet for communication between bevy/dioxus
 pub struct InfoPacket<T, U, V> {
     pub update: T,
     pub index: Option<U>,

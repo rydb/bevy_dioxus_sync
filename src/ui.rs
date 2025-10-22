@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::{DioxusPanel, plugins::DioxusAppKind, systems::PanelUpdateKind};
 use async_std::task::sleep;
 use bevy_dioxus_hooks::{
-    asset::BevyAssetsRegistry, component_single::hook::BevyComponentsRegistry,
+    asset::BevyAssetsRegistry, component::component_single::hook::BevyComponentsRegistry,
     resource::hook::ResourceRegistry,
 };
 use bevy_dioxus_interop::{BevyCommandQueueTx, InfoRefershRateMS};

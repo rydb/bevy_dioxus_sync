@@ -4,10 +4,7 @@ use bytes::Bytes;
 use crossbeam_channel::{Receiver, Sender};
 use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
-use std::{
-    any::Any,
-    sync::Arc,
-};
+use std::{any::Any, sync::Arc};
 
 use crate::systems::PanelUpdate;
 

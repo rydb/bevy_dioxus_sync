@@ -1,16 +1,13 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use bevy_app::Update;
 use bevy_ecs::prelude::*;
 
-use crate::{
-    hooks::{
-        BevyDioxusIO,
-        one_component_kind::{AddRemoveQueues, EntityComponentQueue},
-    },
-    *,
-};
 
+use bevy_dioxus_interop::*;
+use bevy_log::warn;
+
+use crate::component::one_component_kind::{AddRemoveQueues, EntityComponentQueue};
 pub struct RequestBevyComponents<T: Component> {
     pub(crate) io: BevyDioxusIO<EntityComponentQueue<T>>,
 }
