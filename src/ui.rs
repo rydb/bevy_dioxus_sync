@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
 // use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
-use crate::{plugins::{DioxusAppKind}, systems::PanelUpdateKind, DioxusPanel};
+use crate::{DioxusPanel, plugins::DioxusAppKind, systems::PanelUpdateKind};
 use async_std::task::sleep;
-use bevy_dioxus_hooks::{asset::BevyAssetsRegistry, component_single::hook::BevyComponentsRegistry, resource::hook::ResourceRegistry};
+use bevy_dioxus_hooks::{
+    asset::BevyAssetsRegistry, component_single::hook::BevyComponentsRegistry,
+    resource::hook::ResourceRegistry,
+};
 use bevy_dioxus_interop::{BevyCommandQueueTx, InfoRefershRateMS};
 use bevy_ecs::entity::Entity;
 use dioxus_core::Element;
@@ -14,11 +17,9 @@ use dioxus_signals::*;
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 
-pub enum AppKind {
-}
+pub enum AppKind {}
 
 pub fn dioxus_app(app_kind: DioxusAppKind) -> Element {
-    
     let props = match app_kind {
         DioxusAppKind::NativeBevy(bevy_props) => {
             let dioxus_props = bevy_props.dioxus_props.clone();
@@ -26,7 +27,8 @@ pub fn dioxus_app(app_kind: DioxusAppKind) -> Element {
             let register_updates = use_context_provider(|| bevy_props.clone());
             let mut dioxus_panels = use_context_provider(|| DioxusPanels::default());
 
-            let _command_queue_tx = use_context_provider(|| BevyCommandQueueTx(bevy_props.command_queues_tx.clone()));
+            let _command_queue_tx =
+                use_context_provider(|| BevyCommandQueueTx(bevy_props.command_queues_tx.clone()));
             use_future(move || {
                 {
                     let value = register_updates.dioxus_panel_updates.clone();
@@ -53,10 +55,8 @@ pub fn dioxus_app(app_kind: DioxusAppKind) -> Element {
                 }
             });
             dioxus_props
-        },
-        DioxusAppKind::NativeOnly(props) => {
-            props
-        },
+        }
+        DioxusAppKind::NativeOnly(props) => props,
     };
     let refresh_rate_ms = 1000 / props.fps.clone();
 
@@ -64,17 +64,12 @@ pub fn dioxus_app(app_kind: DioxusAppKind) -> Element {
 
     let main_window_ui = props.main_window_ui.clone();
 
-
     let _resource_registers = use_context_provider(|| ResourceRegistry::default());
     // let component_signals = use_context_provider(|| BevyComponentsSignals::default());
     // let _asset_singletons = use_context_provider(|| BevyAssetsSignals::default());
     let _asset_registers = use_context_provider(|| BevyAssetsRegistry::default());
     let _component_registers = use_context_provider(|| BevyComponentsRegistry::default());
 
-
-
-
-    
     rsx! {
         {main_window_ui.map(|n| n())},
         // for (_, panel_kind) in dioxus_panels.0.read().clone() {

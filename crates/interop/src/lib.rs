@@ -1,4 +1,8 @@
-use std::{any::{Any, TypeId}, collections::HashMap, sync::Arc};
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+    sync::Arc,
+};
 
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel, system::ScheduleSystem, world::CommandQueue};
 use bytemuck::TransparentWrapper;
@@ -6,8 +10,8 @@ use crossbeam_channel::{Receiver, Sender};
 
 use crate::traits::ErasedSubGenericMap;
 
-pub mod traits;
 pub mod plugins;
+pub mod traits;
 
 /// Bevy side channel for giving [`T`] to dioxus
 #[derive(Resource)]
@@ -26,7 +30,6 @@ pub struct DioxusRxChannel<T>(pub Receiver<T>);
 
 #[derive(Resource)]
 pub struct DioxusCommandQueueRx(pub Receiver<CommandQueue>);
-
 
 /// An untyped hashmap that resolved typed entries by their type id.
 pub type ArcAnytypeMap = HashMap<TypeId, Arc<dyn Any + Send + Sync>>;
@@ -59,9 +62,8 @@ impl ErasedSubGenericMap for RxChannelRegistry {
 pub struct InfoPacket<T, U, V> {
     pub update: T,
     pub index: Option<U>,
-    pub additional_info: Option<V>
+    pub additional_info: Option<V>,
 }
-
 
 #[derive(Clone)]
 pub struct BevyDioxusIO<A, Index, AdditionalInfo, C = A> {
@@ -73,8 +75,10 @@ pub struct BevyDioxusIO<A, Index, AdditionalInfo, C = A> {
 
 impl<A, Index, C, AdditionalInfo> Default for BevyDioxusIO<A, Index, AdditionalInfo, C> {
     fn default() -> Self {
-        let (bevy_tx, dioxus_rx) = crossbeam_channel::unbounded::<InfoPacket<A, Index, AdditionalInfo>>();
-        let (dioxus_tx, bevy_rx) = crossbeam_channel::unbounded::<InfoPacket<C, Index, AdditionalInfo>>();
+        let (bevy_tx, dioxus_rx) =
+            crossbeam_channel::unbounded::<InfoPacket<A, Index, AdditionalInfo>>();
+        let (dioxus_tx, bevy_rx) =
+            crossbeam_channel::unbounded::<InfoPacket<C, Index, AdditionalInfo>>();
 
         Self {
             bevy_tx,

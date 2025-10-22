@@ -4,32 +4,30 @@ use std::rc::Rc;
 use bevy_app::prelude::*;
 use bevy_dioxus_events::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
-use bevy_dioxus_render::plugins::DioxusRenderPlugin;
 use bevy_dioxus_render::DioxusMessages;
+use bevy_dioxus_render::plugins::DioxusRenderPlugin;
 use bevy_ecs::{prelude::*, world::CommandQueue};
 
+use crate::PanelUpdate;
+use crate::systems::PanelUpdateKind;
+use crate::{DioxusPanel, systems::DioxusPanelUpdates, ui::dioxus_app, *};
 use bevy_log::warn;
 use bevy_utils::default;
 use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus_core::{provide_context, Element, ScopeId, VirtualDom};
+use dioxus_core::{Element, ScopeId, VirtualDom, provide_context};
 use dioxus_native_dom::DioxusDocument;
-use crate::systems::PanelUpdateKind;
-use crate::PanelUpdate;
-use crate::{
-    systems::DioxusPanelUpdates, ui::dioxus_app, DioxusPanel, *
-};
 
 pub struct DioxusPlugin {
     /// how many times per second does dioxus refresh info from bevy.
     pub bevy_info_refresh_fps: u16,
 
-    pub main_window_ui: Option<fn() -> Element>
+    pub main_window_ui: Option<fn() -> Element>,
 }
 #[derive(Clone)]
 pub struct DioxusPropsNative {
     pub fps: u16,
-    pub main_window_ui: Option<fn() -> Element>
+    pub main_window_ui: Option<fn() -> Element>,
 }
 
 #[derive(Clone)]
@@ -42,54 +40,59 @@ pub struct DioxusPropsNativeBevy {
 #[derive(Clone)]
 pub enum DioxusAppKind {
     NativeBevy(DioxusPropsNativeBevy),
-    NativeOnly(DioxusPropsNative)
+    NativeOnly(DioxusPropsNative),
 }
 
 /// plugin for managing dioxus plugins
 pub struct DioxusPanelsPlugin {
-    dioxus_panel_updates_tx: Sender<DioxusPanelUpdates>, 
-    dioxus_panel_updates_rx: Receiver<DioxusPanelUpdates>
+    dioxus_panel_updates_tx: Sender<DioxusPanelUpdates>,
+    dioxus_panel_updates_rx: Receiver<DioxusPanelUpdates>,
 }
 
 impl DioxusPanelsPlugin {
     pub fn new() -> Self {
         let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) =
-        crossbeam_channel::unbounded::<DioxusPanelUpdates>();
+            crossbeam_channel::unbounded::<DioxusPanelUpdates>();
 
-        Self { dioxus_panel_updates_tx, dioxus_panel_updates_rx}
+        Self {
+            dioxus_panel_updates_tx,
+            dioxus_panel_updates_rx,
+        }
     }
 }
 
 impl Plugin for DioxusPanelsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DioxusPanelUpdates>();
-        app.insert_resource(DioxusPanelUpdatesSender(self.dioxus_panel_updates_tx.clone()));
+        app.insert_resource(DioxusPanelUpdatesSender(
+            self.dioxus_panel_updates_tx.clone(),
+        ));
 
         app.world_mut()
-        .register_component_hooks::<DioxusPanel>()
-        .on_add(|mut world, hook| {
+            .register_component_hooks::<DioxusPanel>()
+            .on_add(|mut world, hook| {
                 let Some(value) = world.entity(hook.entity).get::<DioxusPanel>() else {
-                warn!(
-                    "could not get {:#} on {:#}",
-                    type_name::<DioxusPanel>(),
-                    hook.entity
-                );
-                return;
-            };
-            let value = value.clone();
-            let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            panel_updates.0.push(PanelUpdate {
-                key: hook.entity,
-                value: PanelUpdateKind::Add(value),
-            }) 
-        })
-        .on_remove(|mut world, hook| {
-            let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-            panel_updates.0.push(PanelUpdate {
-                key: hook.entity,
-                value: PanelUpdateKind::Remove,
+                    warn!(
+                        "could not get {:#} on {:#}",
+                        type_name::<DioxusPanel>(),
+                        hook.entity
+                    );
+                    return;
+                };
+                let value = value.clone();
+                let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
+                panel_updates.0.push(PanelUpdate {
+                    key: hook.entity,
+                    value: PanelUpdateKind::Add(value),
+                })
             })
-        });
+            .on_remove(|mut world, hook| {
+                let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
+                panel_updates.0.push(PanelUpdate {
+                    key: hook.entity,
+                    value: PanelUpdateKind::Remove,
+                })
+            });
         app.add_systems(
             PreUpdate,
             push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>),
@@ -111,27 +114,22 @@ impl Plugin for DioxusPlugin {
             command_queues_tx: bevy_dioxus_interop_plugin.command_tx.clone(),
             dioxus_props: DioxusPropsNative {
                 fps: self.bevy_info_refresh_fps,
-                main_window_ui: self.main_window_ui
-            }
-
+                main_window_ui: self.main_window_ui,
+            },
         };
         app.add_plugins(bevy_dioxus_interop_plugin);
         app.add_plugins(DioxusRenderPlugin);
         app.add_plugins(DioxusEventSyncPlugin);
         app.add_plugins(dioxus_panels_plugin);
 
-
-
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size
         let vdom = VirtualDom::new_with_props(dioxus_app, DioxusAppKind::NativeBevy(props));
-        
-        let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig {
-            ..default()
-        });
+
+        let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig { ..default() });
         // Setup NetProvider
         let net_provider = BevyNetProvider::shared(s.clone());
-        
+
         dioxus_doc.set_net_provider(net_provider);
 
         // Setup DocumentProxy to process CreateHeadElement messages
@@ -147,8 +145,6 @@ impl Plugin for DioxusPlugin {
         dioxus_doc.initial_build();
         dioxus_doc.resolve(0.0);
         app.insert_non_send_resource(dioxus_doc);
-
-
     }
 }
 

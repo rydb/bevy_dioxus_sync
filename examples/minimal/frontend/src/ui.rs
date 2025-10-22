@@ -2,12 +2,15 @@ use std::fmt::Display;
 
 use bevy_color::Color;
 use bevy_derive::{Deref, DerefMut};
-use bevy_ecs::prelude::*;
-use bevy_dioxus_hooks::{asset::use_bevy_component_asset_single, component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource, BevyValue};
+use bevy_dioxus_hooks::{
+    asset::use_bevy_component_asset_single,
+    component_single::hook::use_bevy_component_singleton, resource::hook::use_bevy_resource,
+};
 use bevy_dioxus_sync::DioxusElementMarker;
+use bevy_ecs::prelude::*;
 use bevy_pbr::prelude::*;
 use bevy_transform::components::Transform;
-use dioxus::{core::SuperInto, prelude::*};
+use dioxus::prelude::*;
 // use dioxus_signals::*;
 // use dioxus_core::Element;
 // use dioxus_core_macro::{component, rsx};
@@ -54,7 +57,6 @@ impl Default for CubeRotationSpeed {
     }
 }
 
-
 #[derive(Debug)]
 pub struct AppUi;
 
@@ -68,12 +70,11 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 
 // static CSS: dioxus::prelude::Asset = asset!("./ui.css");
 
-
-
 #[component]
 pub fn app_ui() -> Element {
-    let fps  = use_bevy_resource::<FPS>();
-    let cube_color = use_bevy_component_asset_single::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
+    let fps = use_bevy_resource::<FPS>();
+    let cube_color =
+        use_bevy_component_asset_single::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
     let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
@@ -86,9 +87,9 @@ pub fn app_ui() -> Element {
             div {
                 id: "title",
                 h1 {
-                   u {  
+                   u {
                     "bevy_dioxus_sync: "
-                   } 
+                   }
                    br {}
                    {"example menu "}
                 }
@@ -134,7 +135,7 @@ pub fn app_ui() -> Element {
                         }).unwrap_or("???".to_string());
 
                         {xyzw.to_string()}
-                    }  
+                    }
                 }
             }
             div {

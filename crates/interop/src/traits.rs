@@ -1,4 +1,7 @@
-use std::{any::{type_name, Any, TypeId}, sync::Arc};
+use std::{
+    any::{Any, TypeId, type_name},
+    sync::Arc,
+};
 
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;

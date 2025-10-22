@@ -1,12 +1,10 @@
 //! minimal example showing each of the hooks
 
 use bevy::prelude::*;
-use bevy_dioxus_sync::{plugins::{DioxusAppKind, DioxusPlugin, DioxusPropsNative}, ui::dioxus_app};
-use dioxus::core::VirtualDom;
+use bevy_dioxus_sync::plugins::DioxusPlugin;
 use frontend::ui::app_ui;
 
 use crate::bevy_scene_plugin::BevyScenePlugin;
-
 
 mod bevy_scene_plugin;
 

@@ -6,18 +6,16 @@ use bevy_camera::{Camera, Camera2d};
 use bevy_derive::Deref;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
-use bevy_log::{debug, warn};
+use bevy_log::debug;
 use bevy_math::prelude::*;
 use bevy_mesh::{Mesh, Mesh2d};
 use bevy_render::{
     Extract,
-    prelude::*,
     render_asset::RenderAssets,
     render_graph::{self, NodeRunError, RenderGraphContext, RenderLabel},
     renderer::{RenderContext, RenderDevice, RenderQueue},
     texture::GpuImage,
 };
-use bevy_sprite::prelude::*;
 use bevy_sprite_render::{ColorMaterial, MeshMaterial2d};
 use bevy_transform::components::Transform;
 use bevy_utils::default;
@@ -27,14 +25,13 @@ use blitz_paint::paint_scene;
 use blitz_traits::shell::{ColorScheme, Viewport};
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_devtools::DevserverMsg;
-use dioxus_native::{CustomPaintSource, DioxusDocument};
-use rustc_hash::FxHashMap;
+use dioxus_native::DioxusDocument;
 use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
- 
+
 /// placeholder const for dioxus animations
 /// TODO: implement this
 pub const ANIMATION_TIME_PLACEHOLDER: f32 = 0.0;
@@ -238,8 +235,6 @@ fn update_ui(
             .expect("failed to render to texture");
     }
 }
-
-
 
 fn setup_ui(
     mut commands: Commands,

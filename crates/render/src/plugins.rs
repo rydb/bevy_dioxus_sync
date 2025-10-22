@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use bevy_app::prelude::*;
-use bevy_render::{render_graph::RenderGraph, renderer::RenderDevice, RenderApp};
+use bevy_render::{RenderApp, render_graph::RenderGraph, renderer::RenderDevice};
 use vello::RendererOptions;
 
 use crate::*;
@@ -11,8 +11,7 @@ pub struct DioxusRenderPlugin;
 impl Plugin for DioxusRenderPlugin {
     fn build(&self, app: &mut App) {
         let epoch = AnimationTime(Instant::now());
-        
-        
+
         // Dummy waker
         struct NullWake;
         impl std::task::Wake for NullWake {
@@ -23,10 +22,8 @@ impl Plugin for DioxusRenderPlugin {
         app.insert_non_send_resource(waker);
 
         app.insert_resource(epoch);
-        app
-        .add_systems(Startup, setup_ui)
-        .add_systems(Update, update_ui)
-        ;
+        app.add_systems(Startup, setup_ui)
+            .add_systems(Update, update_ui);
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer

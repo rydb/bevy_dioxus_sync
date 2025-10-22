@@ -1,20 +1,15 @@
 use bevy_dioxus_render::{DioxusMessage, HeadElement};
-use bevy_ecs::{
-    component::{Component, Immutable, StorageType}, 
-};
-use bevy_log::warn;
+use bevy_ecs::component::{Component, Immutable, StorageType};
 use bytes::Bytes;
 use crossbeam_channel::{Receiver, Sender};
 use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
 use std::{
-    any::{Any, type_name},
+    any::Any,
     sync::Arc,
 };
 
-use crate::{
-    systems::{DioxusPanelUpdates, PanelUpdate, PanelUpdateKind},
-};
+use crate::systems::PanelUpdate;
 
 use std::fmt::Debug;
 
@@ -23,7 +18,6 @@ use dioxus_core::Element;
 pub mod plugins;
 pub(crate) mod systems;
 pub mod ui;
-
 
 pub struct SenderReceiver<T: Send + Sync + 'static> {
     pub sender: Sender<T>,
@@ -36,7 +30,6 @@ pub trait DioxusElementMarker: 'static + Sync + Send + Debug {
     //const ELEMENT_FUNCTION: fn() -> Element;
     fn element(&self) -> Element;
 }
-
 
 /// Component that marks an entity as a dioxus panel
 #[derive(Clone, Debug)]
@@ -61,7 +54,6 @@ impl Component for DioxusPanel {
 pub struct ResourceUpdates {}
 
 pub type BoxSync = Box<dyn Any + Send + Sync + 'static>;
-
 
 struct BevyNetCallback {
     sender: Sender<DioxusMessage>,
@@ -134,7 +126,6 @@ impl NetProvider<BlitzResource> for BevyNetProvider {
         }
     }
 }
-
 
 pub struct DioxusDocumentProxy {
     sender: Sender<DioxusMessage>,

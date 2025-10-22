@@ -1,18 +1,19 @@
 use bevy_app::Update;
-use bevy_dioxus_interop::{add_systems_through_world, BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket};
+use bevy_dioxus_interop::{
+    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, add_systems_through_world,
+};
 use bevy_ecs::{component::Mutable, prelude::*};
 use bevy_log::warn;
-use bevy_utils::default;
 use bytemuck::TransparentWrapper;
 use std::{any::TypeId, marker::PhantomData};
 
-use crossbeam_channel::{Receiver, Sender};
 
 type ComponentValue<T> = T;
 type ComponentIndex = TypeId;
 type ComponentAdditionalInfo = ();
 
-type ComponentInfoPacket<T> = InfoPacket<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>;
+type ComponentInfoPacket<T> =
+    InfoPacket<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>;
 
 /// Command to register dioxus bevy interop for a given resource.
 #[derive(TransparentWrapper, Clone)]
@@ -21,13 +22,12 @@ type ComponentInfoPacket<T> = InfoPacket<ComponentValue<T>, ComponentIndex, Comp
 pub(crate) struct RequestBevyComponentSingleton<
     T: Component<Mutability = Mutable> + Clone,
     U: Component + Clone,
->
-{
+> {
     pub(crate) channels: BevyDioxusIO<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>,
     singleton_marker: PhantomData<U>,
 }
 
-impl<T, U> Default for RequestBevyComponentSingleton<T, U> 
+impl<T, U> Default for RequestBevyComponentSingleton<T, U>
 where
     T: Component<Mutability = Mutable> + Clone,
     U: Component + Clone,
@@ -66,9 +66,11 @@ fn send_component_singleton<T, U>(
     };
     let _ = bevy_tx
         .0
-        .send(
-            InfoPacket { update: value.clone(), index: Some(TypeId::of::<T>()), additional_info: None }
-        )
+        .send(InfoPacket {
+            update: value.clone(),
+            index: Some(TypeId::of::<T>()),
+            additional_info: None,
+        })
         .inspect_err(|err| warn!("{:#}", err));
 }
 

@@ -5,12 +5,9 @@
 
 use bevy_asset::{Asset, Handle};
 use bevy_dioxus_interop::BoxAnyTypeMap;
-use bevy_ecs::{component::Component, resource::Resource};
+use bevy_ecs::component::Component;
 use bytemuck::TransparentWrapper;
-use dioxus_signals::SyncSignal;
-use std::{
-    any::TypeId, ops::Deref, 
-};
+use std::{any::TypeId, ops::Deref};
 
 pub trait ErasedSubGenericComponentsMap
 where
@@ -108,8 +105,7 @@ where
     }
 }
 
-
-// pub trait BevySignalSource 
+// pub trait BevySignalSource
 //     type Signal;
 //     type SignalHolder;
 // {

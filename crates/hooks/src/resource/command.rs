@@ -1,13 +1,13 @@
 use std::any::TypeId;
 
 use bevy_app::prelude::*;
-use bevy_dioxus_interop::{add_systems_through_world, BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket};
+use bevy_dioxus_interop::{
+    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, add_systems_through_world,
+};
 use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
-use crossbeam_channel::{Receiver, Sender};
 
-use crate::{AdditionalInfo, Channels, DioxusTxRx};
 
 // #[derive(TransparentWrapper, Clone)]
 // #[repr(transparent)]
@@ -15,14 +15,16 @@ use crate::{AdditionalInfo, Channels, DioxusTxRx};
 
 #[derive(TransparentWrapper, Clone)]
 #[repr(transparent)]
-pub struct RequestBevyResource<T: Resource + Clone>(pub(crate) BevyDioxusIO<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>);
-
+pub struct RequestBevyResource<T: Resource + Clone>(
+    pub(crate) BevyDioxusIO<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>,
+);
 
 // lay out types like this to prevent de-sync between systems and backend logistics updates.
 type ResourceInfoIndex = TypeId;
 type ResourceValue<T> = T;
 type ResourceAdditionalInfo = ();
-type ResourceInfoPacket<T> = InfoPacket<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>;
+type ResourceInfoPacket<T> =
+    InfoPacket<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>;
 
 impl<T: Resource + Clone> Default for RequestBevyResource<T> {
     fn default() -> Self {

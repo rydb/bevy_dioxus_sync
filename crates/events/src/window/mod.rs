@@ -9,7 +9,9 @@ use bevy_window::WindowResized;
 use blitz_traits::shell::Viewport;
 use dioxus_native::DioxusDocument;
 
-use bevy_dioxus_render::{COLOR_SCHEME, DioxusUiQuad, SCALE_FACTOR, TextureImage, create_ui_texture};
+use bevy_dioxus_render::{
+    COLOR_SCHEME, DioxusUiQuad, SCALE_FACTOR, TextureImage, create_ui_texture,
+};
 
 pub(crate) fn handle_window_resize(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
