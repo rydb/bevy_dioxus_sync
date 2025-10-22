@@ -15,15 +15,26 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-# TODO: disable mandatory tracing once: https://github.com/DioxusLabs/dioxus/issues/4641 is resolved
-dioxus-native = {version = "0.7.0-rc.3", default-features = false}
-dioxus-native-dom = {version = "0.7.0-rc.3", default-features = false}
-dioxus = {version = "0.7.0-rc.3", default-features = false}
-dioxus-signals = {version = "0.7.0-rc.3", default-features = false}
-dioxus-hooks = {version = "0.7.0-rc.3", default-features = false}
-dioxus-core = {version = "0.7.0-rc.3", default-features = false}
-dioxus-html = {version = "0.7.0-rc.3", default-features = false}
-dioxus-core-macro = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-native = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-native-dom = {version = "0.7.0-rc.3", default-features = false}
+# dioxus = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-signals = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-hooks = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-core = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-html = {version = "0.7.0-rc.3", default-features = false}
+# dioxus-core-macro = {version = "0.7.0-rc.3", default-features = false}
+dioxus-native = { git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false }
+dioxus-native-dom = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-signals = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-hooks = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-core = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-html = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-core-macro = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-devtools = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-document = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-asset-resolver = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+
 bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
 bevy_dioxus_hooks = {path = "./crates/hooks"}
@@ -53,17 +64,21 @@ bevy_core_pipeline = {version = "0.17"}
 bevy_tasks = {version = "0.17"}
 bevy_camera = {version = "0.17"}
 bevy_sprite_render = {version = "0.17"}
+
 vello = {version = "0.6"}
 rustc-hash = "1"
 bytemuck = "1.23"
+data-url = "0.3.2"
+bytes = "1.10"
+
 
 anyrender_vello = {version = "0.6", default-features = false}
-blitz-net = { version = "=0.2", default-features = false}
-blitz-paint = { version = "=0.2", default-features = false}
-blitz-traits = { version = "=0.2", default-features = false}
-blitz-dom = { version = "=0.2", default-features = false }
-blitz-shell = { version = "=0.2", default-features = false }
-blitz-html = {version = "=0.2", default-features = false}
+blitz-net = { version = "0.2", default-features = false}
+blitz-paint = { version = "0.2", default-features = false}
+blitz-traits = { version = "0.2", default-features = false}
+blitz-dom = { version = "0.2.4", default-features = false }
+blitz-shell = { version = "0.2", default-features = false }
+blitz-html = {version = "0.2", default-features = false}
 
 async-std = "1.13"
 crossbeam-channel = "0.5"
@@ -75,6 +90,8 @@ bevy_dioxus_render = {workspace = true}
 bevy_dioxus_hooks = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_events = {workspace = true}
+dioxus-asset-resolver = {workspace = true}
+dioxus-devtools = {workspace = true}
 
 bevy_input = {workspace = true}
 bevy_log = {workspace = true}
@@ -91,6 +108,8 @@ wgpu-types = {workspace = true}
 
 async-std = {workspace = true}
 crossbeam-channel = {workspace = true}
+data-url = {workspace = true}
+bytes = {workspace = true}
 
 blitz-dom = {workspace = true}
 blitz-traits = {workspace = true}
@@ -101,3 +120,4 @@ dioxus-native-dom = {workspace = true}
 dioxus-signals = {workspace = true}
 dioxus-hooks = {workspace = true}
 dioxus-core-macro = {workspace = true}
+dioxus-document = {workspace = true}

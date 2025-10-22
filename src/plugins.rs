@@ -1,21 +1,23 @@
 use std::any::type_name;
+use std::rc::Rc;
 
 use bevy_app::prelude::*;
 use bevy_dioxus_events::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
+use bevy_dioxus_render::DioxusMessages;
 use bevy_ecs::{prelude::*, world::CommandQueue};
 
 use bevy_log::warn;
 use bevy_utils::default;
 use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus_core::{Element, VirtualDom};
+use dioxus_core::{provide_context, Element, ScopeId, VirtualDom};
 use dioxus_native_dom::DioxusDocument;
 use crate::systems::PanelUpdateKind;
 use crate::PanelUpdate;
 use crate::{
-    systems::DioxusPanelUpdates, ui::dioxus_app, DioxusPanel,
+    systems::DioxusPanelUpdates, ui::dioxus_app, DioxusPanel, *
 };
 
 pub struct DioxusPlugin {
@@ -100,7 +102,8 @@ pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
 
 impl Plugin for DioxusPlugin {
     fn build(&self, app: &mut App) {
-        
+        let (s, r) = crossbeam_channel::unbounded();
+
         let bevy_dioxus_interop_plugin = DioxusBevyInteropPlugin::new();
         let dioxus_panels_plugin = DioxusPanelsPlugin::new();
         let props = DioxusPropsNativeBevy {
@@ -117,13 +120,30 @@ impl Plugin for DioxusPlugin {
         app.add_plugins(DioxusEventSyncPlugin);
         app.add_plugins(dioxus_panels_plugin);
 
+
+
         // Create the dioxus virtual dom and the dioxus-native document
         // The viewport will be set in setup_ui after we get the window size
         let vdom = VirtualDom::new_with_props(dioxus_app, DioxusAppKind::NativeBevy(props));
-        // FIXME add a NetProvider
+        
         let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig {
             ..default()
         });
+        // Setup NetProvider
+        let net_provider = BevyNetProvider::shared(s.clone());
+        
+        dioxus_doc.set_net_provider(net_provider);
+
+        // Setup DocumentProxy to process CreateHeadElement messages
+        let proxy = Rc::new(DioxusDocumentProxy::new(s.clone()));
+        dioxus_doc.vdom.in_scope(ScopeId::ROOT, move || {
+            provide_context(proxy as Rc<dyn dioxus_document::Document>);
+        });
+
+        // Setup devtools listener for hot-reloading
+        dioxus_devtools::connect(move |msg| s.send(DioxusMessage::Devserver(msg)).unwrap());
+        app.insert_resource(DioxusMessages(r));
+
         dioxus_doc.initial_build();
         dioxus_doc.resolve(0.0);
         app.insert_non_send_resource(dioxus_doc);

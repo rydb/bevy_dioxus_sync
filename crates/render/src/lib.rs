@@ -26,6 +26,7 @@ use blitz_dom::Document;
 use blitz_paint::paint_scene;
 use blitz_traits::shell::{ColorScheme, Viewport};
 use crossbeam_channel::{Receiver, Sender};
+use dioxus_devtools::DevserverMsg;
 use dioxus_native::{CustomPaintSource, DioxusDocument};
 use rustc_hash::FxHashMap;
 use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
@@ -140,9 +141,25 @@ impl render_graph::Node for TextureGetterNodeDriver {
 #[derive(Resource)]
 struct AnimationTime(Instant);
 
+pub enum DioxusMessage {
+    Devserver(DevserverMsg),
+    CreateHeadElement(HeadElement),
+    ResourceLoad(blitz_dom::net::Resource),
+}
+
+pub struct HeadElement {
+    pub name: String,
+    pub attributes: Vec<(String, String)>,
+    pub contents: Option<String>,
+}
+
+#[derive(Resource, Deref)]
+pub struct DioxusMessages(pub Receiver<DioxusMessage>);
+
 #[allow(clippy::too_many_arguments)]
 fn update_ui(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
+    dioxus_messages: Res<DioxusMessages>,
     waker: NonSendMut<std::task::Waker>,
     vello_renderer: Option<NonSendMut<VelloRenderer>>,
     render_device: Res<RenderDevice>,
@@ -151,15 +168,42 @@ fn update_ui(
     animation_epoch: Res<AnimationTime>,
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
+    while let Ok(msg) = dioxus_messages.0.try_recv() {
+        match msg {
+            DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
+                dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {
+                    // Apply changes to vdom
+                    dioxus_devtools::apply_changes(&dioxus_doc.vdom, &hotreload_message);
+
+                    // Reload changed assets
+                    for asset_path in &hotreload_message.assets {
+                        if let Some(url) = asset_path.to_str() {
+                            dioxus_doc.reload_resource_by_href(url);
+                        }
+                    }
+                }
+                dioxus_devtools::DevserverMsg::FullReloadStart => {}
+                _ => {}
+            },
+            DioxusMessage::CreateHeadElement(el) => {
+                println!("ACTUALLY CREATE");
+                dioxus_doc.create_head_element(&el.name, &el.attributes, &el.contents);
+                dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
+            }
+            DioxusMessage::ResourceLoad(resource) => {
+                dioxus_doc.load_resource(resource);
+            }
+        };
+    }
+
     while let Ok(texture) = receiver.try_recv() {
         *cached_texture = Some(texture);
     }
 
     if let (Some(texture), Some(mut vello_renderer)) = ((*cached_texture).as_ref(), vello_renderer)
     {
-        let context = std::task::Context::from_waker(&waker);
         // Poll the vdom
-        dioxus_doc.poll(Some(context));
+        dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
 
         // Refresh the document
         let animation_time = animation_epoch.0.elapsed().as_secs_f64();

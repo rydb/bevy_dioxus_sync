@@ -78,8 +78,8 @@ pub fn app_ui() -> Element {
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
     rsx! {
-        style { {include_str!("./ui.css")} }
-        // document::Stylesheet { href: asset!("/src/ui.css") }
+        // style { {include_str!("./ui.css")} }
+        document::Stylesheet { href: asset!("/src/ui.css") }
         div {
             id: "panel",
             class: "catch-events",
