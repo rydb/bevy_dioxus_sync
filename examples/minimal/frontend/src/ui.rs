@@ -87,7 +87,7 @@ pub fn app_ui() -> Element {
                 id: "title",
                 h1 {
                    u {  
-                    "bevy_dioxus_sync:"
+                    "bevy_dioxus_sync: "
                    } 
                    br {}
                    {"example menu "}

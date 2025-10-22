@@ -24,7 +24,6 @@ dioxus-hooks = {version = "0.7.0-rc.3", default-features = false}
 dioxus-core = {version = "0.7.0-rc.3", default-features = false}
 dioxus-html = {version = "0.7.0-rc.3", default-features = false}
 dioxus-core-macro = {version = "0.7.0-rc.3", default-features = false}
-dioxus-desktop = {version = "0.7.0-rc.3", default-features = false}
 bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
 bevy_dioxus_hooks = {path = "./crates/hooks"}

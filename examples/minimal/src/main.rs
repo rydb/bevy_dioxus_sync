@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 use bevy_dioxus_sync::{plugins::{DioxusAppKind, DioxusPlugin, DioxusPropsNative}, ui::dioxus_app};
 use dioxus::core::VirtualDom;
-use dioxus_desktop::Config;
 use frontend::ui::app_ui;
 
 use crate::bevy_scene_plugin::BevyScenePlugin;
@@ -11,29 +10,7 @@ use crate::bevy_scene_plugin::BevyScenePlugin;
 
 mod bevy_scene_plugin;
 
-pub enum ENVChoice {
-    Dioxus,
-    Bevy,
-}
-
-const CHOICE: ENVChoice = ENVChoice::Dioxus;
-
 pub fn main() {
-    match CHOICE {
-        ENVChoice::Dioxus => ui_debug_main(),
-        ENVChoice::Bevy => bevy_main(),
-    }
-}
-
-fn ui_debug_main() {
-    let vdom = VirtualDom::new_with_props(dioxus_app, DioxusAppKind::NativeOnly(DioxusPropsNative {
-        fps: 30,
-        main_window_ui: Some(app_ui),
-    }));
-    dioxus_desktop::launch::launch_virtual_dom(vdom, Config::new())
-}
-
-fn bevy_main() {
     println!("running bevy plugin");
     App::new()
         .add_plugins(DefaultPlugins)
@@ -43,5 +20,4 @@ fn bevy_main() {
         })
         .add_plugins(BevyScenePlugin)
         .run();
-    
 }

@@ -7,5 +7,4 @@ edition.workspace = true
 bevy = {workspace = true, features = ["trace_tracy"]}
 bevy_dioxus_sync = {workspace = true}
 dioxus = {workspace = true, default-features = false, features = ["native", "launch", "devtools"]}
-dioxus-desktop = {workspace = true, features = ["tokio_runtime"]}
 frontend = {path = "./frontend"}
