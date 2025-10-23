@@ -103,7 +103,6 @@ fn send_asset_updates_singleton<T, U, V>(
         warn!("could not get asset from {:#?}", handle);
         return;
     };
-    warn!("sending asset update..");
     let _ = bevy_tx
         .0
         .send(InfoPacket {

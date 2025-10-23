@@ -55,22 +55,25 @@ pub struct BevyValue<T: Clone + 'static, Index, U> {
 }
 
 impl<T: Clone + 'static, Index: Clone, U: Clone> BevyValue<T, Index, U> {
-    pub fn set_value(&self, value: T) {
+    pub fn set_value(&mut self, value: T) {
         if let Some(send_channel) = &self.writer {
-            let _ = send_channel
+            let send_result = send_channel
                 .send(InfoPacket {
                     update: value.clone(),
                     index: self.index.clone(),
                     additional_info: self.additional_info.clone(),
                 })
                 .inspect_err(|err| warn!("could not update bevy value signal due to {:#}", err));
+            if send_result.is_ok() {
+                self.value = Ok(value)
+            }
         } else {
             warn!("no send channel for {:#}, skipping", type_name::<T>());
             return;
         }
     }
-    pub fn read_value(&self) -> &Result<T, BevyFetchBackup> {
-        &self.value
+    pub fn read_value(&self) -> Result<&T, &BevyFetchBackup> {
+        self.value.as_ref()
     }
 }
 

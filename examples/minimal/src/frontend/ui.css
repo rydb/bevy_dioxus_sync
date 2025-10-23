@@ -1,4 +1,6 @@
-html, body, #main {
+html,
+body,
+#main {
     color: white;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     height: 100%;
@@ -25,7 +27,6 @@ html, body, #main {
     flex-direction: row;
     justify-content: space-evenly;
     align-items: center;
-    text-decoration: underline rgb(245, 60, 214) double 10px;
 }
 
 #buttons {
@@ -63,22 +64,29 @@ html, body, #main {
     background-color: blue;
 }
 
-#translation-speed-control, #rotation-speed-control {
-    display: flex;
-    flex-direction: row;
-    align-items: start;
-    padding: 1px;
-    gap: 10px;
-    column-gap: 40px;
+.spin-box {
+    width: 50px;
+    height: 50px;
+    animation: spin 4s infinite linear;
 }
 
-#rotation-display {
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#translation-speed-control,
+#rotation-speed-control {
     display: flex;
     flex-direction: row;
     align-items: start;
-    padding: 10px;
+    padding: 20px;
     gap: 10px;
-    column-gap: 40px;
 }
 
 input[type="number"] {
@@ -95,22 +103,6 @@ input[type="number"] {
     padding: 0 10px;
     outline: none;
     margin-left: auto;
-}
-
-.bevy-display {
-    width: 15em;
-    height: 1.5em;
-    line-height: 1.5em;
-    background: #444;
-    border: 2px solid #666;
-    border-radius: 4px;
-    color: #ffffff;
-    font-size: 15px;
-    font-weight: bold;
-    padding: 2px 3px;
-    outline: none;
-    margin-left: auto;
-
 }
 
 #footer {
