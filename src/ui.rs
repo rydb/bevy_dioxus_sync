@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 // use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
-use crate::{DioxusPanel, plugins::DioxusAppKind, systems::PanelUpdateKind};
+use crate::{
+    panels::{DioxusPanel, PanelUpdateKind},
+    plugins::DioxusAppKind,
+};
 use async_std::task::sleep;
 use bevy_dioxus_hooks::{
     asset::BevyAssetsRegistry, component::component_single::hook::BevyComponentsRegistry,

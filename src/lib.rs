@@ -1,57 +1,16 @@
 use bevy_dioxus_render::{DioxusMessage, HeadElement};
-use bevy_ecs::component::{Component, Immutable, StorageType};
 use bytes::Bytes;
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::Sender;
 use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
-use crate::systems::PanelUpdate;
 
-use std::fmt::Debug;
 
-use dioxus_core::Element;
-
+pub mod panels;
 pub mod plugins;
 pub(crate) mod systems;
 pub mod ui;
-
-pub struct SenderReceiver<T: Send + Sync + 'static> {
-    pub sender: Sender<T>,
-    pub receiver: Receiver<T>,
-}
-
-/// marks a struct as a Dioxus element.
-/// used to statically typed dioxus [`Element`]s
-pub trait DioxusElementMarker: 'static + Sync + Send + Debug {
-    //const ELEMENT_FUNCTION: fn() -> Element;
-    fn element(&self) -> Element;
-}
-
-/// Component that marks an entity as a dioxus panel
-#[derive(Clone, Debug)]
-pub struct DioxusPanel {
-    pub(crate) element_marker: Arc<dyn DioxusElementMarker>,
-}
-
-impl DioxusPanel {
-    pub fn new<T: DioxusElementMarker>(element: T) -> Self {
-        Self {
-            element_marker: Arc::new(element),
-        }
-    }
-}
-
-impl Component for DioxusPanel {
-    const STORAGE_TYPE: StorageType = StorageType::Table;
-
-    /// to change the panel on this entity, insert a new one.
-    type Mutability = Immutable;
-}
-pub struct ResourceUpdates {}
-
-pub type BoxSync = Box<dyn Any + Send + Sync + 'static>;
-
 struct BevyNetCallback {
     sender: Sender<DioxusMessage>,
 }
@@ -145,7 +104,6 @@ impl dioxus_document::Document for DioxusDocumentProxy {
         attributes: &[(&str, String)],
         contents: Option<String>,
     ) {
-        println!("CREATE HEAD ELEMENT");
         self.sender
             .send(DioxusMessage::CreateHeadElement(HeadElement {
                 name: name.to_string(),

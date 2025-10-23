@@ -29,7 +29,13 @@ pub fn app_ui() -> Element {
     let mut cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
     let cube_transform = use_bevy_component_singleton::<Transform, DynamicCube>();
 
-    let color = cube_color.read().read_value().map(|n| n.base_color).unwrap_or(Color::default()).to_srgba().to_f32_array();
+    let color = cube_color
+        .read()
+        .read_value()
+        .map(|n| n.base_color)
+        .unwrap_or(Color::default())
+        .to_srgba()
+        .to_f32_array();
     let [r, g, b, a] = color.map(|c| (c * 255.0) as u8);
 
     rsx! {

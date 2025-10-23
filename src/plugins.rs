@@ -1,4 +1,3 @@
-use std::any::type_name;
 use std::rc::Rc;
 
 use bevy_app::prelude::*;
@@ -6,12 +5,11 @@ use bevy_dioxus_events::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
 use bevy_dioxus_render::DioxusMessages;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
-use bevy_ecs::{prelude::*, world::CommandQueue};
+use bevy_ecs::world::CommandQueue;
 
-use crate::PanelUpdate;
-use crate::systems::PanelUpdateKind;
-use crate::{DioxusPanel, systems::DioxusPanelUpdates, ui::dioxus_app, *};
-use bevy_log::warn;
+use crate::panels::DioxusPanelUpdates;
+use crate::panels::plugins::DioxusPanelsPlugin;
+use crate::{ui::dioxus_app, *};
 use bevy_utils::default;
 use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
@@ -42,66 +40,6 @@ pub enum DioxusAppKind {
     NativeBevy(DioxusPropsNativeBevy),
     NativeOnly(DioxusPropsNative),
 }
-
-/// plugin for managing dioxus plugins
-pub struct DioxusPanelsPlugin {
-    dioxus_panel_updates_tx: Sender<DioxusPanelUpdates>,
-    dioxus_panel_updates_rx: Receiver<DioxusPanelUpdates>,
-}
-
-impl DioxusPanelsPlugin {
-    pub fn new() -> Self {
-        let (dioxus_panel_updates_tx, dioxus_panel_updates_rx) =
-            crossbeam_channel::unbounded::<DioxusPanelUpdates>();
-
-        Self {
-            dioxus_panel_updates_tx,
-            dioxus_panel_updates_rx,
-        }
-    }
-}
-
-impl Plugin for DioxusPanelsPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<DioxusPanelUpdates>();
-        app.insert_resource(DioxusPanelUpdatesSender(
-            self.dioxus_panel_updates_tx.clone(),
-        ));
-
-        app.world_mut()
-            .register_component_hooks::<DioxusPanel>()
-            .on_add(|mut world, hook| {
-                let Some(value) = world.entity(hook.entity).get::<DioxusPanel>() else {
-                    warn!(
-                        "could not get {:#} on {:#}",
-                        type_name::<DioxusPanel>(),
-                        hook.entity
-                    );
-                    return;
-                };
-                let value = value.clone();
-                let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-                panel_updates.0.push(PanelUpdate {
-                    key: hook.entity,
-                    value: PanelUpdateKind::Add(value),
-                })
-            })
-            .on_remove(|mut world, hook| {
-                let mut panel_updates = world.get_resource_mut::<DioxusPanelUpdates>().unwrap();
-                panel_updates.0.push(PanelUpdate {
-                    key: hook.entity,
-                    value: PanelUpdateKind::Remove,
-                })
-            });
-        app.add_systems(
-            PreUpdate,
-            push_panel_updates.run_if(resource_changed::<DioxusPanelUpdates>),
-        );
-    }
-}
-
-#[derive(Resource)]
-pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
 
 impl Plugin for DioxusPlugin {
     fn build(&self, app: &mut App) {
@@ -146,18 +84,4 @@ impl Plugin for DioxusPlugin {
         dioxus_doc.resolve(0.0);
         app.insert_non_send_resource(dioxus_doc);
     }
-}
-
-pub fn push_panel_updates(
-    mut panel_updates: ResMut<DioxusPanelUpdates>,
-    panel_update_sender: ResMut<DioxusPanelUpdatesSender>,
-) {
-    let mut updates = Vec::new();
-
-    updates.extend(panel_updates.0.drain(..));
-
-    let _ = panel_update_sender
-        .0
-        .send(DioxusPanelUpdates(updates))
-        .inspect_err(|err| warn!("{:#}", err));
 }
