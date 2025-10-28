@@ -70,3 +70,5 @@ pub fn push_panel_updates(
         .send(DioxusPanelUpdates(updates))
         .inspect_err(|err| warn!("{:#}", err));
 }
+
+

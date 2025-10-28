@@ -70,7 +70,8 @@ rustc-hash = "1"
 bytemuck = "1.23"
 data-url = "0.3.2"
 bytes = "1.10"
-
+tokio = "1.48"
+maybe-debug = "0.1"
 
 anyrender_vello = {version = "0.6", default-features = false}
 blitz-net = { version = "0.2", default-features = false}

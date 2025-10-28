@@ -165,6 +165,7 @@ fn update_ui(
     animation_epoch: Res<AnimationTime>,
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
+
     while let Ok(msg) = dioxus_messages.0.try_recv() {
         match msg {
             DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
@@ -183,7 +184,6 @@ fn update_ui(
                 _ => {}
             },
             DioxusMessage::CreateHeadElement(el) => {
-                println!("ACTUALLY CREATE");
                 dioxus_doc.create_head_element(&el.name, &el.attributes, &el.contents);
                 dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
             }

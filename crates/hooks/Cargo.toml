@@ -16,6 +16,7 @@ bevy_dioxus_interop = {workspace = true}
 async-std = {workspace = true}
 crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true}
+tokio = {workspace = true, features = ["sync"]}
 
 dioxus-signals = {workspace = true}
 dioxus-hooks = {workspace = true}

@@ -15,7 +15,7 @@ type ComponentInfoPacket<T> =
     InfoPacket<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>;
 
 /// Command to register dioxus bevy interop for a given resource.
-#[derive(TransparentWrapper, Clone)]
+#[derive(TransparentWrapper)]
 #[repr(transparent)]
 #[transparent(BevyDioxusIO<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>)]
 pub(crate) struct RequestBevyComponentSingleton<
@@ -63,14 +63,15 @@ fn send_component_singleton<T, U>(
     let Ok((value, _)) = singleton.single() else {
         return;
     };
-    let _ = bevy_tx
-        .0
-        .send(InfoPacket {
+    let packet = InfoPacket {
             update: value.clone(),
             index: Some(TypeId::of::<T>()),
             additional_info: None,
-        })
-        .inspect_err(|err| warn!("{:#}", err));
+    };
+    let _ = bevy_tx
+        .0
+        .send(packet)
+        .inspect_err(|err| warn!("could not send component: {:#}", err));
 }
 
 fn receive_component_update<T, U>(

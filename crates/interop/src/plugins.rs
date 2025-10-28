@@ -5,8 +5,8 @@ use super::*;
 
 /// plugin for setting up minimal channels for interop
 pub struct DioxusBevyInteropPlugin {
-    pub command_tx: Sender<CommandQueue>,
-    pub command_rx: Receiver<CommandQueue>,
+    pub command_tx: CrossBeamSender<CommandQueue>,
+    pub command_rx: CrossBeamReceiver<CommandQueue>,
 }
 impl DioxusBevyInteropPlugin {
     pub fn new() -> Self {

@@ -8,7 +8,7 @@ where
 {
     // type Value: Clone + 'static + Send + Sync;
     type Index: Hash + Eq + Clone + Send + Sync + 'static;
-    type AdditionalInfo: Send + Sync + 'static;
+    type AdditionalInfo: Send + Sync + 'static + Clone;
     fn insert_typed<T: Clone + Send + Sync + 'static>(
         &mut self,
         value: SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>,

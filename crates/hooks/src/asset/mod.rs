@@ -32,7 +32,7 @@ pub enum AssetRequestFilter<T, U> {
     Singleton(PhantomData<T>, PhantomData<U>),
 }
 
-#[derive(TransparentWrapper, Clone)]
+#[derive(TransparentWrapper)]
 #[repr(transparent)]
 #[transparent(BevyDioxusIO<AssetValue<U>, AssetInfoIndex, AssetAdditionalInfo>)]
 pub struct RequestScopedAssetWithMarker<
@@ -71,16 +71,21 @@ fn receive_asset_updates<U>(
 ) where
     U: Asset + Clone,
 {
-    let Ok(packet) = bevy_rx.0.try_recv() else {
-        return;
-    };
-    let Some(index) = packet.index else {
-        warn!("asset update received, but index not given with packet update?");
-        return;
-    };
-    let _ = assets
-        .insert(index.typed(), packet.update)
-        .inspect_err(|err| warn!("{err}"));
+
+    while let Ok(packet) = bevy_rx.0.try_recv().inspect_err(|err| {
+        match err {
+            crossbeam_channel::TryRecvError::Empty => {},
+            crossbeam_channel::TryRecvError::Disconnected => warn!("could not receive asset: {:#}", err),
+        }
+    }) {
+        let Some(index) = packet.index else {
+            warn!("asset update received, but index not given with packet update?");
+            return;
+        };
+        let _ = assets
+            .insert(index.typed(), packet.update)
+            .inspect_err(|err| warn!("{err}"));
+        }
 }
 
 fn send_asset_updates_singleton<T, U, V>(

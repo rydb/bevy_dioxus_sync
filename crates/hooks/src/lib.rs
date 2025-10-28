@@ -16,6 +16,10 @@ use dioxus_signals::{
     Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock,
 };
 
+use tokio::sync::broadcast::{
+    self, Receiver as TokioReceiver, Sender as TokioSender
+};
+
 pub mod asset;
 pub mod component;
 pub mod resource;
@@ -48,7 +52,7 @@ impl Display for BevyFetchBackup {
 
 pub struct BevyValue<T: Clone + 'static, Index, U> {
     pub(crate) writer: Option<Sender<InfoPacket<T, Index, U>>>,
-    pub(crate) reader: Option<Receiver<InfoPacket<T, Index, U>>>,
+    pub(crate) reader: Option<TokioReceiver<InfoPacket<T, Index, U>>>,
     pub(crate) value: Result<T, BevyFetchBackup>,
     pub(crate) additional_info: Option<U>,
     pub(crate) index: Option<Index>,
@@ -101,7 +105,7 @@ where
     T: Send + Sync + Clone + 'static,
     U: Clone + 'static + TransparentWrapper<Signal<V>>,
     V: TransparentWrapper<BoxGenericTypeMap<V::Index>> + SignalsErasedMap + 'static,
-    W: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, V::Index, V::AdditionalInfo>>,
+    W: Command + Default + TransparentWrapper<BevyDioxusIO<T, V::Index, V::AdditionalInfo>>,
 {
     let refresh_rate = try_use_context::<InfoRefershRateMS>();
     let command_queue_tx = try_use_context::<BevyCommandQueueTx>();
@@ -139,16 +143,32 @@ where
             async move {
                 let map_erased = TransparentWrapper::peel_mut(&mut value);
                 let mut signal = signal.clone();
-                let Some(reader) = signal.clone().write().reader.clone() else {
-                    return;
+
+                let mut reader = {
+                    let Some(ref reader) = signal.write().reader else {
+                        return;
+                    };
+                    let reader = reader.resubscribe();
+                    reader
+
                 };
+
+
                 let mut map_erased = map_erased.clone();
                 let refresh_rate = refresh_rate.take().unwrap_or_default().0;
                 loop {
-                    while let Ok(packet) = reader.try_recv() {
+                    // warn!("looping...");
+                    while let Ok(packet) = reader.try_recv().inspect_err(|err| {
+                        match err {
+                            broadcast::error::TryRecvError::Empty => {},
+                            broadcast::error::TryRecvError::Closed => warn!("channel closed for {:#}", type_name::<T>()),
+                            broadcast::error::TryRecvError::Lagged(_) => warn!("channel lagging for {:#}", type_name::<T>()),
+                        }
+                    }) {
                         let mut register_signal = None;
                         if index_known == false {
                             if let Some(index) = packet.index {
+                                // warn!("index not received for: {:#?} ", packet);
                                 register_signal = Some(index.clone());
                                 map_erased.write().insert_typed::<T>(signal.clone(), index);
                             }
@@ -178,19 +198,22 @@ fn request_bevy_signal<T, U, V>(
 where
     T: Send + Sync + Clone,
     U: TransparentWrapper<BoxGenericTypeMap<U::Index>> + SignalsErasedMap,
-    V: Clone + Command + Default + TransparentWrapper<BevyDioxusIO<T, U::Index, U::AdditionalInfo>>,
+    V: Command + Default + TransparentWrapper<BevyDioxusIO<T, U::Index, U::AdditionalInfo>>,
 {
     if let Some(command_queue_tx) = command_queue_tx {
+        let channels = V::peel_ref(&request);
+
+        let dioxus_rx = channels.dioxus_rx.resubscribe();
+        let dioxus_tx = channels.dioxus_tx.clone();
+
         let mut commands = CommandQueue::default();
+        let command = request;
+        commands.push(command);
 
         //let channels: DioxusTxrX<_> = request.clone().into();
-        let channels = V::peel(request.clone());
         // let channels = request.txrx();
-        let command = request;
 
-        let dioxus_rx = channels.dioxus_rx.clone();
-        let dioxus_tx = channels.dioxus_tx.clone();
-        commands.push(command);
+
 
         let new_signal = SyncSignal::new_maybe_sync(BevyValue {
             value: Err(BevyFetchBackup::Uninitialized),

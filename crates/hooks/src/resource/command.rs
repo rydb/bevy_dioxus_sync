@@ -8,11 +8,7 @@ use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 
-// #[derive(TransparentWrapper, Clone)]
-// #[repr(transparent)]
-// pub struct RequestBevyResource<T: Resource + Clone>(pub(crate) Channels<RequestBevyResource<T>>);
-
-#[derive(TransparentWrapper, Clone)]
+#[derive(TransparentWrapper)]
 #[repr(transparent)]
 pub struct RequestBevyResource<T: Resource + Clone>(
     pub(crate) BevyDioxusIO<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>,
@@ -22,8 +18,7 @@ pub struct RequestBevyResource<T: Resource + Clone>(
 type ResourceInfoIndex = TypeId;
 type ResourceValue<T> = T;
 type ResourceAdditionalInfo = ();
-type ResourceInfoPacket<T> =
-    InfoPacket<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>;
+type ResourceInfoPacket<T> = InfoPacket<ResourceValue<T>, ResourceInfoIndex, ResourceAdditionalInfo>;
 
 impl<T: Resource + Clone> Default for RequestBevyResource<T> {
     fn default() -> Self {
@@ -49,7 +44,6 @@ impl<T: Resource + Clone> Command for RequestBevyResource<T> {
 fn send_resource_update<T: Resource + Clone>(
     resource: Res<T>,
     bevy_tx: ResMut<BevyTxChannel<ResourceInfoPacket<T>>>,
-    // bevy_rx: ResMut<BevyRxChannel<T>>,
 ) {
     let _ = bevy_tx
         .0
@@ -66,10 +60,14 @@ fn send_resource_update<T: Resource + Clone>(
 fn receive_resource_update<T: Resource + Clone>(
     mut resource: ResMut<T>,
     bevy_rx: ResMut<BevyRxChannel<ResourceInfoPacket<T>>>,
-    // bevy_rx: ResMut<BevyRxChannel<T>>,
 ) {
-    let Ok(packet) = bevy_rx.0.try_recv() else {
+    while let Ok(packet) = bevy_rx.0.try_recv()
+    .inspect_err(|err| match err {
+        crossbeam_channel::TryRecvError::Empty => {},
+        crossbeam_channel::TryRecvError::Disconnected => warn!("could not receive as channel is disconnected"),
+    }){
+        *resource = packet.update;
+
         return;
     };
-    *resource = packet.update;
 }
