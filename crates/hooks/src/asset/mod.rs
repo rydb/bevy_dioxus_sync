@@ -7,12 +7,13 @@ use std::{
 use bevy_app::prelude::*;
 use bevy_asset::{Asset, Assets, Handle, UntypedAssetId};
 use bevy_dioxus_interop::{
-    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, add_systems_through_world,
+    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, InfoUpdate, StatusUpdate, add_systems_through_world
 };
 use bevy_ecs::prelude::*;
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use dioxus_signals::{Signal, SyncSignal};
+use std::fmt::Debug;
 
 use crate::{BevyValue, BoxGenericTypeMap, SignalsErasedMap, use_bevy_value};
 
@@ -48,7 +49,7 @@ pub struct RequestScopedAssetWithMarker<
 impl<T, U, V> Command for RequestScopedAssetWithMarker<T, U, V>
 where
     T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Asset + Clone,
+    U: Debug + Asset + Clone,
     V: Component + Clone,
 {
     fn apply(self, world: &mut World) -> () {
@@ -56,7 +57,7 @@ where
         world.insert_resource(BevyRxChannel(self.channels.bevy_rx));
 
         add_systems_through_world(world, Update, send_asset_updates_singleton::<T, U, V>);
-        add_systems_through_world(world, Update, receive_asset_updates::<U>);
+        add_systems_through_world(world, Update, receive_asset_updates_singleton::<T, U, V>);
     }
 }
 
@@ -65,11 +66,18 @@ type AssetValue<T> = T;
 type AssetAdditionalInfo = UntypedAssetId;
 type AssetInfoPacket<T> = InfoPacket<AssetValue<T>, AssetInfoIndex, AssetAdditionalInfo>;
 
-fn receive_asset_updates<U>(
+fn receive_asset_updates_singleton<T, U, V>(
+    handle: Query<(Entity, &T, &V)>,
+
     bevy_rx: ResMut<BevyRxChannel<AssetInfoPacket<U>>>,
+    bevy_tx: ResMut<BevyTxChannel<AssetInfoPacket<U>>>,
+
     mut assets: ResMut<Assets<U>>,
-) where
-    U: Asset + Clone,
+) 
+    where
+        T: Deref<Target = Handle<U>> + Component + Clone,
+        U: Debug + Asset + Clone,
+        V: Component + Clone,
 {
 
     while let Ok(packet) = bevy_rx.0.try_recv().inspect_err(|err| {
@@ -78,27 +86,64 @@ fn receive_asset_updates<U>(
             crossbeam_channel::TryRecvError::Disconnected => warn!("could not receive asset: {:#}", err),
         }
     }) {
-        let Some(index) = packet.index else {
-            warn!("asset update received, but index not given with packet update?");
-            return;
-        };
-        let _ = assets
-            .insert(index.typed(), packet.update)
-            .inspect_err(|err| warn!("{err}"));
+        match packet {
+            InfoPacket::Update(info_update) => {
+                let Some(index) = info_update.index else {
+                    warn!("asset update received, but index not given with packet update?");
+                    return;
+                };
+                let _ = assets
+                    .insert(index.typed(), info_update.update)
+                    .inspect_err(|err| warn!("{err}"));
+                
+            },
+            InfoPacket::Request(status_update) => {
+                match status_update {
+                    StatusUpdate::RequestRefresh => {
+                        let Ok((_e, handle, _u)) = handle.single()
+                        .inspect_err(|err| match err {
+                            bevy_ecs::query::QuerySingleError::MultipleEntities(_debug_name) => warn!("Asset for {:#} with marker {:#} no unique", type_name::<T>(), type_name::<V>()),
+                            bevy_ecs::query::QuerySingleError::NoEntities(_debug_name) => {},
+                        })
+                        else {
+                            return;
+                        };
+                        let handle = (**handle).clone();
+                        let Some(asset) = assets.get(&handle) else {
+                            warn!("could not get asset from {:#?}", handle);
+                            return;
+                        };
+                        let packet = InfoUpdate {
+                            update: asset.clone(),
+                            index: Some(handle.id().untyped()),
+                            additional_info: Some(handle.id().untyped()),
+                        };
+                        bevy_tx.0.send({
+                            InfoPacket::Update(packet)
+                        }).inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<U>(), err));
+                    },
+                }
+
+            },
         }
+
+    }
 }
 
 fn send_asset_updates_singleton<T, U, V>(
-    handle: Query<(Entity, &T, &V), Changed<T>>,
+    handle: Query<(Entity, &T, &V), Or<(Changed<T>, Added<T>)>>,
     bevy_tx: ResMut<BevyTxChannel<AssetInfoPacket<U>>>,
     assets: ResMut<Assets<U>>,
 ) where
     T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Asset + Clone,
+    U: Debug + Asset + Clone,
     V: Component + Clone,
 {
     let Ok((_e, handle, _u)) = handle.single()
-    //.inspect_err(|err| warn!("could not get singleton: {:#} ", err))
+    .inspect_err(|err| match err {
+        bevy_ecs::query::QuerySingleError::MultipleEntities(_debug_name) => warn!("Asset for {:#} with marker {:#} no unique", type_name::<T>(), type_name::<V>()),
+        bevy_ecs::query::QuerySingleError::NoEntities(_debug_name) => {},
+    })
     else {
         return;
     };
@@ -108,14 +153,14 @@ fn send_asset_updates_singleton<T, U, V>(
         warn!("could not get asset from {:#?}", handle);
         return;
     };
-    let _ = bevy_tx
-        .0
-        .send(InfoPacket {
-            update: asset.clone(),
-            index: Some(handle.id().untyped()),
-            additional_info: Some(handle.id().untyped()),
-        })
-        .inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<U>(), err));
+    let packet = InfoUpdate {
+        update: asset.clone(),
+        index: Some(handle.id().untyped()),
+        additional_info: Some(handle.id().untyped()),
+    };
+    bevy_tx.0.send({
+        InfoPacket::Update(packet)
+    }).inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<U>(), err));
 }
 
 impl<T, U, V> Default for RequestScopedAssetWithMarker<T, U, V>
@@ -145,7 +190,7 @@ pub fn use_bevy_component_asset_single<T, U, V>()
 -> SyncSignal<BevyValue<U, UntypedAssetId, UntypedAssetId>>
 where
     T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Asset + Clone,
+    U: Debug + Asset + Clone,
     V: Component + Clone,
 {
     use_bevy_value::<U, BevyAssetsRegistry, BevyAssets, RequestScopedAssetWithMarker<T, U, V>>(None)

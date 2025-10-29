@@ -3,6 +3,7 @@ use std::any::TypeId;
 use bevy_ecs::prelude::*;
 use bytemuck::TransparentWrapper;
 use dioxus_signals::{Signal, SyncSignal};
+use std::fmt::Debug;
 
 use crate::{
     BevyValue, BoxGenericTypeMap, SignalsErasedMap, resource::command::RequestBevyResource,
@@ -17,6 +18,8 @@ pub struct ResourceRegistry(Signal<BevyResources>);
 // #[derive(TransparentWrapper, Default)]
 // #[repr(transparent)]
 // pub struct BevyResources(BoxGenericTypeMap<TypeId>);
+
+
 
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
@@ -39,7 +42,7 @@ impl SignalsErasedMap for BevyResources {
 }
 
 /// requests a resource from bevy.
-pub fn use_bevy_resource<T: Resource + Send + Sync + Clone>() -> SyncSignal<BevyValue<T, TypeId, ()>>
+pub fn use_bevy_resource<T: Debug + Resource + Send + Sync + Clone>() -> SyncSignal<BevyValue<T, TypeId, ()>>
 {
     use_bevy_value::<T, ResourceRegistry, BevyResources, RequestBevyResource<T>>(Some(
         TypeId::of::<T>(),

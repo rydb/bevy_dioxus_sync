@@ -1,13 +1,14 @@
 use crate::{BoxGenericTypeMap, SignalErasedMapValue};
 use bytemuck::TransparentWrapper;
 use std::hash::Hash;
+use std::fmt::Debug;
 
 pub trait SignalsErasedMap
 where
     Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
 {
     // type Value: Clone + 'static + Send + Sync;
-    type Index: Hash + Eq + Clone + Send + Sync + 'static;
+    type Index: Debug + Hash + Eq + Clone + Send + Sync + 'static;
     type AdditionalInfo: Send + Sync + 'static + Clone;
     fn insert_typed<T: Clone + Send + Sync + 'static>(
         &mut self,

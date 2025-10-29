@@ -2,7 +2,7 @@ use std::any::TypeId;
 
 use bevy_app::prelude::*;
 use bevy_dioxus_interop::{
-    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, add_systems_through_world,
+    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, InfoUpdate, StatusUpdate, add_systems_through_world
 };
 use bevy_ecs::prelude::*;
 use bevy_log::warn;
@@ -45,29 +45,40 @@ fn send_resource_update<T: Resource + Clone>(
     resource: Res<T>,
     bevy_tx: ResMut<BevyTxChannel<ResourceInfoPacket<T>>>,
 ) {
+    let packet = InfoUpdate {
+        update: resource.clone(),
+        index: Some(TypeId::of::<T>()),
+        additional_info: Some(()),
+    };
     let _ = bevy_tx
         .0
-        .send({
-            ResourceInfoPacket {
-                update: resource.clone(),
-                index: Some(TypeId::of::<T>()),
-                additional_info: Some(()),
-            }
-        })
+        .send(InfoPacket::Update(packet))
         .inspect_err(|err| warn!("could not send resource: {:#}", err));
 }
 
 fn receive_resource_update<T: Resource + Clone>(
     mut resource: ResMut<T>,
     bevy_rx: ResMut<BevyRxChannel<ResourceInfoPacket<T>>>,
+    bevy_tx: ResMut<BevyTxChannel<ResourceInfoPacket<T>>>,
+
 ) {
     while let Ok(packet) = bevy_rx.0.try_recv()
     .inspect_err(|err| match err {
         crossbeam_channel::TryRecvError::Empty => {},
         crossbeam_channel::TryRecvError::Disconnected => warn!("could not receive as channel is disconnected"),
     }){
-        *resource = packet.update;
-
+        match packet {
+            InfoPacket::Update(info_update) => {
+                *resource = info_update.update;
+            },
+            InfoPacket::Request(status_update) => {
+                match status_update {
+                    StatusUpdate::RequestRefresh => {
+                        send_resource_update(resource.into(), bevy_tx)
+                    },
+                }
+            },
+        }
         return;
     };
 }

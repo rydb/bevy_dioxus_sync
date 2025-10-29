@@ -57,8 +57,30 @@ pub type BoxAnySignalTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
 // impl ErasedSubGenericMap for RxChannelRegistry {
 //     type Generic<T: Send + Sync + 'static> = Receiver<T>;
 // }
+// #[derive(Clone, Debug)]
+// pub struct InfoPacket<T, U, V> {
+//     pub update: T,
+//     pub index: Option<U>,
+//     pub additional_info: Option<V>,
+// }
+
 #[derive(Clone, Debug)]
-pub struct InfoPacket<T, U, V> {
+pub enum InfoPacket<T, U, V> {
+    Update(InfoUpdate<T, U, V>),
+    Request(StatusUpdate)
+
+}
+
+#[derive(Clone, Debug)]
+pub enum StatusUpdate {
+    /// request a refresh
+    RequestRefresh
+}
+
+
+/// data to/from dioxus
+#[derive(Clone, Debug)]
+pub struct InfoUpdate<T, U, V> {
     pub update: T,
     pub index: Option<U>,
     pub additional_info: Option<V>,

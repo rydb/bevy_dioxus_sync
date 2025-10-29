@@ -10,7 +10,7 @@ bevy_app = {workspace = true}
 bevy_asset = {workspace = true}
 bevy_time = {workspace = true}
 bevy_utils = {workspace = true}
-
+bevy_transform = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 
 async-std = {workspace = true}

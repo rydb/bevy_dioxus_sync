@@ -5,9 +5,10 @@ use std::{
 };
 
 use async_std::task::sleep;
-use bevy_dioxus_interop::{BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS};
+use bevy_dioxus_interop::{BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS, InfoUpdate, StatusUpdate};
 use bevy_ecs::{system::Command, world::CommandQueue};
 use bevy_log::warn;
+use bevy_transform::components::Transform;
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_core::use_hook;
@@ -15,6 +16,7 @@ use dioxus_hooks::{try_use_context, use_context, use_future};
 use dioxus_signals::{
     Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock,
 };
+use std::fmt::Debug;
 
 use tokio::sync::broadcast::{
     self, Receiver as TokioReceiver, Sender as TokioSender
@@ -50,9 +52,10 @@ impl Display for BevyFetchBackup {
     }
 }
 
+/// bevy value + useful structures needed for bevy/dioxus interop
 pub struct BevyValue<T: Clone + 'static, Index, U> {
-    pub(crate) writer: Option<Sender<InfoPacket<T, Index, U>>>,
-    pub(crate) reader: Option<TokioReceiver<InfoPacket<T, Index, U>>>,
+    writer: Option<Sender<InfoPacket<T, Index, U>>>,
+    reader: Option<TokioReceiver<InfoPacket<T, Index, U>>>,
     pub(crate) value: Result<T, BevyFetchBackup>,
     pub(crate) additional_info: Option<U>,
     pub(crate) index: Option<Index>,
@@ -61,12 +64,13 @@ pub struct BevyValue<T: Clone + 'static, Index, U> {
 impl<T: Clone + 'static, Index: Clone, U: Clone> BevyValue<T, Index, U> {
     pub fn set_value(&mut self, value: T) {
         if let Some(send_channel) = &self.writer {
-            let send_result = send_channel
-                .send(InfoPacket {
+            let packet = InfoUpdate {
                     update: value.clone(),
                     index: self.index.clone(),
                     additional_info: self.additional_info.clone(),
-                })
+            };
+            let send_result = send_channel
+                .send(InfoPacket::Update(packet))
                 .inspect_err(|err| warn!("could not update bevy value signal due to {:#}", err));
             if send_result.is_ok() {
                 self.value = Ok(value)
@@ -102,7 +106,7 @@ pub fn use_bevy_value<T, U, V, W>(
     index: Option<V::Index>,
 ) -> SyncSignal<BevyValue<T, V::Index, V::AdditionalInfo>>
 where
-    T: Send + Sync + Clone + 'static,
+    T: Debug + Send + Sync + Clone + 'static,
     U: Clone + 'static + TransparentWrapper<Signal<V>>,
     V: TransparentWrapper<BoxGenericTypeMap<V::Index>> + SignalsErasedMap + 'static,
     W: Command + Default + TransparentWrapper<BevyDioxusIO<T, V::Index, V::AdditionalInfo>>,
@@ -150,9 +154,16 @@ where
                     };
                     let reader = reader.resubscribe();
                     reader
-
                 };
+                
+                // get an update for the latest status of value because .resubscribe() nukes previous messages
+                {
+                let Some(ref writer) = signal.write().writer else {
+                    return;
+                };
+                let _ = writer.send(InfoPacket::Request(StatusUpdate::RequestRefresh)).inspect_err(|err| warn!("{:#}", err));
 
+                }
 
                 let mut map_erased = map_erased.clone();
                 let refresh_rate = refresh_rate.take().unwrap_or_default().0;
@@ -165,9 +176,17 @@ where
                             broadcast::error::TryRecvError::Lagged(_) => warn!("channel lagging for {:#}", type_name::<T>()),
                         }
                     }) {
+                        let packet = match packet {
+                            InfoPacket::Update(info_update) =>info_update,
+                            //TODO: statu update requests from bevy not ready yet. implement later.
+                            InfoPacket::Request(_status_update) => todo!(),
+                        };
+
+                        print!("packet info: value; {:#?}, index; {:#?}", packet.update, packet.index);
+
                         let mut register_signal = None;
                         if index_known == false {
-                            if let Some(index) = packet.index {
+                            if let Some(index) = packet.index.clone() {
                                 // warn!("index not received for: {:#?} ", packet);
                                 register_signal = Some(index.clone());
                                 map_erased.write().insert_typed::<T>(signal.clone(), index);
