@@ -2,7 +2,7 @@
 
 bevy-dioxus interop between Dioxus and bevy to syncronize their state
 
-!add picture here when <https://github.com/DioxusLabs/dioxus/issues/4616> gets fixed.
+[bevy_dioxus_sync_V1.webm](https://github.com/user-attachments/assets/7ab6ca08-9d26-4323-b19c-93bf57d8485c)
 
 ## Features
 
