@@ -51,7 +51,7 @@ pub fn app_ui() -> Element {
                     "bevy_dioxus_sync: "
                    }
                    br {}
-                   {"example menu "}
+                   b {"example menu "}
                 }
             }
             div {
