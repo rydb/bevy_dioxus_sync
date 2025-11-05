@@ -5,8 +5,6 @@ use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
 use std::sync::Arc;
 
-
-
 pub mod panels;
 pub mod plugins;
 pub(crate) mod systems;

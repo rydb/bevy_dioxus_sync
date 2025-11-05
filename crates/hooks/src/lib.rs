@@ -5,12 +5,13 @@ use std::{
 };
 
 use async_std::task::sleep;
-use bevy_dioxus_interop::{BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS, InfoUpdate, StatusUpdate};
+use bevy_dioxus_interop::{
+    BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS, InfoUpdate, StatusUpdate,
+};
 use bevy_ecs::{system::Command, world::CommandQueue};
 use bevy_log::warn;
-use bevy_transform::components::Transform;
 use bytemuck::TransparentWrapper;
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::Sender;
 use dioxus_core::use_hook;
 use dioxus_hooks::{try_use_context, use_context, use_future};
 use dioxus_signals::{
@@ -18,9 +19,7 @@ use dioxus_signals::{
 };
 use std::fmt::Debug;
 
-use tokio::sync::broadcast::{
-    self, Receiver as TokioReceiver, Sender as TokioSender
-};
+use tokio::sync::broadcast::{self, Receiver as TokioReceiver};
 
 pub mod asset;
 pub mod component;
@@ -65,9 +64,9 @@ impl<T: Clone + 'static, Index: Clone, U: Clone> BevyValue<T, Index, U> {
     pub fn set_value(&mut self, value: T) {
         if let Some(send_channel) = &self.writer {
             let packet = InfoUpdate {
-                    update: value.clone(),
-                    index: self.index.clone(),
-                    additional_info: self.additional_info.clone(),
+                update: value.clone(),
+                index: self.index.clone(),
+                additional_info: self.additional_info.clone(),
             };
             let send_result = send_channel
                 .send(InfoPacket::Update(packet))
@@ -155,34 +154,37 @@ where
                     let reader = reader.resubscribe();
                     reader
                 };
-                
+
                 // get an update for the latest status of value because .resubscribe() nukes previous messages
                 {
-                let Some(ref writer) = signal.write().writer else {
-                    return;
-                };
-                let _ = writer.send(InfoPacket::Request(StatusUpdate::RequestRefresh)).inspect_err(|err| warn!("{:#}", err));
-
+                    let Some(ref writer) = signal.write().writer else {
+                        return;
+                    };
+                    let _ = writer
+                        .send(InfoPacket::Request(StatusUpdate::RequestRefresh))
+                        .inspect_err(|err| warn!("{:#}", err));
                 }
 
                 let mut map_erased = map_erased.clone();
                 let refresh_rate = refresh_rate.take().unwrap_or_default().0;
                 loop {
                     // warn!("looping...");
-                    while let Ok(packet) = reader.try_recv().inspect_err(|err| {
-                        match err {
-                            broadcast::error::TryRecvError::Empty => {},
-                            broadcast::error::TryRecvError::Closed => warn!("channel closed for {:#}", type_name::<T>()),
-                            broadcast::error::TryRecvError::Lagged(_) => warn!("channel lagging for {:#}", type_name::<T>()),
+                    while let Ok(packet) = reader.try_recv().inspect_err(|err| match err {
+                        broadcast::error::TryRecvError::Empty => {}
+                        broadcast::error::TryRecvError::Closed => {
+                            warn!("channel closed for {:#}", type_name::<T>())
+                        }
+                        broadcast::error::TryRecvError::Lagged(_) => {
+                            warn!("channel lagging for {:#}", type_name::<T>())
                         }
                     }) {
                         let packet = match packet {
-                            InfoPacket::Update(info_update) =>info_update,
-                            //TODO: statu update requests from bevy not ready yet. implement later.
-                            InfoPacket::Request(_status_update) => todo!(),
+                            InfoPacket::Update(info_update) => info_update,
+                            //TODO: status update requests from bevy not ready yet. implement later.
+                            InfoPacket::Request(_status_update) => panic!(
+                                "status update for bevy -> dioxus not implemented yet, panicing..."
+                            ),
                         };
-
-                        print!("packet info: value; {:#?}, index; {:#?}", packet.update, packet.index);
 
                         let mut register_signal = None;
                         if index_known == false {
@@ -231,8 +233,6 @@ where
 
         //let channels: DioxusTxrX<_> = request.clone().into();
         // let channels = request.txrx();
-
-
 
         let new_signal = SyncSignal::new_maybe_sync(BevyValue {
             value: Err(BevyFetchBackup::Uninitialized),

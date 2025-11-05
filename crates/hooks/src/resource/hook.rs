@@ -19,8 +19,6 @@ pub struct ResourceRegistry(Signal<BevyResources>);
 // #[repr(transparent)]
 // pub struct BevyResources(BoxGenericTypeMap<TypeId>);
 
-
-
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
 pub struct BevyResources(BoxGenericTypeMap<TypeId>);
@@ -42,8 +40,8 @@ impl SignalsErasedMap for BevyResources {
 }
 
 /// requests a resource from bevy.
-pub fn use_bevy_resource<T: Debug + Resource + Send + Sync + Clone>() -> SyncSignal<BevyValue<T, TypeId, ()>>
-{
+pub fn use_bevy_resource<T: Debug + Resource + Send + Sync + Clone>()
+-> SyncSignal<BevyValue<T, TypeId, ()>> {
     use_bevy_value::<T, ResourceRegistry, BevyResources, RequestBevyResource<T>>(Some(
         TypeId::of::<T>(),
     ))

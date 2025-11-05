@@ -1,7 +1,7 @@
 use crate::{BoxGenericTypeMap, SignalErasedMapValue};
 use bytemuck::TransparentWrapper;
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 pub trait SignalsErasedMap
 where

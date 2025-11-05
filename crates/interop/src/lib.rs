@@ -5,14 +5,8 @@ use std::{
 };
 
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel, system::ScheduleSystem, world::CommandQueue};
-use bytemuck::TransparentWrapper;
-use crossbeam_channel::{
-    Receiver as CrossBeamReceiver, Sender as CrossBeamSender
-};
-use tokio::sync::broadcast::{
-    self, Receiver as TokioReceiver, Sender as TokioSender
-};
-use crate::traits::ErasedSubGenericMap;
+use crossbeam_channel::{Receiver as CrossBeamReceiver, Sender as CrossBeamSender};
+use tokio::sync::broadcast::{self, Receiver as TokioReceiver, Sender as TokioSender};
 
 pub mod plugins;
 pub mod traits;
@@ -67,16 +61,14 @@ pub type BoxAnySignalTypeMap = HashMap<TypeId, Box<dyn Any + Send + Sync>>;
 #[derive(Clone, Debug)]
 pub enum InfoPacket<T, U, V> {
     Update(InfoUpdate<T, U, V>),
-    Request(StatusUpdate)
-
+    Request(StatusUpdate),
 }
 
 #[derive(Clone, Debug)]
 pub enum StatusUpdate {
     /// request a refresh
-    RequestRefresh
+    RequestRefresh,
 }
-
 
 /// data to/from dioxus
 #[derive(Clone, Debug)]
@@ -93,7 +85,9 @@ pub struct BevyDioxusIO<A: Clone, Index, AdditionalInfo: Clone, C: Clone = A> {
     pub dioxus_rx: TokioReceiver<InfoPacket<A, Index, AdditionalInfo>>,
 }
 
-impl<A: Clone, Index: Clone, C: Clone, AdditionalInfo: Clone> Default for BevyDioxusIO<A, Index, AdditionalInfo, C> {
+impl<A: Clone, Index: Clone, C: Clone, AdditionalInfo: Clone> Default
+    for BevyDioxusIO<A, Index, AdditionalInfo, C>
+{
     fn default() -> Self {
         // let (bevy_tx, dioxus_rx) =
         //     crossbeam_channel::unbounded::<InfoPacket<A, Index, AdditionalInfo>>();

@@ -1,6 +1,7 @@
 use bevy_app::Update;
 use bevy_dioxus_interop::{
-    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, InfoUpdate, StatusUpdate, add_systems_through_world
+    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, InfoUpdate, StatusUpdate,
+    add_systems_through_world,
 };
 use bevy_ecs::{component::Mutable, prelude::*};
 use bevy_log::warn;
@@ -64,9 +65,9 @@ fn send_component_singleton<T, U>(
         return;
     };
     let packet = InfoUpdate {
-            update: value.clone(),
-            index: Some(TypeId::of::<T>()),
-            additional_info: None,
+        update: value.clone(),
+        index: Some(TypeId::of::<T>()),
+        additional_info: None,
     };
     let _ = bevy_tx
         .0
@@ -78,7 +79,6 @@ fn receive_component_update<T, U>(
     mut singleton: Query<&mut T, With<U>>,
     bevy_rx: ResMut<BevyRxChannel<ComponentInfoPacket<T>>>,
     bevy_tx: ResMut<BevyTxChannel<ComponentInfoPacket<T>>>,
-
 ) where
     T: Component<Mutability = Mutable> + Clone,
     U: Component,
@@ -90,21 +90,19 @@ fn receive_component_update<T, U>(
         return;
     };
     match packet {
-        InfoPacket::Update(info_update) => {
-            *singleton = info_update.update
-
-        },
-        InfoPacket::Request(status_update) => {
-            match status_update {
-                StatusUpdate::RequestRefresh => {
-                    let packet = InfoUpdate {
-                        update: singleton.clone(),
-                        index: Some(ComponentIndex::of::<T>()),
-                        additional_info: Some(()),
-                    };
-                    let _ = bevy_tx.0.send(InfoPacket::Update(packet)).inspect_err(|err| warn!("could not send component: {:#}", err));
-                },
+        InfoPacket::Update(info_update) => *singleton = info_update.update,
+        InfoPacket::Request(status_update) => match status_update {
+            StatusUpdate::RequestRefresh => {
+                let packet = InfoUpdate {
+                    update: singleton.clone(),
+                    index: Some(ComponentIndex::of::<T>()),
+                    additional_info: Some(()),
+                };
+                let _ = bevy_tx
+                    .0
+                    .send(InfoPacket::Update(packet))
+                    .inspect_err(|err| warn!("could not send component: {:#}", err));
             }
         },
-    } 
+    }
 }

@@ -37,7 +37,6 @@ pub fn use_bevy_component_query<T: Component + Clone>() -> SyncSignal<BevyQueryC
                 sleep(std::time::Duration::from_millis(1000)).await;
 
                 let mut copies = signal.write();
-                warn!("attempting to receive resource");
                 while let Ok(value) = copies.query_read.try_recv() {
                     // warn!("received entity component map");
                     copies

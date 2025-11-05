@@ -17,7 +17,7 @@ pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
 /// Component that marks an entity as a dioxus panel
 #[derive(Clone, Debug)]
 pub struct DioxusPanel {
-    pub(crate) element_marker: Arc<dyn DioxusElementMarker>,
+    pub(crate) _element_marker: Arc<dyn DioxusElementMarker>,
 }
 
 /// marks a struct as a Dioxus element.
@@ -45,7 +45,7 @@ pub struct DioxusPanelUpdates(pub(crate) Vec<PanelUpdate>);
 impl DioxusPanel {
     pub fn new<T: DioxusElementMarker>(element: T) -> Self {
         Self {
-            element_marker: Arc::new(element),
+            _element_marker: Arc::new(element),
         }
     }
 }
@@ -70,5 +70,3 @@ pub fn push_panel_updates(
         .send(DioxusPanelUpdates(updates))
         .inspect_err(|err| warn!("{:#}", err));
 }
-
-

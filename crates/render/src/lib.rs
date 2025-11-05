@@ -165,7 +165,6 @@ fn update_ui(
     animation_epoch: Res<AnimationTime>,
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
-
     while let Ok(msg) = dioxus_messages.0.try_recv() {
         match msg {
             DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
