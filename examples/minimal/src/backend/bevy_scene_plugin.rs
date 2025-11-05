@@ -66,6 +66,7 @@ fn setup(
         brightness: 100.0,
         affects_lightmapped_meshes: true,
     });
+    //TODO: add this back in when bevy_dioxus_panels is implemented
     //commands.spawn(DioxusPanel::new(AppUi {}));
     commands.spawn((
         Camera3d::default(),

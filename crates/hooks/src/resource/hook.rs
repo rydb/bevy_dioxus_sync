@@ -15,23 +15,10 @@ use crate::{
 #[repr(transparent)]
 pub struct ResourceRegistry(Signal<BevyResources>);
 
-// #[derive(TransparentWrapper, Default)]
-// #[repr(transparent)]
-// pub struct BevyResources(BoxGenericTypeMap<TypeId>);
-
+/// type erased map of bevy resources
 #[derive(TransparentWrapper, Default)]
 #[repr(transparent)]
 pub struct BevyResources(BoxGenericTypeMap<TypeId>);
-
-// impl<T: Resource + Clone> BevyRegistryKindErased<T> for BevyResources {
-//     type RequestKind = RequestBevyResource<T>;
-// }
-
-// impl SignalsErasedMap for BevyResources {
-//     type Value<T: Clone + Send + Sync + 'static> = SyncSignal<BevyValue<T, TypeId>>;
-
-//     type Index = TypeId;
-// }
 
 impl SignalsErasedMap for BevyResources {
     type Index = TypeId;
@@ -39,7 +26,7 @@ impl SignalsErasedMap for BevyResources {
     type AdditionalInfo = ();
 }
 
-/// requests a resource from bevy.
+/// hook to interface with a bevy resource
 pub fn use_bevy_resource<T: Debug + Resource + Send + Sync + Clone>()
 -> SyncSignal<BevyValue<T, TypeId, ()>> {
     use_bevy_value::<T, ResourceRegistry, BevyResources, RequestBevyResource<T>>(Some(

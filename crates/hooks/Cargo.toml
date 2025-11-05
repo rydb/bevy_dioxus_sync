@@ -21,6 +21,3 @@ tokio = {workspace = true, features = ["sync"]}
 dioxus-signals = {workspace = true}
 dioxus-hooks = {workspace = true}
 dioxus-core = {workspace = true}
-
-[features]
-lorem_ipsum = []

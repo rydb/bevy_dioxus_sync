@@ -84,7 +84,7 @@ pub(crate) fn handle_keyboard_events(
     // dioxus_doc.resolve();
 }
 
-fn bevy_key_to_blitz_key(key: &BevyKey) -> Key {
+pub fn bevy_key_to_blitz_key(key: &BevyKey) -> Key {
     match key {
         BevyKey::Character(c) => Key::Character(c.to_string()),
         BevyKey::Unidentified(_) => Key::Unidentified,

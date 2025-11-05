@@ -12,6 +12,7 @@ type ComponentValue<T> = T;
 type ComponentIndex = TypeId;
 type ComponentAdditionalInfo = ();
 
+/// info sent to/from bevy on component data.
 type ComponentInfoPacket<T> =
     InfoPacket<ComponentValue<T>, ComponentIndex, ComponentAdditionalInfo>;
 

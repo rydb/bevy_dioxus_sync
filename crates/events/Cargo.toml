@@ -17,7 +17,6 @@ bevy_asset = {workspace = true}
 bevy_sprite_render = {workspace = true}
 dioxus-native = {workspace = true}
 dioxus-html = {workspace = true}
-# dioxus = {workspace = true}
 blitz-dom = {workspace = true}
 blitz-traits = {workspace = true}
 

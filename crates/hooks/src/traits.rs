@@ -7,8 +7,10 @@ pub trait SignalsErasedMap
 where
     Self: TransparentWrapper<BoxGenericTypeMap<Self::Index>> + Sized,
 {
-    // type Value: Clone + 'static + Send + Sync;
+    /// What type a signal is indexed by
     type Index: Debug + Hash + Eq + Clone + Send + Sync + 'static;
+
+    /// additional to be sent to/from bevy.
     type AdditionalInfo: Send + Sync + 'static + Clone;
     fn insert_typed<T: Clone + Send + Sync + 'static>(
         &mut self,

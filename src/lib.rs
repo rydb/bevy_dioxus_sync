@@ -5,7 +5,8 @@ use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
 use std::sync::Arc;
 
-pub mod panels;
+//TODO: Move pub(crate) to pub once bevy_dioxus_panels is implemented.
+pub(crate) mod panels;
 pub mod plugins;
 pub(crate) mod systems;
 pub mod ui;

@@ -30,14 +30,14 @@ pub struct BevyAssetsRegistry(Signal<BevyAssets>);
 
 #[derive(Clone)]
 pub enum AssetRequestFilter<T, U> {
-    // All(UntypedAssetMap),
+    //TODO: Add more here
     Singleton(PhantomData<T>, PhantomData<U>),
 }
 
 #[derive(TransparentWrapper)]
 #[repr(transparent)]
 #[transparent(BevyDioxusIO<AssetValue<U>, AssetInfoIndex, AssetAdditionalInfo>)]
-pub struct RequestScopedAssetWithMarker<
+pub(crate) struct RequestScopedAssetWithMarker<
     T: Deref<Target = Handle<U>> + Component + Clone,
     U: Asset + Clone,
     V: Component + Clone,
@@ -65,6 +65,8 @@ where
 type AssetInfoIndex = UntypedAssetId;
 type AssetValue<T> = T;
 type AssetAdditionalInfo = UntypedAssetId;
+
+/// info send to/from bevy on asset data
 type AssetInfoPacket<T> = InfoPacket<AssetValue<T>, AssetInfoIndex, AssetAdditionalInfo>;
 
 fn receive_asset_updates_singleton<T, U, V>(

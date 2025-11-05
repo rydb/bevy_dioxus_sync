@@ -101,6 +101,7 @@ pub type BoxGenericTypeMap<Index> = HashMap<Index, Box<dyn Any + Send + Sync>>;
 pub type SignalErasedMapValue<T, Index, AdditionalInfo> =
     SyncSignal<BevyValue<T, Index, AdditionalInfo>>;
 
+/// hook that handles the logistics of getting a value to and from bevy.
 pub fn use_bevy_value<T, U, V, W>(
     index: Option<V::Index>,
 ) -> SyncSignal<BevyValue<T, V::Index, V::AdditionalInfo>>
@@ -140,7 +141,6 @@ where
     use_future(move || {
         let mut refresh_rate = refresh_rate.clone();
         let index_known = index.is_some();
-        //
         {
             let mut value = signals_register.clone();
             async move {
@@ -168,7 +168,6 @@ where
                 let mut map_erased = map_erased.clone();
                 let refresh_rate = refresh_rate.take().unwrap_or_default().0;
                 loop {
-                    // warn!("looping...");
                     while let Ok(packet) = reader.try_recv().inspect_err(|err| match err {
                         broadcast::error::TryRecvError::Empty => {}
                         broadcast::error::TryRecvError::Closed => {
@@ -230,9 +229,6 @@ where
         let mut commands = CommandQueue::default();
         let command = request;
         commands.push(command);
-
-        //let channels: DioxusTxrX<_> = request.clone().into();
-        // let channels = request.txrx();
 
         let new_signal = SyncSignal::new_maybe_sync(BevyValue {
             value: Err(BevyFetchBackup::Uninitialized),
