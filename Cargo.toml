@@ -27,11 +27,11 @@ dioxus-devtools = {version = "0.7", default-features = false}
 dioxus-document = {version = "0.7", default-features = false}
 dioxus-asset-resolver = {version = "0.7", default-features = false}
 
-bevy_dioxus_sync = {path = "./"}
-bevy_dioxus_render = {path = "./crates/render"}
-bevy_dioxus_hooks = {path = "./crates/hooks"}
-bevy_dioxus_interop = {path = "./crates/interop"}
-bevy_dioxus_messages = {path = "./crates/messages"}
+bevy_dioxus_sync = {path = "./", version = "0.1"}
+bevy_dioxus_render = {path = "./crates/render", version = "0.1"}
+bevy_dioxus_hooks = {path = "./crates/hooks", version = "0.1"}
+bevy_dioxus_interop = {path = "./crates/interop", version = "0.1"}
+bevy_dioxus_messages = {path = "./crates/messages", version = "0.1"}
 bevy = {version = "0.17"}
 bevy_ecs = {version = "0.17"}
 bevy_render = {version = "0.17"}
