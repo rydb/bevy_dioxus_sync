@@ -10,7 +10,7 @@ use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
 use dioxus_html::*;
 use dioxus_native::*;
 
-pub(crate) fn handle_keyboard_events(
+pub(crate) fn handle_keyboard_messages(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
     mut keyboard_input_events: ResMut<Messages<KeyboardInput>>,
     mut keys: ResMut<ButtonInput<BevyKeyCode>>,

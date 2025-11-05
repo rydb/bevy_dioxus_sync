@@ -16,7 +16,7 @@ pub struct MouseState {
     pub mods: Modifiers,
 }
 
-pub(crate) fn handle_mouse_events(
+pub(crate) fn handle_mouse_messages(
     mut dioxus_doc: NonSendMut<DioxusDocument>,
     mut cursor_moved: MessageReader<CursorMoved>,
     mut mouse_button_input_events: ResMut<Messages<MouseButtonInput>>,

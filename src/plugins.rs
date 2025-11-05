@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use bevy_app::prelude::*;
-use bevy_dioxus_events::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
+use bevy_dioxus_messages::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_render::DioxusMessages;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
 use bevy_ecs::world::CommandQueue;

@@ -31,7 +31,7 @@ bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
 bevy_dioxus_hooks = {path = "./crates/hooks"}
 bevy_dioxus_interop = {path = "./crates/interop"}
-bevy_dioxus_events = {path = "./crates/events"}
+bevy_dioxus_messages = {path = "./crates/messages"}
 bevy = {version = "0.17"}
 bevy_ecs = {version = "0.17"}
 bevy_render = {version = "0.17"}
@@ -82,7 +82,7 @@ wgpu-types = "26"
 bevy_dioxus_render = {workspace = true}
 bevy_dioxus_hooks = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
-bevy_dioxus_events = {workspace = true}
+bevy_dioxus_messages = {workspace = true}
 dioxus-asset-resolver = {workspace = true}
 dioxus-devtools = {workspace = true}
 
