@@ -89,6 +89,37 @@ body,
     gap: 10px;
 }
 
+#rotation-display {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    padding: 20px;
+    gap: 10px;
+}
+
+
+.bevy-display {
+    background-color: #444;
+    border: 2px solid #666;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    padding: 0px 10px;
+    min-width: 200px;
+    display: inline-block; 
+    vertical-align: middle; 
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    margin-left: 1%;
+    box-sizing: border-box;
+    top: -2px;
+}
+
 input[type="number"] {
     width: 3em;
     height: 1.5em;
@@ -102,7 +133,8 @@ input[type="number"] {
     text-align: center;
     padding: 0 10px;
     outline: none;
-    margin-left: auto;
+    margin-left: 1%;
+    top: -2px
 }
 
 #footer {

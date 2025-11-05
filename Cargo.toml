@@ -15,25 +15,17 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-# dioxus-native = {version = "0.7.0-rc.3", default-features = false}
-# dioxus-native-dom = {version = "0.7.0-rc.3", default-features = false}
-# dioxus = {version = "0.7.0-rc.3", default-features = false}
-# dioxus-signals = {version = "0.7.0-rc.3", default-features = false}
-# dioxus-hooks = {version = "0.7.0-rc.3", default-features = false}
-# dioxus-core = {version = "0.7.0-rc.3", default-features = false}
-# dioxus-html = {version = "0.7.0-rc.3", default-features = false}
-# dioxus-core-macro = {version = "0.7.0-rc.3", default-features = false}
-dioxus-native = { git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false }
-dioxus-native-dom = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-signals = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-hooks = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-core = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-html = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-core-macro = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-devtools = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-document = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
-dioxus-asset-resolver = {git = "https://github.com/nicoburns/dioxus", branch = "fix-native-asset-hotreloading", default-features = false}
+dioxus-native = { version = "0.7", default-features = false }
+dioxus-native-dom = {version = "0.7", default-features = false}
+dioxus = {version = "0.7", default-features = false}
+dioxus-signals = {version = "0.7", default-features = false}
+dioxus-hooks = {version = "0.7", default-features = false}
+dioxus-core = {version = "0.7", default-features = false}
+dioxus-html = {version = "0.7", default-features = false}
+dioxus-core-macro = {version = "0.7", default-features = false}
+dioxus-devtools = {version = "0.7", default-features = false}
+dioxus-document = {version = "0.7", default-features = false}
+dioxus-asset-resolver = {version = "0.7", default-features = false}
 
 bevy_dioxus_sync = {path = "./"}
 bevy_dioxus_render = {path = "./crates/render"}
