@@ -19,8 +19,9 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-# TODO: dioxus-native fails to publish without net feature, make a git issue for this.
-dioxus-native = { version = "0.7", default-features = false, features = ["net"]}
+# TODO: dioxus-native fails to publish without these features, even though the crate doesn't need them. 
+# remove net and html when that is resolved.
+dioxus-native = { version = "0.7", default-features = false, features = ["net", "html"]}
 dioxus-native-dom = {version = "0.7", default-features = false}
 dioxus = {version = "0.7", default-features = false}
 dioxus-signals = {version = "0.7", default-features = false}
