@@ -2,6 +2,10 @@
 name = "bevy_dioxus_sync"
 version = "0.1.0"
 edition = "2024"
+description = "a"
+license = "MIT OR Apache-2.0"
+repository = "Top crate for bevy-dioxus interop through syncronization"
+keywords = ["dom", "ui", "gui", "bevy", "dioxus"]
 
 [workspace.package]
 version = "0.1.0"
