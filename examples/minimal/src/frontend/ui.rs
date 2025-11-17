@@ -5,19 +5,19 @@ use bevy_dioxus_hooks::{
     component::component_single::hook::use_bevy_component_singleton,
     resource::hook::use_bevy_resource,
 };
+use bevy_dioxus_sync::panels::DioxusElementMarker;
 use bevy_pbr::prelude::*;
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
 
-// TODO: uncomment when bevy_dioxus_panels in ready
-// #[derive(Debug)]
-// pub struct AppUi;
+#[derive(Debug)]
+pub struct AppUi;
 
-// impl DioxusElementMarker for AppUi {
-//     fn element(&self) -> Element {
-//         app_ui()
-//     }
-// }
+impl DioxusElementMarker for AppUi {
+    fn element(&self) -> Element {
+        app_ui()
+    }
+}
 
 pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 

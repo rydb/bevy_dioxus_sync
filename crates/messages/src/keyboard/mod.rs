@@ -1,4 +1,5 @@
 use super::{does_catch_events, mouse::MouseState};
+use bevy_dioxus_interop::DioxusDocuments;
 use bevy_ecs::prelude::*;
 use bevy_input::{
     ButtonState,
@@ -11,7 +12,7 @@ use dioxus_html::*;
 use dioxus_native::*;
 
 pub(crate) fn handle_keyboard_messages(
-    mut dioxus_doc: NonSendMut<DioxusDocument>,
+    mut dioxus_docs: NonSendMut<DioxusDocuments>,
     mut keyboard_input_events: ResMut<Messages<KeyboardInput>>,
     mut keys: ResMut<ButtonInput<BevyKeyCode>>,
     mut last_mouse_state: Local<MouseState>,
@@ -19,69 +20,74 @@ pub(crate) fn handle_keyboard_messages(
     if keyboard_input_events.is_empty() {
         return;
     }
+    let mut should_catch_events = false;
 
     for event in keyboard_input_events
         .get_cursor()
         .read(&keyboard_input_events)
     {
-        let modifier = match event.logical_key {
-            BevyKey::Alt => Some(Modifiers::ALT),
-            BevyKey::AltGraph => Some(Modifiers::ALT_GRAPH),
-            BevyKey::CapsLock => Some(Modifiers::CAPS_LOCK),
-            BevyKey::Control => Some(Modifiers::CONTROL),
-            BevyKey::Fn => Some(Modifiers::FN),
-            BevyKey::FnLock => Some(Modifiers::FN_LOCK),
-            BevyKey::NumLock => Some(Modifiers::NUM_LOCK),
-            BevyKey::ScrollLock => Some(Modifiers::SCROLL_LOCK),
-            BevyKey::Shift => Some(Modifiers::SHIFT),
-            BevyKey::Symbol => Some(Modifiers::SYMBOL),
-            BevyKey::SymbolLock => Some(Modifiers::SYMBOL_LOCK),
-            BevyKey::Meta => Some(Modifiers::META),
-            BevyKey::Hyper => Some(Modifiers::HYPER),
-            BevyKey::Super => Some(Modifiers::SUPER),
-            _ => None,
-        };
-        if let Some(modifier) = modifier {
-            match event.state {
-                ButtonState::Pressed => last_mouse_state.mods.insert(modifier),
-                ButtonState::Released => last_mouse_state.mods.remove(modifier),
+        for (_, dioxus_doc) in &mut dioxus_docs.0 {
+            let modifier = match event.logical_key {
+                BevyKey::Alt => Some(Modifiers::ALT),
+                BevyKey::AltGraph => Some(Modifiers::ALT_GRAPH),
+                BevyKey::CapsLock => Some(Modifiers::CAPS_LOCK),
+                BevyKey::Control => Some(Modifiers::CONTROL),
+                BevyKey::Fn => Some(Modifiers::FN),
+                BevyKey::FnLock => Some(Modifiers::FN_LOCK),
+                BevyKey::NumLock => Some(Modifiers::NUM_LOCK),
+                BevyKey::ScrollLock => Some(Modifiers::SCROLL_LOCK),
+                BevyKey::Shift => Some(Modifiers::SHIFT),
+                BevyKey::Symbol => Some(Modifiers::SYMBOL),
+                BevyKey::SymbolLock => Some(Modifiers::SYMBOL_LOCK),
+                BevyKey::Meta => Some(Modifiers::META),
+                BevyKey::Hyper => Some(Modifiers::HYPER),
+                BevyKey::Super => Some(Modifiers::SUPER),
+                _ => None,
             };
-        }
-        let key_state = match event.state {
-            ButtonState::Pressed => KeyState::Pressed,
-            ButtonState::Released => KeyState::Released,
-        };
-        let blitz_key_event = BlitzKeyEvent {
-            key: bevy_key_to_blitz_key(&event.logical_key),
-            code: bevy_key_code_to_blitz_code(&event.key_code),
-            modifiers: last_mouse_state.mods,
-            location: Location::Standard,
-            is_auto_repeating: event.repeat,
-            is_composing: false,
-            state: key_state,
-            text: event.text.clone(),
-        };
+            if let Some(modifier) = modifier {
+                match event.state {
+                    ButtonState::Pressed => last_mouse_state.mods.insert(modifier),
+                    ButtonState::Released => last_mouse_state.mods.remove(modifier),
+                };
+            }
+            let key_state = match event.state {
+                ButtonState::Pressed => KeyState::Pressed,
+                ButtonState::Released => KeyState::Released,
+            };
+            let blitz_key_event = BlitzKeyEvent {
+                key: bevy_key_to_blitz_key(&event.logical_key),
+                code: bevy_key_code_to_blitz_code(&event.key_code),
+                modifiers: last_mouse_state.mods,
+                location: Location::Standard,
+                is_auto_repeating: event.repeat,
+                is_composing: false,
+                state: key_state,
+                text: event.text.clone(),
+            };
 
-        match key_state {
-            KeyState::Pressed => {
-                dioxus_doc.handle_ui_event(UiEvent::KeyDown(blitz_key_event));
+            match key_state {
+                KeyState::Pressed => {
+                    dioxus_doc.handle_ui_event(UiEvent::KeyDown(blitz_key_event));
+                }
+                KeyState::Released => {
+                    dioxus_doc.handle_ui_event(UiEvent::KeyUp(blitz_key_event));
+                }
             }
-            KeyState::Released => {
-                dioxus_doc.handle_ui_event(UiEvent::KeyUp(blitz_key_event));
+            let flip_catch_events = dioxus_doc
+                .hit(last_mouse_state.x, last_mouse_state.y)
+                .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
+                .unwrap_or(false);
+
+            if flip_catch_events {
+                should_catch_events = true;
             }
+
         }
     }
-
-    let should_catch_events = dioxus_doc
-        .hit(last_mouse_state.x, last_mouse_state.y)
-        .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
-        .unwrap_or(false);
     if should_catch_events {
         keyboard_input_events.clear();
         keys.reset_all();
     }
-
-    // dioxus_doc.resolve();
 }
 
 pub fn bevy_key_to_blitz_key(key: &BevyKey) -> Key {

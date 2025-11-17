@@ -4,6 +4,7 @@ use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_camera::{Camera, Camera2d};
 use bevy_derive::Deref;
+use bevy_dioxus_interop::DioxusDocuments;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_log::debug;
@@ -155,7 +156,7 @@ pub struct DioxusMessages(pub Receiver<DioxusMessage>);
 
 #[allow(clippy::too_many_arguments)]
 fn update_ui(
-    mut dioxus_doc: NonSendMut<DioxusDocument>,
+    mut dioxus_docs: NonSendMut<DioxusDocuments>,
     dioxus_messages: Res<DioxusMessages>,
     waker: NonSendMut<std::task::Waker>,
     vello_renderer: Option<NonSendMut<VelloRenderer>>,
@@ -170,24 +171,30 @@ fn update_ui(
             DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
                 dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {
                     // Apply changes to vdom
-                    dioxus_devtools::apply_changes(&dioxus_doc.vdom, &hotreload_message);
+                    for (_, dioxus_doc) in &mut dioxus_docs.0 {
+                        dioxus_devtools::apply_changes(&dioxus_doc.vdom, &hotreload_message);
 
-                    // Reload changed assets
-                    for asset_path in &hotreload_message.assets {
-                        if let Some(url) = asset_path.to_str() {
-                            dioxus_doc.reload_resource_by_href(url);
-                        }
+                        // Reload changed assets
+                        for asset_path in &hotreload_message.assets {
+                            if let Some(url) = asset_path.to_str() {
+                                dioxus_doc.reload_resource_by_href(url);
+                            }
+                        }   
                     }
                 }
                 dioxus_devtools::DevserverMsg::FullReloadStart => {}
                 _ => {}
             },
             DioxusMessage::CreateHeadElement(el) => {
-                dioxus_doc.create_head_element(&el.name, &el.attributes, &el.contents);
-                dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
+                for (_, dioxus_doc) in &mut dioxus_docs.0 {
+                    dioxus_doc.create_head_element(&el.name, &el.attributes, &el.contents);
+                    dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
+                }
             }
             DioxusMessage::ResourceLoad(resource) => {
-                dioxus_doc.load_resource(resource);
+                for (_, dioxus_doc) in &mut dioxus_docs.0 {
+                    dioxus_doc.load_resource(resource.clone());
+                }
             }
         };
     }
@@ -198,40 +205,42 @@ fn update_ui(
 
     if let (Some(texture), Some(mut vello_renderer)) = ((*cached_texture).as_ref(), vello_renderer)
     {
-        // Poll the vdom
-        dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
+        for (_, dioxus_doc) in &mut dioxus_docs.0 {
+            // Poll the vdom
+            dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
 
-        // Refresh the document
-        let animation_time = animation_epoch.0.elapsed().as_secs_f64();
-        dioxus_doc.resolve(animation_time);
+            // Refresh the document
+            let animation_time = animation_epoch.0.elapsed().as_secs_f64();
+            dioxus_doc.resolve(animation_time);
 
-        // Create a `vello::Scene` to paint into
-        let mut scene = Scene::new();
+            // Create a `vello::Scene` to paint into
+            let mut scene = Scene::new();
 
-        // Paint the document
-        paint_scene(
-            &mut VelloScenePainter::new(&mut scene),
-            &dioxus_doc,
-            SCALE_FACTOR as f64,
-            texture.width,
-            texture.height,
-        );
+            // Paint the document
+            paint_scene(
+                &mut VelloScenePainter::new(&mut scene),
+                &dioxus_doc,
+                SCALE_FACTOR as f64,
+                texture.width,
+                texture.height,
+            );
 
-        // Render the `vello::Scene` to the Texture using the `VelloRenderer`
-        vello_renderer
-            .render_to_texture(
-                render_device.wgpu_device(),
-                render_queue.into_inner(),
-                &scene,
-                &texture.texture_view,
-                &RenderParams {
-                    base_color: AlphaColor::TRANSPARENT,
-                    width: texture.width,
-                    height: texture.height,
-                    antialiasing_method: vello::AaConfig::Msaa16,
-                },
-            )
-            .expect("failed to render to texture");
+            // Render the `vello::Scene` to the Texture using the `VelloRenderer`
+            vello_renderer
+                .render_to_texture(
+                    render_device.wgpu_device(),
+                    &render_queue.0,
+                    &scene,
+                    &texture.texture_view,
+                    &RenderParams {
+                        base_color: AlphaColor::TRANSPARENT,
+                        width: texture.width,
+                        height: texture.height,
+                        antialiasing_method: vello::AaConfig::Msaa16,
+                    },
+                )
+                .expect("failed to render to texture");
+        }
     }
 }
 
@@ -240,7 +249,7 @@ fn setup_ui(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    mut dioxus_doc: NonSendMut<DioxusDocument>,
+    mut dioxus_docs: NonSendMut<DioxusDocuments>,
     mut animation_epoch: ResMut<AnimationTime>,
     windows: Query<&Window>,
 ) {
@@ -255,6 +264,13 @@ fn setup_ui(
 
     // Set the initial viewport
     animation_epoch.0 = Instant::now();
+    
+    if dioxus_docs.0.len() > 1 {
+        panic!("rework for multi-surface support in process. Fix this function to be integrated into that rework.")
+    }
+    let Some((_,dioxus_doc)) = dioxus_docs.0.iter_mut().next() else {
+        panic!("Can't get first document in dioxus documents. Map empty.")
+    };
     dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
     dioxus_doc.resolve(0.0);
 

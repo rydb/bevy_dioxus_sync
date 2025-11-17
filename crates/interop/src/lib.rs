@@ -6,6 +6,7 @@ use std::{
 
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel, system::ScheduleSystem, world::CommandQueue};
 use crossbeam_channel::{Receiver as CrossBeamReceiver, Sender as CrossBeamSender};
+use dioxus_native_dom::DioxusDocument;
 use tokio::sync::broadcast::{self, Receiver as TokioReceiver, Sender as TokioSender};
 
 pub mod plugins;
@@ -116,3 +117,5 @@ pub(crate) fn read_dioxus_command_queues(world: &mut World) {
         world.commands().append(&mut command_queue);
     }
 }
+
+pub struct DioxusDocuments(pub HashMap<Entity, DioxusDocument>);

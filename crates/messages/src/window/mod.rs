@@ -1,4 +1,5 @@
 use bevy_asset::prelude::*;
+use bevy_dioxus_interop::DioxusDocuments;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_log::debug;
@@ -14,7 +15,7 @@ use bevy_dioxus_render::{
 };
 
 pub(crate) fn handle_window_resize(
-    mut dioxus_doc: NonSendMut<DioxusDocument>,
+    mut dioxus_docs: NonSendMut<DioxusDocuments>,
     mut resize_events: MessageReader<WindowResized>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -28,9 +29,10 @@ pub(crate) fn handle_window_resize(
 
         debug!("Window resized to: {}x{}", width, height);
 
-        // Update the dioxus viewport
-        dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-        // dioxus_doc.resolve();
+        for (_, dioxus_doc) in &mut dioxus_docs.0 {
+            // Update the dioxus viewport
+            dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
+        }
 
         // Create a new texture with the new size
         let new_image = create_ui_texture(width, height);

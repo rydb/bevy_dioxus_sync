@@ -15,4 +15,5 @@ crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true, features = ["derive"]}
 bevy_log = {workspace = true}
 dioxus-signals = {workspace = true}
+dioxus-native-dom = {workspace = true}
 tokio = {workspace = true, features = ["sync"]}

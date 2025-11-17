@@ -25,3 +25,4 @@ blitz-dom = {workspace = true}
 blitz-traits = {workspace = true}
 
 bevy_dioxus_render = {workspace = true}
+bevy_dioxus_interop = {workspace = true}
