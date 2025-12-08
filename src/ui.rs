@@ -6,10 +6,7 @@ use crate::{
     // plugins::DioxusAppKind,
 };
 use async_std::task::sleep;
-use bevy_dioxus_hooks::{
-    asset::BevyAssetsRegistry, component::component_single::hook::BevyComponentsRegistry,
-    resource::hook::ResourceRegistry,
-};
+use bevy_dioxus_hooks::resource::command::BevyResourcesSignalsCache;
 use bevy_dioxus_interop::{BevyCommandQueueTx, InfoRefershRateMS};
 use bevy_ecs::entity::Entity;
 use dioxus_core::Element;
@@ -71,11 +68,11 @@ pub fn dioxus_app(props: DioxusPluginProps) -> Element {
     if let Some((entity, panel)) = main_window_ui {
         dioxus_panels.0.write().insert(entity, panel);
     }
-    let _resource_registers = use_context_provider(|| ResourceRegistry::default());
+    let _resource_registers = use_context_provider(|| BevyResourcesSignalsCache::default());
     // let component_signals = use_context_provider(|| BevyComponentsSignals::default());
     // let _asset_singletons = use_context_provider(|| BevyAssetsSignals::default());
-    let _asset_registers = use_context_provider(|| BevyAssetsRegistry::default());
-    let _component_registers = use_context_provider(|| BevyComponentsRegistry::default());
+    // let _asset_registers = use_context_provider(|| BevyAssetsRegistry::default());
+    // let _component_registers = use_context_provider(|| BevyComponentsRegistry::default());
     // let panels = 
     rsx! {
         // {main_window_ui.map(|n| n())},

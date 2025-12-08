@@ -6,254 +6,83 @@ use std::{
 
 use async_std::task::sleep;
 use bevy_dioxus_interop::{
-    BevyCommandQueueTx, BevyDioxusIO, InfoPacket, InfoRefershRateMS, InfoUpdate, StatusUpdate,
+    BevyCommandQueueTx, BevyDioxusIO, BevyDioxusPacket, BevyFetchBackup, BevyValue, InfoPacket, InfoRefershRateMS, InfoUpdate, StatusUpdate, signals::CrossDomSignal, traits::{BoxGenericDomTypeMap, CrossDomSignalErasedMap, ErasedSignal}
 };
 use bevy_ecs::{system::Command, world::CommandQueue};
 use bevy_log::warn;
 use bytemuck::TransparentWrapper;
 use crossbeam_channel::Sender;
-use dioxus_core::use_hook;
-use dioxus_hooks::{try_use_context, use_context, use_future};
+use dioxus_core::{ReactiveContext, use_hook};
+use dioxus_hooks::{try_use_context, use_context, use_future, use_memo, use_signal, use_signal_sync};
 use dioxus_signals::{
-    Signal, SignalSubscriberDrop, SyncSignal, UnsyncStorage, WritableExt, WriteLock,
+    Memo, ReadSignal, Readable, ReadableExt, Signal, SignalSubscriberDrop, SyncSignal, SyncStorage, UnsyncStorage, WritableExt, WriteLock
 };
 use std::fmt::Debug;
 
 use tokio::sync::broadcast::{self, Receiver as TokioReceiver};
 
-pub mod asset;
-pub mod component;
+// pub mod asset;
+// pub mod component;
 pub mod resource;
 
-pub mod traits;
-pub use traits::*;
-
-pub enum BevyFetchBackup {
-    /// Return value as unknown as it couldn't be fetched
-    Unknown,
-    /// Return value for when the value exists in bevy, but dioxus hasn't received it yet.
-    Uninitialized,
-}
-
-impl Default for BevyFetchBackup {
-    fn default() -> Self {
-        BevyFetchBackup::Unknown
-    }
-}
-
-impl Display for BevyFetchBackup {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let string = match self {
-            BevyFetchBackup::Unknown => format!("Unable to receive {}", type_name::<Self>()),
-            BevyFetchBackup::Uninitialized => "waiting for value from bevy....".to_string(),
-        };
-        write!(f, "{}", string)
-    }
-}
-
-/// bevy value + useful structures needed for bevy/dioxus interop
-pub struct BevyValue<T: Clone + 'static, Index, U> {
-    writer: Option<Sender<InfoPacket<T, Index, U>>>,
-    reader: Option<TokioReceiver<InfoPacket<T, Index, U>>>,
-    pub(crate) value: Result<T, BevyFetchBackup>,
-    pub(crate) additional_info: Option<U>,
-    pub(crate) index: Option<Index>,
-}
-
-impl<T: Clone + 'static, Index: Clone, U: Clone> BevyValue<T, Index, U> {
-    pub fn set_value(&mut self, value: T) {
-        if let Some(send_channel) = &self.writer {
-            let packet = InfoUpdate {
-                update: value.clone(),
-                index: self.index.clone(),
-                additional_info: self.additional_info.clone(),
-            };
-            let send_result = send_channel
-                .send(InfoPacket::Update(packet))
-                .inspect_err(|err| warn!("could not update bevy value signal due to {:#}", err));
-            if send_result.is_ok() {
-                self.value = Ok(value)
-            }
-        } else {
-            warn!("no send channel for {:#}, skipping", type_name::<T>());
-            return;
-        }
-    }
-    pub fn read_value(&self) -> Result<&T, &BevyFetchBackup> {
-        self.value.as_ref()
-    }
-}
-
-impl<T, Index, U> Display for BevyValue<T, Index, U>
-where
-    T: Display + Clone,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.value {
-            Ok(n) => write!(f, "{}", n),
-            Err(err) => write!(f, "{}", err),
-        }
-    }
-}
-
-pub type BoxGenericTypeMap<Index> = HashMap<Index, Box<dyn Any + Send + Sync>>;
-
-pub type SignalErasedMapValue<T, Index, AdditionalInfo> =
-    SyncSignal<BevyValue<T, Index, AdditionalInfo>>;
-
 /// hook that handles the logistics of getting a value to and from bevy.
-pub fn use_bevy_value<T, U, V, W>(
-    index: Option<V::Index>,
-) -> SyncSignal<BevyValue<T, V::Index, V::AdditionalInfo>>
+pub fn use_bevy_value<T, V, W, X>(
+    index: V::Index,
+) -> CrossDomSignal<T> 
 where
     T: Debug + Send + Sync + Clone + 'static,
-    U: Clone + 'static + TransparentWrapper<Signal<V>>,
-    V: TransparentWrapper<BoxGenericTypeMap<V::Index>> + SignalsErasedMap + 'static,
-    W: Command + Default + TransparentWrapper<BevyDioxusIO<T, V::Index, V::AdditionalInfo>>,
+    V: TransparentWrapper<BoxGenericDomTypeMap<V::Index>> + CrossDomSignalErasedMap + 'static,
+    W: Clone + Command + Default + TransparentWrapper<CrossDomSignal<T>>,
+    X: Clone + TransparentWrapper<Signal<V>> + 'static,
 {
-    let refresh_rate = try_use_context::<InfoRefershRateMS>();
-    let command_queue_tx = try_use_context::<BevyCommandQueueTx>();
-    let mut signals_register = use_context::<U>();
+    let command_queue_tx = use_context::<BevyCommandQueueTx>();
 
-    let signal = use_hook(|| {
-        let mut map_erased: WriteLock<
-            '_,
-            V,
-            UnsyncStorage,
-            SignalSubscriberDrop<V, UnsyncStorage>,
-        > = TransparentWrapper::peel_mut(&mut signals_register).write();
-        let mut value = None;
-        if let Some(index) = index.clone() {
-            value = map_erased.get_typed::<T>(&index);
-        }
-        let signal = if let Some(signal) = value {
+    let instance = use_context::<X>();
+
+
+    let mut binding = TransparentWrapper::peel(instance);
+    let mut signals = binding.write();
+    let signal = match signals.get_typed::<T>(&index) {
+        Some(signal) => {
+            println!("outputing current signal state");
             signal.clone()
-        } else {
-            request_bevy_signal::<T, V, W>(
-                command_queue_tx,
-                map_erased,
-                index.clone(),
-                W::default(),
-            )
-        };
-        signal
-    });
-    use_future(move || {
-        let mut refresh_rate = refresh_rate.clone();
-        let index_known = index.is_some();
-        {
-            let mut value = signals_register.clone();
-            async move {
-                let map_erased = TransparentWrapper::peel_mut(&mut value);
-                let mut signal = signal.clone();
+        },
+        None => {
+            println!("requesting signal..");
 
-                let mut reader = {
-                    let Some(ref reader) = signal.write().reader else {
-                        return;
-                    };
-                    let reader = reader.resubscribe();
-                    reader
-                };
+            let signal = request_bevy_signal::<T, V, W>(command_queue_tx);
+            signals.insert_signal(signal.clone(), index);
+            signal
 
-                // get an update for the latest status of value because .resubscribe() nukes previous messages
-                {
-                    let Some(ref writer) = signal.write().writer else {
-                        return;
-                    };
-                    let _ = writer
-                        .send(InfoPacket::Request(StatusUpdate::RequestRefresh))
-                        .inspect_err(|err| warn!("{:#}", err));
-                }
-
-                let mut map_erased = map_erased.clone();
-                let refresh_rate = refresh_rate.take().unwrap_or_default().0;
-                loop {
-                    while let Ok(packet) = reader.try_recv().inspect_err(|err| match err {
-                        broadcast::error::TryRecvError::Empty => {}
-                        broadcast::error::TryRecvError::Closed => {
-                            warn!("channel closed for {:#}", type_name::<T>())
-                        }
-                        broadcast::error::TryRecvError::Lagged(_) => {
-                            warn!("channel lagging for {:#}", type_name::<T>())
-                        }
-                    }) {
-                        let packet = match packet {
-                            InfoPacket::Update(info_update) => info_update,
-                            //TODO: status update requests from bevy not ready yet. implement later.
-                            InfoPacket::Request(_status_update) => panic!(
-                                "status update for bevy -> dioxus not implemented yet, panicing..."
-                            ),
-                        };
-
-                        let mut register_signal = None;
-                        if index_known == false {
-                            if let Some(index) = packet.index.clone() {
-                                // warn!("index not received for: {:#?} ", packet);
-                                register_signal = Some(index.clone());
-                                map_erased.write().insert_typed::<T>(signal.clone(), index);
-                            }
-                        }
-                        let mut asset = signal.write();
-
-                        if let Some(index) = register_signal {
-                            asset.index = Some(index.clone());
-                        }
-                        asset.value = Ok(packet.update);
-                    }
-
-                    sleep(std::time::Duration::from_millis(refresh_rate)).await;
-                }
-            }
-        }
-    });
+        },
+    };
     signal
 }
 
+pub enum SignalStatus<T> {
+    Initializing,
+    Initialized(T)
+}
+
 fn request_bevy_signal<T, U, V>(
-    command_queue_tx: Option<BevyCommandQueueTx>,
-    mut signal_registry: WriteLock<'_, U, UnsyncStorage, SignalSubscriberDrop<U, UnsyncStorage>>,
-    index: Option<U::Index>,
-    request: V,
-) -> SyncSignal<BevyValue<T, U::Index, U::AdditionalInfo>>
+    command_queue_tx: BevyCommandQueueTx,
+) -> CrossDomSignal<T>
 where
-    T: Send + Sync + Clone,
-    U: TransparentWrapper<BoxGenericTypeMap<U::Index>> + SignalsErasedMap,
-    V: Command + Default + TransparentWrapper<BevyDioxusIO<T, U::Index, U::AdditionalInfo>>,
+    T: 'static + Send + Sync + Clone,
+    U: TransparentWrapper<BoxGenericDomTypeMap<U::Index>> + CrossDomSignalErasedMap,
+    V: Clone + Command + Default + TransparentWrapper<CrossDomSignal<T>>,
 {
-    if let Some(command_queue_tx) = command_queue_tx {
-        let channels = V::peel_ref(&request);
+    let new_signal = CrossDomSignal::new_uninitialized();
 
-        let dioxus_rx = channels.dioxus_rx.resubscribe();
-        let dioxus_tx = channels.dioxus_tx.clone();
+    let mut commands = CommandQueue::default();
 
-        let mut commands = CommandQueue::default();
-        let command = request;
-        commands.push(command);
+    let command = V::wrap(new_signal.clone());
+    commands.push(command);
 
-        let new_signal = SyncSignal::new_maybe_sync(BevyValue {
-            value: Err(BevyFetchBackup::Uninitialized),
-            reader: Some(dioxus_rx),
-            writer: Some(dioxus_tx),
-            additional_info: None,
-            index: None,
-        });
-        if let Some(index) = index {
-            signal_registry.insert_typed::<T>(new_signal.clone(), index);
-        }
-        let _ = command_queue_tx
-            .0
-            .send(commands)
-            .inspect_err(|err| warn!("{:#}", err));
-
-        return new_signal;
-    } else {
-        let new_signal = SyncSignal::new_maybe_sync(BevyValue {
-            value: Err(BevyFetchBackup::Unknown),
-            reader: None,
-            writer: None,
-            additional_info: None,
-            index: None,
-        });
-        new_signal
-    }
+    let _ = command_queue_tx
+        .0
+        .send(commands)
+        .inspect_err(|err| warn!("{:#}", err));
+    return new_signal;
+    
 }

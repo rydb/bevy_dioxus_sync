@@ -16,7 +16,7 @@ use bytemuck::TransparentWrapper;
 use dioxus_signals::{Signal, SyncSignal};
 use std::fmt::Debug;
 
-use crate::{BevyValue, BoxGenericTypeMap, SignalsErasedMap, use_bevy_value};
+use crate::{BevyValue, BoxGenericTypeMap, use_bevy_value};
 
 pub type UntypedSendAsset = Box<dyn Any + Send + Sync>;
 
@@ -54,7 +54,7 @@ where
     V: Component + Clone,
 {
     fn apply(self, world: &mut World) -> () {
-        world.insert_resource(BevyTxChannel(self.channels.bevy_tx));
+        // world.insert_resource(BevyTxChannel(self.channels.bevy_tx));
         world.insert_resource(BevyRxChannel(self.channels.bevy_rx));
 
         add_systems_through_world(world, Update, send_asset_updates_singleton::<T, U, V>);
@@ -182,12 +182,12 @@ where
     }
 }
 
-pub type BevyAsset<T> = BevyValue<T, UntypedAssetId, UntypedAssetId>;
+// pub type BevyAsset<T> = BevyValue<T, UntypedAssetId, UntypedAssetId>;
 
-impl SignalsErasedMap for BevyAssets {
-    type Index = UntypedAssetId;
-    type AdditionalInfo = UntypedAssetId;
-}
+// impl SignalsErasedMap for BevyAssets {
+//     type Index = UntypedAssetId;
+//     type AdditionalInfo = UntypedAssetId;
+// }
 
 /// interface with a singular bevy asset, [`U`]. Selects the asset based on its handle newtype, [`T`] and a marker component, [`V`].
 pub fn use_bevy_component_asset_single<T, U, V>()

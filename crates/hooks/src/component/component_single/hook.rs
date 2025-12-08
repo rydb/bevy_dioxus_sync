@@ -6,7 +6,7 @@ use dioxus_signals::{Signal, SyncSignal};
 use std::fmt::Debug;
 
 use crate::{
-    BevyValue, BoxGenericTypeMap, SignalsErasedMap,
+    BevyValue, BoxGenericTypeMap,
     component::component_single::command::RequestBevyComponentSingleton, use_bevy_value,
 };
 
@@ -21,16 +21,16 @@ where
     )
 }
 
-/// type erased map of bevy components
-#[derive(TransparentWrapper, Default)]
-#[repr(transparent)]
-pub struct BevyComponents(BoxGenericTypeMap<TypeId>);
+// /// type erased map of bevy components
+// #[derive(TransparentWrapper, Default)]
+// #[repr(transparent)]
+// pub struct BevyComponents(BoxGenericTypeMap<TypeId>);
 
-impl SignalsErasedMap for BevyComponents {
-    type Index = TypeId;
+// impl SignalsErasedMap for BevyComponents {
+//     type Index = TypeId;
 
-    type AdditionalInfo = ();
-}
+//     type AdditionalInfo = ();
+// }
 
 /// signal to erased components map
 #[derive(Clone, TransparentWrapper, Default)]

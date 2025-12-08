@@ -32,6 +32,7 @@ dioxus-core-macro = {version = "0.7", default-features = false}
 dioxus-devtools = {version = "0.7", default-features = false}
 dioxus-document = {version = "0.7", default-features = false}
 dioxus-asset-resolver = {version = "0.7", default-features = false}
+generational-box = {version = "0.7", default-features = false}
 
 bevy_dioxus_sync = {path = "./", version = "0.1"}
 bevy_dioxus_render = {path = "./crates/render", version = "0.1"}
@@ -70,6 +71,7 @@ data-url = "0.3.2"
 bytes = "1.10"
 tokio = "1.48"
 maybe-debug = "0.1"
+arc-swap = "1.7"
 
 anyrender_vello = {version = "0.6", default-features = false}
 blitz-net = { version = "0.2", default-features = false}

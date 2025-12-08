@@ -17,3 +17,6 @@ bevy_log = {workspace = true}
 dioxus-signals = {workspace = true}
 dioxus-native-dom = {workspace = true}
 tokio = {workspace = true, features = ["sync"]}
+generational-box = {workspace = true}
+arc-swap = {workspace = true}
+dioxus-core = {workspace = true}

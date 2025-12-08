@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use bevy_app::prelude::*;
+use bevy_dioxus_hooks::resource::BevyResourcesSignalsPlugin;
 use bevy_dioxus_interop::DioxusDocuments;
 use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
 use bevy_dioxus_messages::plugins::DioxusEventSyncPlugin;
@@ -55,6 +56,7 @@ pub struct DioxusPluginProps {
 
 impl Plugin for DioxusPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(BevyResourcesSignalsPlugin);
         let (s, r) = crossbeam_channel::unbounded();
 
         let mut documents = HashMap::new();

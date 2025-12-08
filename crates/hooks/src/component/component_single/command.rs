@@ -47,7 +47,7 @@ where
     U: Component + Clone,
 {
     fn apply(self, world: &mut World) -> () {
-        world.insert_resource(BevyTxChannel(self.channels.bevy_tx));
+        // world.insert_resource(BevyTxChannel(self.channels.bevy_tx));
         world.insert_resource(BevyRxChannel(self.channels.bevy_rx));
 
         add_systems_through_world(world, Update, send_component_singleton::<T, U>);
