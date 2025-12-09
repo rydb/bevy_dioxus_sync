@@ -5,7 +5,6 @@ use bevy_window::CursorMoved;
 use blitz_dom::Document;
 use blitz_traits::events::{BlitzMouseButtonEvent, MouseEventButton, MouseEventButtons, UiEvent};
 use dioxus_html::Modifiers;
-use dioxus_native::DioxusDocument;
 
 use super::does_catch_events;
 
@@ -28,7 +27,6 @@ pub(crate) fn handle_mouse_messages(
         return;
     }
     let mut should_catch_events = false;
-
 
     let mouse_state = &mut last_mouse_state;
 
@@ -63,37 +61,35 @@ pub(crate) fn handle_mouse_messages(
             match event.state {
                 ButtonState::Pressed => {
                     mouse_state.buttons |= buttons_blitz;
-                        dioxus_doc.handle_ui_event(UiEvent::MouseDown(BlitzMouseButtonEvent {
-                            x: mouse_state.x,
-                            y: mouse_state.y,
-                            button: button_blitz,
-                            buttons: mouse_state.buttons,
-                            mods: mouse_state.mods,
-                        }));
+                    dioxus_doc.handle_ui_event(UiEvent::MouseDown(BlitzMouseButtonEvent {
+                        x: mouse_state.x,
+                        y: mouse_state.y,
+                        button: button_blitz,
+                        buttons: mouse_state.buttons,
+                        mods: mouse_state.mods,
+                    }));
                 }
                 ButtonState::Released => {
                     mouse_state.buttons &= !buttons_blitz;
-                        dioxus_doc.handle_ui_event(UiEvent::MouseUp(BlitzMouseButtonEvent {
-                            x: mouse_state.x,
-                            y: mouse_state.y,
-                            button: button_blitz,
-                            buttons: mouse_state.buttons,
-                            mods: mouse_state.mods,
-                        }));
+                    dioxus_doc.handle_ui_event(UiEvent::MouseUp(BlitzMouseButtonEvent {
+                        x: mouse_state.x,
+                        y: mouse_state.y,
+                        button: button_blitz,
+                        buttons: mouse_state.buttons,
+                        mods: mouse_state.mods,
+                    }));
                 }
             }
             let flip_catch_events = dioxus_doc
-            .hit(mouse_state.x, mouse_state.y)
-            .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
-            .unwrap_or(false);
+                .hit(mouse_state.x, mouse_state.y)
+                .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
+                .unwrap_or(false);
 
             if flip_catch_events {
                 should_catch_events = true;
             }
         }
-
     }
-
 
     if should_catch_events {
         mouse_button_input_events.clear();

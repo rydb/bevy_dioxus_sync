@@ -1,13 +1,10 @@
 use crate::backend::*;
-use bevy_color::{Color, ColorToComponents};
 use bevy_dioxus_hooks::{
     // asset::use_bevy_component_asset_single,
     // component::component_single::hook::use_bevy_component_singleton,
     resource::hook::use_bevy_resource,
 };
 use bevy_dioxus_sync::panels::DioxusElementMarker;
-use bevy_pbr::prelude::*;
-use bevy_transform::components::Transform;
 use dioxus::prelude::*;
 
 #[derive(Debug)]
@@ -153,7 +150,7 @@ pub fn app_ui() -> Element {
 
         div {
             h1 {"this is rendering!"}
-            h1 {{format!("Bevy framerate: {:#?}", fps)}}
+            h1 {{format!("Bevy framerate: {:#}", fps)}}
         }
         div {
             // h1 {

@@ -10,15 +10,14 @@ use bevy_dioxus_render::plugins::DioxusRenderPlugin;
 use bevy_ecs::world::CommandQueue;
 
 use crate::net_provider::{BevyNetProvider, DioxusDocumentProxy};
-use crate::panels::{DioxusPanel, DioxusPanelUpdates};
 use crate::panels::plugins::DioxusPanelsPlugin;
+use crate::panels::{DioxusPanel, DioxusPanelUpdates};
 use crate::{ui::dioxus_app, *};
 use bevy_utils::default;
 use blitz_dom::DocumentConfig;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus_core::{Element, ScopeId, VirtualDom, provide_context};
+use dioxus_core::{ScopeId, VirtualDom, provide_context};
 use dioxus_native_dom::DioxusDocument;
-use bevy_ecs::prelude::*;
 
 pub struct DioxusPlugin {
     /// how many times per second does dioxus refresh info from bevy.
@@ -52,8 +51,6 @@ pub struct DioxusPluginProps {
     pub(crate) command_queues_tx: Sender<CommandQueue>,
 }
 
-
-
 impl Plugin for DioxusPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(BevyResourcesSignalsPlugin);
@@ -63,13 +60,13 @@ impl Plugin for DioxusPlugin {
 
         let bevy_dioxus_interop_plugin = DioxusBevyInteropPlugin::new();
         let dioxus_panels_plugin = DioxusPanelsPlugin::new();
-        
+
         let panels_rx = dioxus_panels_plugin.dioxus_panel_updates_rx.clone();
         // panels plugin must be added before `DioxusPanels is first used or bevy will crash when adding component hooks for it`
         app.add_plugins(dioxus_panels_plugin);
 
-        if let Some(main_window_ui) = &self.main_window_ui{
-            let entity = app.world_mut().spawn( main_window_ui.clone()).id();
+        if let Some(main_window_ui) = &self.main_window_ui {
+            let entity = app.world_mut().spawn(main_window_ui.clone()).id();
 
             let props = DioxusPluginProps {
                 fps: self.bevy_info_refresh_fps,
@@ -101,17 +98,12 @@ impl Plugin for DioxusPlugin {
             dioxus_doc.initial_build();
             dioxus_doc.resolve(0.0);
 
-
             documents.insert(entity, dioxus_doc);
-                
         }
-
 
         app.add_plugins(bevy_dioxus_interop_plugin);
         app.add_plugins(DioxusRenderPlugin);
         app.add_plugins(DioxusEventSyncPlugin);
         app.insert_non_send_resource(DioxusDocuments(documents));
-
-
     }
 }

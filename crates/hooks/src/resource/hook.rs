@@ -2,12 +2,10 @@ use std::any::TypeId;
 
 use bevy_dioxus_interop::signals::CrossDomSignal;
 use bevy_ecs::prelude::*;
-use bytemuck::TransparentWrapper;
-use dioxus_signals::{Signal, SyncSignal};
 use std::fmt::Debug;
 
 use crate::{
-    BevyValue, resource::command::{BevyResourceSignals, BevyResourcesSignalsCache, RequestBevyResource},
+    resource::command::{BevyResourceSignals, BevyResourcesSignalsCache, RequestBevyResource},
     use_bevy_value,
 };
 
@@ -28,9 +26,8 @@ use crate::{
 // }
 
 /// hook to interface with a bevy resource
-pub fn use_bevy_resource<T: Debug + Resource + Send + Sync + Clone>()
--> CrossDomSignal<T> {
-    use_bevy_value::<T, BevyResourceSignals ,RequestBevyResource<T>, BevyResourcesSignalsCache>(
+pub fn use_bevy_resource<T: Debug + Resource + Send + Sync + Clone>() -> CrossDomSignal<T> {
+    use_bevy_value::<T, BevyResourceSignals, RequestBevyResource<T>, BevyResourcesSignalsCache>(
         TypeId::of::<T>(),
     )
 }

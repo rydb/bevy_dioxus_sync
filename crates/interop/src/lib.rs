@@ -1,21 +1,20 @@
 use std::{
-    any::{Any, TypeId, type_name}, collections::HashMap, fmt::Display, sync::Arc
+    any::{Any, TypeId, type_name},
+    collections::HashMap,
+    fmt::Display,
+    sync::Arc,
 };
 
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel, system::ScheduleSystem, world::CommandQueue};
-use bevy_log::warn;
-use bytemuck::TransparentWrapper;
+use crossbeam_channel::Sender;
 use crossbeam_channel::{Receiver as CrossBeamReceiver, Sender as CrossBeamSender};
 use dioxus_native_dom::DioxusDocument;
-use generational_box::GenerationalRef;
-use tokio::sync::broadcast::{self, Receiver as TokioReceiver, Sender as TokioSender};
-use crossbeam_channel::Sender;
 
 use crate::signals::CrossDomSignal;
 
 pub mod plugins;
-pub mod traits;
 pub mod signals;
+pub mod traits;
 /// Bevy side channel for giving [`T`] to dioxus
 // #[derive(Resource)]
 // pub struct BevyTxChannel<T>(pub TokioSender<T>);
@@ -59,19 +58,20 @@ pub struct BevyDioxusPacket<T: Send + Sync + Clone + 'static, Index, AdditionalI
     pub signal: CrossDomSignal<Option<T>>,
 }
 
-impl<T: Clone + Send + Sync, Index: Clone, AdditionalInfo: Clone> Default for BevyDioxusPacket<T, Index, AdditionalInfo> {
+impl<T: Clone + Send + Sync, Index: Clone, AdditionalInfo: Clone> Default
+    for BevyDioxusPacket<T, Index, AdditionalInfo>
+{
     fn default() -> Self {
-        Self { io: Default::default(), signal: Default::default() }
+        Self {
+            io: Default::default(),
+            signal: Default::default(),
+        }
     }
 }
 
 /// channels for bevy dioxus interop.
 #[derive(Clone)]
-pub struct BevyDioxusIO<
-    T: Clone,
-    Index,
-    AdditionalInfo: Clone,
-> {
+pub struct BevyDioxusIO<T: Clone, Index, AdditionalInfo: Clone> {
     // pub bevy_tx: TokioSender<InfoPacket<A, Index, AdditionalInfo>>,
     pub bevy_rx: CrossBeamReceiver<InfoPacket<T, Index, AdditionalInfo>>,
     pub dioxus_tx: CrossBeamSender<InfoPacket<T, Index, AdditionalInfo>>,
@@ -134,14 +134,13 @@ pub(crate) fn read_dioxus_command_queues(world: &mut World) {
 
 pub struct DioxusDocuments(pub HashMap<Entity, DioxusDocument>);
 
-
 pub enum BevyFetchBackup {
     /// Return value as unknown as it couldn't be fetched
     Unknown,
     /// Return value for when the value exists in bevy, but dioxus hasn't received it yet.
     Uninitialized,
 
-    ReadError(generational_box::BorrowError)
+    ReadError(generational_box::BorrowError),
 }
 
 impl From<generational_box::BorrowError> for BevyFetchBackup {
@@ -167,7 +166,6 @@ impl Display for BevyFetchBackup {
     }
 }
 
-
 // /// bevy value + useful structures needed for bevy/dioxus interop
 // pub struct BevyValue<T: Clone + 'static, Index, U> {
 //     pub writer: Option<Sender<InfoPacket<T, Index, U>>>,
@@ -177,7 +175,6 @@ impl Display for BevyFetchBackup {
 //     /// index for underlying value, weather this is a number or a untyped handle for an asset
 //     pub index: Option<Index>,
 // }
-
 
 /// bevy value + useful structures needed for bevy/dioxus interop
 pub struct BevyValue<T: Clone + 'static, Index, U> {
@@ -234,7 +231,7 @@ pub struct BevyValue<T: Clone + 'static, Index, U> {
 //             // if send_result.is_ok() {
 //             //     self.value = Ok(value)
 //             // }
-        
+
 //         // else {
 //         //     warn!("no send channel for {:#}, skipping", type_name::<T>());
 //         //     return;
@@ -259,7 +256,7 @@ pub struct BevyValue<T: Clone + 'static, Index, U> {
 impl<T, Index, U> Display for BevyValue<T, Index, U>
 where
     T: Display + Clone,
-    Option<T>: Display
+    Option<T>: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // let binding = self.value.try_read();
@@ -277,15 +274,13 @@ where
             Ok(n) => {
                 write!(f, "{}", n)
                 // match n.as_ref() {
-                    // Some(n) => write!(f, "{}", n),
-                    // None => write!(f, "waiting for value from bevy..."),
+                // Some(n) => write!(f, "{}", n),
+                // None => write!(f, "waiting for value from bevy..."),
                 // }
-            },
+            }
             Err(err) => write!(f, "{}", err),
         }
     }
 }
-
-
 
 // pub struct BevyResourceSignals(HashMap<Entity, HashMap<TypeId, BoxAnyTypeMap>>)

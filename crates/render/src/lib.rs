@@ -26,7 +26,6 @@ use blitz_paint::paint_scene;
 use blitz_traits::shell::{ColorScheme, Viewport};
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_devtools::DevserverMsg;
-use dioxus_native::DioxusDocument;
 use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
@@ -179,7 +178,7 @@ fn update_ui(
                             if let Some(url) = asset_path.to_str() {
                                 dioxus_doc.reload_resource_by_href(url);
                             }
-                        }   
+                        }
                     }
                 }
                 dioxus_devtools::DevserverMsg::FullReloadStart => {}
@@ -264,11 +263,13 @@ fn setup_ui(
 
     // Set the initial viewport
     animation_epoch.0 = Instant::now();
-    
+
     if dioxus_docs.0.len() > 1 {
-        panic!("rework for multi-surface support in process. Fix this function to be integrated into that rework.")
+        panic!(
+            "rework for multi-surface support in process. Fix this function to be integrated into that rework."
+        )
     }
-    let Some((_,dioxus_doc)) = dioxus_docs.0.iter_mut().next() else {
+    let Some((_, dioxus_doc)) = dioxus_docs.0.iter_mut().next() else {
         panic!("Can't get first document in dioxus documents. Map empty.")
     };
     dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));

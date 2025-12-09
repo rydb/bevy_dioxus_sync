@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 // use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
+use crate::plugins::DioxusPluginProps;
 use crate::{
     panels::{DioxusPanel, PanelUpdateKind},
     // plugins::DioxusAppKind,
@@ -13,7 +14,6 @@ use dioxus_core::Element;
 use dioxus_core_macro::rsx;
 use dioxus_hooks::{use_context_provider, use_future};
 use dioxus_signals::*;
-use crate::plugins::DioxusPluginProps;
 
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
@@ -21,8 +21,6 @@ pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 pub enum AppKind {}
 
 pub fn dioxus_app(props: DioxusPluginProps) -> Element {
-    
-    
     // let props = match app_kind {
     //     DioxusAppKind::NativeBevy(bevy_props) => {
     let update_frequency = 1000;
@@ -30,7 +28,8 @@ pub fn dioxus_app(props: DioxusPluginProps) -> Element {
     let dioxus_props = use_context_provider(|| props);
     let mut dioxus_panels = use_context_provider(|| DioxusPanels::default());
 
-    let _command_queue_tx = use_context_provider(|| BevyCommandQueueTx(dioxus_props.command_queues_tx.clone()));
+    let _command_queue_tx =
+        use_context_provider(|| BevyCommandQueueTx(dioxus_props.command_queues_tx.clone()));
     use_future(move || {
         {
             let value = dioxus_props.dioxus_panel_updates.clone();
@@ -56,7 +55,7 @@ pub fn dioxus_app(props: DioxusPluginProps) -> Element {
             }
         }
     });
-            // dioxus_props
+    // dioxus_props
     //     }
     //     DioxusAppKind::NativeOnly(props) => props,
     // };
@@ -73,7 +72,7 @@ pub fn dioxus_app(props: DioxusPluginProps) -> Element {
     // let _asset_singletons = use_context_provider(|| BevyAssetsSignals::default());
     // let _asset_registers = use_context_provider(|| BevyAssetsRegistry::default());
     // let _component_registers = use_context_provider(|| BevyComponentsRegistry::default());
-    // let panels = 
+    // let panels =
     rsx! {
         // {main_window_ui.map(|n| n())},
         for (_, panel_kind) in dioxus_panels.0.read().clone() {

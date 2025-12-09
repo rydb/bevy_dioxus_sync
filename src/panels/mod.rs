@@ -7,8 +7,6 @@ use bevy_ecs::{
 use bevy_log::warn;
 use crossbeam_channel::Sender;
 use dioxus_core::Element;
-use dioxus_document::Document;
-use dioxus_native_dom::DioxusDocument;
 use std::fmt::Debug;
 
 pub mod plugins;
@@ -21,7 +19,6 @@ pub struct DioxusPanelUpdatesSender(Sender<DioxusPanelUpdates>);
 pub struct DioxusPanel {
     pub(crate) element_marker: Arc<dyn DioxusElementMarker>,
 }
-
 
 /// marks a struct as a Dioxus element.
 /// used to statically typed dioxus [`Element`]s

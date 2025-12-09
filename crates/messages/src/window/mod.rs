@@ -8,7 +8,6 @@ use bevy_sprite_render::prelude::*;
 use bevy_transform::components::Transform;
 use bevy_window::WindowResized;
 use blitz_traits::shell::Viewport;
-use dioxus_native::DioxusDocument;
 
 use bevy_dioxus_render::{
     COLOR_SCHEME, DioxusUiQuad, SCALE_FACTOR, TextureImage, create_ui_texture,

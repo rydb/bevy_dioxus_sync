@@ -9,7 +9,6 @@ use bevy_input::{
 use blitz_dom::*;
 use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
 use dioxus_html::*;
-use dioxus_native::*;
 
 pub(crate) fn handle_keyboard_messages(
     mut dioxus_docs: NonSendMut<DioxusDocuments>,
@@ -81,7 +80,6 @@ pub(crate) fn handle_keyboard_messages(
             if flip_catch_events {
                 should_catch_events = true;
             }
-
         }
     }
     if should_catch_events {

@@ -1,14 +1,10 @@
 pub mod command;
 pub mod hook;
 
-use std::{any::TypeId, collections::HashMap};
 
-use bevy_dioxus_interop::{BevyRxChannel, BoxAnyTypeMap};
-use bevy_ecs::prelude::*;
 use bevy_app::prelude::*;
-use bytemuck::TransparentWrapper;
 
-use crate::resource::command::{BevyResourceSignals, ResourceInfoPacket};
+use crate::resource::command::BevyResourceSignals;
 
 // #[derive(TransparentWrapper ,Resource)]
 // #[repr(transparent)]
@@ -32,7 +28,6 @@ pub struct BevyResourcesSignalsPlugin;
 
 impl Plugin for BevyResourcesSignalsPlugin {
     fn build(&self, app: &mut App) {
-       app.init_resource::<BevyResourceSignals>()    
-       ;
+        app.init_resource::<BevyResourceSignals>();
     }
 }
