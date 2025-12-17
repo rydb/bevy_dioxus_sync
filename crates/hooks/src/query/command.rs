@@ -5,7 +5,6 @@ use std::{
     sync::Arc,
 };
 
-use arc_swap::ArcSwap;
 use bevy_app::Update;
 use bevy_dioxus_interop::{
     add_systems_through_world,
@@ -59,6 +58,7 @@ where
         match world.get_resource::<DioxusQueryResults<T>>() {
             Some(n) => self.0.0.pnt_to(n.0.get_ptr().unwrap()),
             None => {
+                self.0.0.initialize(HashMap::new());
                 world.insert_resource(self.0.clone());
             }
         }
@@ -74,17 +74,22 @@ where
 }
 
 #[derive(Clone, Component)]
-pub struct DioxusClone<T: Component>(pub Arc<ArcSwap<T>>);
+pub struct DioxusClone<T: Component>(pub CrossDomSignal<T>);
 
 pub fn sync_bevy_to_clone<T: Component<Mutability = Mutable> + Clone>(
     original_query: Query<(Entity, &T), Changed<T>>,
-    mut clone_query: Query<&mut DioxusClone<T>>,
+    mut clone_query: Query<(Entity, &mut DioxusClone<T>)>,
+    mut commands: Commands,
 ) {
     for (e, update) in original_query {
-        let Ok(value) = clone_query.get_mut(e).inspect_err(|err| warn!("{err}")) else {
+        let Ok((_, value)) = clone_query.get_mut(e).inspect_err(|err| warn!("{err}")) else {
+            commands.entity(e).insert(DioxusClone(CrossDomSignal::new(update.clone())));
+            let entities = clone_query.iter().map(|(e, _)| e).collect::<Vec<_>>();
+            warn!("entities that do exist.. {:#?}", entities);
+        
             continue;
         };
-        value.0.swap(Arc::new(update.clone()));
+        let _ = value.0.swap(Arc::new(update.clone())).inspect_err(|err| warn!("{err}"));
     }
 }
 
@@ -96,7 +101,7 @@ pub fn sync_dioxus_clone<T: Component<Mutability = Mutable> + Clone>(
         let Ok(mut component) = original_query.get_mut(e).inspect_err(|err| warn!("{err}")) else {
             continue;
         };
-        let value = update.0.load().as_ref().clone();
+        let value = update.0.get().unwrap().as_ref().clone();
         *component = value
     }
 }
@@ -158,7 +163,7 @@ impl<A: Component<Mutability = Mutable> + Clone> DioxusQueryData for (Entity, &A
     fn wrap_as_dioxus_signals<'w, 's>(item: Self::Item<'w, 's>) -> Self::DioxusItem {
         (
             item.0,
-            DioxusClone(ArcSwap::new(item.1.clone().into()).into()),
+            DioxusClone(CrossDomSignal::new(item.1.clone())),
         )
     }
     fn register_component_sync_systems(world: &mut World) {
