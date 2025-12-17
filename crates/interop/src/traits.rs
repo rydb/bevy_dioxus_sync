@@ -46,6 +46,8 @@ pub type BoxGenericDomTypeMap<Index> = HashMap<Index, ErasedSignal>;
 // pub type ErasedSignalValue<T, Index, AdditionalInfo> =
 //     CrossDomSignal<BevyValue<T, Index, AdditionalInfo>>;
 
+pub type SendBoxErased = Box<dyn Any + Send + Sync>;
+
 pub type ErasedSignalValue<T> = CrossDomSignal<T>;
 
 // pub type ReadSignalErasedMapValue<T, Index, AdditionalInfo> = ReadSignal<BevyValue<T, Index, AdditionalInfo>, SyncStorage>;
@@ -115,7 +117,7 @@ pub type ErasedSignalValue<T> = CrossDomSignal<T>;
 //     }
 // }
 
-pub type ErasedSignal = Box<dyn Any + Send + Sync>;
+pub type ErasedSignal = SendBoxErased;
 
 pub trait CrossDomSignalErasedMap
 where
@@ -137,7 +139,7 @@ where
         let erased = Box::new(value);
         map.insert(index, erased);
     }
-    fn get_typed<T: Clone + Send + Sync + 'static>(
+    fn get_typed<T: Send + Sync + 'static>(
         &mut self,
         index: &Self::Index,
     ) -> Option<&mut ErasedSignalValue<T>>
@@ -155,8 +157,5 @@ where
                 None
             }
         }
-
-        // value
-        //value.owner.downcast_mut::<SignalErasedMapValue<T, Self::Index, Self::AdditionalInfo>>()
     }
 }

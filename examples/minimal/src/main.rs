@@ -18,3 +18,7 @@ pub fn main() {
         .add_plugins(BevyScenePlugin)
         .run();
 }
+
+pub fn test_query(query: Query<(&MeshMaterial3d<StandardMaterial>, &Transform)>) {
+    let x = query.iter().last().unwrap();
+}

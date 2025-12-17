@@ -1,9 +1,5 @@
 use crate::backend::*;
-use bevy_dioxus_hooks::{
-    // asset::use_bevy_component_asset_single,
-    // component::component_single::hook::use_bevy_component_singleton,
-    resource::hook::use_bevy_resource,
-};
+use bevy_dioxus_hooks::resource::hook::use_bevy_resource;
 use bevy_dioxus_sync::panels::DioxusElementMarker;
 use dioxus::prelude::*;
 
@@ -21,6 +17,12 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 #[component]
 pub fn app_ui() -> Element {
     let fps = use_bevy_resource::<FPS>();
+    // let colors = use_bevy_query::<(Entity, &MeshMaterial3d<StandardMaterial>), ()>();
+
+    // let mut color_list = Vec::new();
+    // for (_, (e, color)) in colors.get().unwrap().iter() {
+    //     color_list.push(color.0.load().clone().0.clone())
+    // }
     // let mut cube_color =
     //     use_bevy_component_asset_single::<MeshMaterial3d<StandardMaterial>, _, DynamicCube>();
     // let mut cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
@@ -152,12 +154,15 @@ pub fn app_ui() -> Element {
             h1 {"this is rendering!"}
             h1 {{format!("Bevy framerate: {:#}", fps)}}
         }
-        div {
-            // h1 {
-            //     "this is rendering!"
-            // }
-            // id: "footer",
-            // p { "Bevy framerate: {fps}"}
-        }
+        // div {
+        //     h1 {
+        //         "bevy query results:"
+        //     }
+        //     h1 {
+        //         for color in color_list {
+        //             h1 {{format!("{:#?}", color)}}
+        //         }
+        //     }
+        // }
     }
 }

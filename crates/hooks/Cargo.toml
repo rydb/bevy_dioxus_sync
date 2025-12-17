@@ -22,6 +22,7 @@ async-std = {workspace = true}
 crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true}
 tokio = {workspace = true, features = ["sync"]}
+arc-swap = {workspace = true}
 
 dioxus-signals = {workspace = true}
 dioxus-hooks = {workspace = true}

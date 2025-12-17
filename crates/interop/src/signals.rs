@@ -2,9 +2,7 @@ use std::{
     any::type_name,
     collections::HashSet,
     fmt::{Debug, Display},
-    sync::{
-        Arc, Mutex, OnceLock,
-    },
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use arc_swap::ArcSwap;
@@ -112,13 +110,20 @@ impl<T> CrossDomSignal<T> {
         }
     }
 
+    pub fn swap<'a>(&self, value: Arc<T>) -> Result<(), SetError> {
+        let arc = match self.value.get() {
+            Some(arc) => arc,
+            None => return Err(SetError::SignalFetchError(SignalFetchError::Uninitialized)),
+        };
+        arc.swap(value);
+        Ok(())
+    }
     pub fn set<'a>(&self, value: T) -> Result<(), SetError> {
         // Update the state
         let arc = match self.value.get() {
             Some(arc) => arc,
             None => return Err(SetError::SignalFetchError(SignalFetchError::Uninitialized)),
         };
-
         arc.store(value.into());
         // Trigger a re-render of the components that observed the signal's previous value
         let mut subscribers = {
