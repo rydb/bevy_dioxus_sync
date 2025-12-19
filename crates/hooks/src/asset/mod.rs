@@ -1,201 +1,116 @@
-use std::{
-    any::{Any, type_name},
-    marker::PhantomData,
-    ops::Deref,
-};
+use std::any::TypeId;
+use std::collections::{HashMap, HashSet};
 
-use bevy_app::prelude::*;
-use bevy_asset::{Asset, Assets, Handle, UntypedAssetId};
-use bevy_dioxus_interop::{
-    BevyDioxusIO, BevyRxChannel, BevyTxChannel, InfoPacket, InfoUpdate, StatusUpdate,
-    add_systems_through_world,
-};
+use bevy_app::Update;
+use bevy_asset::{Asset, Assets, Handle};
+use bevy_asset::prelude::*;
+use bevy_dioxus_interop::add_systems_through_world;
+use bevy_dioxus_interop::signals::CrossDomSignal;
+use bevy_ecs::storage::ResourceData;
 use bevy_ecs::prelude::*;
+use bevy_ecs::{change_detection::DetectChanges, resource::Resource, system::{Command, ResMut}};
 use bevy_log::warn;
-use bytemuck::TransparentWrapper;
-use dioxus_signals::{Signal, SyncSignal};
-use std::fmt::Debug;
+use dioxus_hooks::Dependency;
 
-use crate::{BevyValue, BoxGenericTypeMap, use_bevy_value};
+use crate::use_bevy_value;
 
-pub type UntypedSendAsset = Box<dyn Any + Send + Sync>;
-
-#[derive(TransparentWrapper, Default)]
-#[repr(transparent)]
-pub struct BevyAssets(pub BoxGenericTypeMap<UntypedAssetId>);
-
-#[derive(Clone, Default, TransparentWrapper)]
-#[repr(transparent)]
-pub struct BevyAssetsRegistry(Signal<BevyAssets>);
-
-#[derive(Clone)]
-pub enum AssetRequestFilter<T, U> {
-    //TODO: Add more here
-    Singleton(PhantomData<T>, PhantomData<U>),
-}
-
-#[derive(TransparentWrapper)]
-#[repr(transparent)]
-#[transparent(BevyDioxusIO<AssetValue<U>, AssetInfoIndex, AssetAdditionalInfo>)]
-pub(crate) struct RequestScopedAssetWithMarker<
-    T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Asset + Clone,
-    V: Component + Clone,
-> {
-    pub(crate) channels: BevyDioxusIO<AssetValue<U>, AssetInfoIndex, AssetAdditionalInfo>,
-    _handle_check_phantom: PhantomData<V>,
-    _marker_filter_phantom: PhantomData<T>,
-}
-
-impl<T, U, V> Command for RequestScopedAssetWithMarker<T, U, V>
-where
-    T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Debug + Asset + Clone,
-    V: Component + Clone,
-{
-    fn apply(self, world: &mut World) -> () {
-        // world.insert_resource(BevyTxChannel(self.channels.bevy_tx));
-        world.insert_resource(BevyRxChannel(self.channels.bevy_rx));
-
-        add_systems_through_world(world, Update, send_asset_updates_singleton::<T, U, V>);
-        add_systems_through_world(world, Update, receive_asset_updates_singleton::<T, U, V>);
-    }
-}
-
-type AssetInfoIndex = UntypedAssetId;
-type AssetValue<T> = T;
-type AssetAdditionalInfo = UntypedAssetId;
-
-/// info send to/from bevy on asset data
-type AssetInfoPacket<T> = InfoPacket<AssetValue<T>, AssetInfoIndex, AssetAdditionalInfo>;
-
-fn receive_asset_updates_singleton<T, U, V>(
-    handle: Query<(Entity, &T, &V)>,
-
-    bevy_rx: ResMut<BevyRxChannel<AssetInfoPacket<U>>>,
-    bevy_tx: ResMut<BevyTxChannel<AssetInfoPacket<U>>>,
-
-    mut assets: ResMut<Assets<U>>,
-) where
-    T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Debug + Asset + Clone,
-    V: Component + Clone,
-{
-    while let Ok(packet) = bevy_rx.0.try_recv().inspect_err(|err| match err {
-        crossbeam_channel::TryRecvError::Empty => {}
-        crossbeam_channel::TryRecvError::Disconnected => {
-            warn!("could not receive asset: {:#}", err)
-        }
-    }) {
-        match packet {
-            InfoPacket::Update(info_update) => {
-                let Some(index) = info_update.index else {
-                    warn!("asset update received, but index not given with packet update?");
-                    return;
-                };
-                let _ = assets
-                    .insert(index.typed(), info_update.update)
-                    .inspect_err(|err| warn!("{err}"));
-            }
-            InfoPacket::Request(status_update) => match status_update {
-                StatusUpdate::RequestRefresh => {
-                    let Ok((_e, handle, _u)) = handle.single().inspect_err(|err| match err {
-                        bevy_ecs::query::QuerySingleError::MultipleEntities(_debug_name) => warn!(
-                            "Asset for {:#} with marker {:#} no unique",
-                            type_name::<T>(),
-                            type_name::<V>()
-                        ),
-                        bevy_ecs::query::QuerySingleError::NoEntities(_debug_name) => {}
-                    }) else {
-                        return;
-                    };
-                    let handle = (**handle).clone();
-                    let Some(asset) = assets.get(&handle) else {
-                        warn!("could not get asset from {:#?}", handle);
-                        return;
-                    };
-                    let packet = InfoUpdate {
-                        update: asset.clone(),
-                        index: Some(handle.id().untyped()),
-                        additional_info: Some(handle.id().untyped()),
-                    };
-                    let _ = bevy_tx
-                        .0
-                        .send(InfoPacket::Update(packet))
-                        .inspect_err(|err| {
-                            warn!("could not send {:#}: {:#}", type_name::<U>(), err)
-                        });
-                }
-            },
-        }
-    }
-}
-
-fn send_asset_updates_singleton<T, U, V>(
-    handle: Query<(Entity, &T, &V), Or<(Changed<T>, Added<T>)>>,
-    bevy_tx: ResMut<BevyTxChannel<AssetInfoPacket<U>>>,
-    assets: ResMut<Assets<U>>,
-) where
-    T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Debug + Asset + Clone,
-    V: Component + Clone,
-{
-    let Ok((_e, handle, _u)) = handle.single().inspect_err(|err| match err {
-        bevy_ecs::query::QuerySingleError::MultipleEntities(_debug_name) => warn!(
-            "Asset for {:#} with marker {:#} no unique",
-            type_name::<T>(),
-            type_name::<V>()
-        ),
-        bevy_ecs::query::QuerySingleError::NoEntities(_debug_name) => {}
-    }) else {
-        return;
-    };
-
-    let handle = (**handle).clone();
-    let Some(asset) = assets.get(&handle) else {
-        warn!("could not get asset from {:#?}", handle);
-        return;
-    };
-    let packet = InfoUpdate {
-        update: asset.clone(),
-        index: Some(handle.id().untyped()),
-        additional_info: Some(handle.id().untyped()),
-    };
-    let _ = bevy_tx
-        .0
-        .send(InfoPacket::Update(packet))
-        .inspect_err(|err| warn!("could not send {:#}: {:#}", type_name::<U>(), err));
-}
-
-impl<T, U, V> Default for RequestScopedAssetWithMarker<T, U, V>
-where
-    T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Asset + Clone,
-    V: Component + Clone,
-{
-    fn default() -> Self {
-        Self {
-            channels: BevyDioxusIO::default(),
-            _handle_check_phantom: PhantomData,
-            _marker_filter_phantom: PhantomData,
-        }
-    }
-}
-
-// pub type BevyAsset<T> = BevyValue<T, UntypedAssetId, UntypedAssetId>;
-
-// impl SignalsErasedMap for BevyAssets {
-//     type Index = UntypedAssetId;
-//     type AdditionalInfo = UntypedAssetId;
+// pub fn use_bevy_asset<T: Asset>(handle: Handle<T>) -> BevyAssetClone<T> {
+//     use_bevy
 // }
 
-/// interface with a singular bevy asset, [`U`]. Selects the asset based on its handle newtype, [`T`] and a marker component, [`V`].
-pub fn use_bevy_component_asset_single<T, U, V>()
--> SyncSignal<BevyValue<U, UntypedAssetId, UntypedAssetId>>
-where
-    T: Deref<Target = Handle<U>> + Component + Clone,
-    U: Debug + Asset + Clone,
-    V: Component + Clone,
-{
-    use_bevy_value::<U, BevyAssetsRegistry, BevyAssets, RequestScopedAssetWithMarker<T, U, V>>(None)
+#[derive(Resource, Default)]
+pub struct CheckedAssetTypes(HashSet<TypeId>);
+
+#[derive(Clone)]
+pub struct RequestBevyAssets<T: Asset>(BevyAssetsClone<T>);
+
+impl<T: PartialEq + Asset + Clone> Command for RequestBevyAssets<T> {
+    fn apply(self, world: &mut bevy_ecs::world::World) -> () {
+        
+        match world.get_resource::<BevyAssetsClone<T>>() {
+            Some(n) => self.0.0.pnt_to(n.0.get_ptr().unwrap()),
+            None => {
+                self.0.0.initialize(HashMap::new());
+                world.insert_resource(self.0.clone());
+            }
+        }
+        let mut checked_asset_types = world.get_resource_or_init::<CheckedAssetTypes>();
+
+        if checked_asset_types.0.contains(&TypeId::of::<T>()) == false {
+            checked_asset_types.0.insert(TypeId::of::<T>());
+
+            add_systems_through_world(world, Update, 
+                manage_asset_status::<T>
+            );
+        }
+        
+    }
 }
+
+pub fn manage_asset_status<T: Clone + Asset + PartialEq>(
+    mut assets: ResMut<Assets<T>>,
+    assets_clone: ResMut<BevyAssetsClone<T>>,
+    asset_events: ResMut<Messages<AssetEvent<T>>>,
+) { 
+    let Ok(dioxus_asset_state) = assets_clone.0.get().inspect_err(|err| warn!("{err}")) else {
+        return
+    };
+    let mut assets_cursor = asset_events.get_cursor();
+    let mut change_event_asset_ids = Vec::new();
+    
+    let changed_assets = assets_cursor.read(&asset_events);
+
+    for asset_events in changed_assets {
+        match asset_events {
+            AssetEvent::Modified { id } => change_event_asset_ids.push(id),
+            _ => {}
+
+        }
+    }
+
+    for (handle, signal) in dioxus_asset_state.as_ref() {
+        
+        let mut asset = match assets.get_mut(handle) {
+            Some(n) => {
+                n
+            },
+            None => todo!("implement behaviour for when asset is removed but handles for it still exist in dioxus."),
+        };
+        // bevy side asset updates take priority over dioxus side updates, so their update over-rides a dioxus update by moving first if they are both changed at the same time.
+        if change_event_asset_ids.contains(&&handle.id()) {
+            let _ = signal.set(BevyAssetClone::Loaded(asset.clone())).inspect_err(|err| warn!("{err}"));
+            continue;
+        } else {
+            let Ok(signal_value) = signal.get().inspect_err(|err| warn!("{err}")) else  {
+                continue
+            };
+            match signal_value.as_ref() {
+                BevyAssetClone::Loading(_handle) => {
+                    let _ = signal.set(BevyAssetClone::Loaded(asset.clone())).inspect_err(|err| warn!("{err}"));
+                },
+                BevyAssetClone::Loaded(current_value) => {
+                    if asset != current_value {
+                        warn!("setting new asset value..");
+                        asset = &mut current_value.clone();
+                        //let _ = signal.set(BevyAssetClone::Loaded(asset.clone())).inspect_err(|err| warn!("{err}"));
+                    }
+                } ,
+            }
+        }
+    }
+} 
+
+pub type BevyAssetServerCloneSignal<T> = CrossDomSignal<HashMap<Handle<T>, CrossDomSignal<BevyAssetClone<T>>>>;
+
+#[derive(Resource, Clone)]
+pub struct BevyAssetsClone<T: Asset>(BevyAssetServerCloneSignal<T>);
+
+pub enum BevyAssetClone<T: Asset> {
+    Loading(Handle<T>),
+    Loaded(T)
+}
+
+// /// Hook to request the bevy asset server 
+// pub fn use_bevy_asset_server<T: Asset>() -> BevyAssetServerCloneSignal<T> {
+//     use_bevy_value::<T>()
+// }

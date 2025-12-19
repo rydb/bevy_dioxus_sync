@@ -13,6 +13,7 @@ use dioxus_hooks::use_context;
 
 pub mod query;
 pub mod resource;
+pub mod asset;
 // pub mod component;
 
 // /// hook that handles the logistics of getting a value to and from bevy.

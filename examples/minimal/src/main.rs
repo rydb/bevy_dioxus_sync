@@ -19,6 +19,6 @@ pub fn main() {
         .run();
 }
 
-pub fn test_query(query: Query<(&MeshMaterial3d<StandardMaterial>, &Transform)>) {
-    let x = query.iter().last().unwrap();
+pub fn test_query(query: Query<(&MeshMaterial3d<StandardMaterial>, &Transform)>, mats: ResMut<Assets<StandardMaterial>>) {
+
 }
