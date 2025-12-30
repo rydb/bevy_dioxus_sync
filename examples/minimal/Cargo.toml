@@ -14,5 +14,6 @@ bevy_transform = {workspace = true}
 bevy_derive = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
 bevy_dioxus_hooks = {workspace = true}
+bevy_dioxus_interop = {workspace = true}
 
 dioxus = {workspace = true, default-features = false, features = ["html", "signals", "hooks", "macro", "native", "asset", "document", "launch", "devtools"]}

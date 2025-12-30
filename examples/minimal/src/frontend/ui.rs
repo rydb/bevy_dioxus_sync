@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use crate::backend::*;
-use bevy_dioxus_hooks::{query::use_bevy_query, resource::hook::use_bevy_resource};
+use bevy_dioxus_hooks::{asset::{BevyAssetClone, use_bevy_assets}, query::use_bevy_query, resource::hook::use_bevy_resource};
+use bevy_dioxus_interop::signals::CrossDomSignal;
 use bevy_dioxus_sync::panels::DioxusElementMarker;
 use bevy_ecs::entity::Entity;
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
@@ -17,10 +20,43 @@ impl DioxusElementMarker for AppUi {
 
 pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 
+// fn get_handle()
+
 #[component]
 pub fn app_ui() -> Element {
     let fps = use_bevy_resource::<FPS>();
     let transforms = use_bevy_query::<(Entity, &Transform), ()>();
+
+    let mats_signal = use_bevy_assets::<StandardMaterial>();
+
+    let handle = if let Ok(colors) =  use_bevy_query::<(Entity, &MeshMaterial3d<StandardMaterial>), ()>().get() 
+    && let Some((e, (_, color))) = colors.iter().last()
+    && let Ok(handle) = color.0.get()
+    {
+        if let Ok(mats) = mats_signal.get() 
+        && let Some(_handle) = mats.get(&handle) {
+
+        } else {
+            let mut map = HashMap::new();
+            map.insert(handle.0.clone(), CrossDomSignal::new(BevyAssetClone::Loading(handle.0.clone())));
+            let _ = mats_signal.set(map);
+        }
+        Some(handle.0.clone())
+    } else {
+        None
+    };
+    
+    let color = if let Ok(colors) = mats_signal.get() 
+    && let Some(handle) = handle
+    && let Some(color_signal) = colors.get(&handle)
+    && let Ok(color_state) = color_signal.get() {
+        Some(color_state)
+    } else {
+        None
+    };
+
+    let color_str = color.map(|n| n.get().map(|n| format!("{:#?}", n.base_color.to_srgba())).unwrap_or("???".to_owned()) ).unwrap_or("???".to_string());
+    
 
     let mut transform_list = Vec::new();
 
@@ -178,6 +214,12 @@ pub fn app_ui() -> Element {
                 {
                     transform_string
                 }
+            }
+            h1 {
+                "bevy colors:"
+            }
+            h1 {
+                {color_str}
             }
         }
     }
