@@ -39,6 +39,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    println!("run setup!");
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -66,8 +67,8 @@ fn setup(
         brightness: 100.0,
         affects_lightmapped_meshes: true,
     });
-    //TODO: add this back in when bevy_dioxus_panels is implemented
-    //commands.spawn(DioxusPanel::new(AppUi {}));
+    //TODO: add this back in when bevy_dioxus_panels is implemented, for now, panel is spawned through plugin instead
+    // commands.spawn(DioxusPanel::new(AppUi {}));
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 0.0, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),

@@ -36,7 +36,6 @@ generational-box = {version = "0.7", default-features = false}
 
 bevy_dioxus_sync = {path = "./", version = "0.1"}
 bevy_dioxus_render = {path = "./crates/render", version = "0.1"}
-bevy_dioxus_hooks = {path = "./crates/hooks", version = "0.1"}
 bevy_dioxus_interop = {path = "./crates/interop", version = "0.1"}
 bevy_dioxus_messages = {path = "./crates/messages", version = "0.1"}
 bevy = {version = "0.17"}
@@ -78,6 +77,8 @@ blitz-net = { version = "0.2", default-features = false}
 blitz-paint = { version = "0.2", default-features = false}
 blitz-traits = { version = "0.2", default-features = false}
 blitz-dom = { version = "0.2.4", default-features = false }
+linebender_resource_handle = "0.1"
+parley = "0.6"
 blitz-shell = { version = "0.2", default-features = false }
 blitz-html = {version = "0.2", default-features = false}
 
@@ -86,9 +87,10 @@ crossbeam-channel = "0.5"
 wgpu = "26"
 wgpu-types = "26"
 
+dioxus_bevy_signals = {path = "../queued_signal/crates/dioxus_bevy_signals"}
+
 [dependencies]
 bevy_dioxus_render = {workspace = true}
-bevy_dioxus_hooks = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_messages = {workspace = true}
 dioxus-asset-resolver = {workspace = true}
@@ -109,6 +111,8 @@ wgpu-types = {workspace = true}
 
 async-std = {workspace = true}
 crossbeam-channel = {workspace = true}
+linebender_resource_handle = {workspace = true}
+parley = {workspace = true}
 data-url = {workspace = true}
 bytes = {workspace = true}
 
@@ -122,3 +126,4 @@ dioxus-signals = {workspace = true}
 dioxus-hooks = {workspace = true}
 dioxus-core-macro = {workspace = true}
 dioxus-document = {workspace = true}
+dioxus_bevy_signals = {workspace = true}

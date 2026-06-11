@@ -62,8 +62,9 @@ pub fn push_panel_updates(
     panel_update_sender: ResMut<DioxusPanelUpdatesSender>,
 ) {
     let mut updates = Vec::new();
+    println!("ran push panel update: {:#?}", panel_updates.0);
 
-    updates.extend(panel_updates.0.drain(..));
+    updates.extend(panel_updates.bypass_change_detection().0.drain(..));
 
     let _ = panel_update_sender
         .0

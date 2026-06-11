@@ -166,6 +166,7 @@ fn update_ui(
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
     while let Ok(msg) = dioxus_messages.0.try_recv() {
+
         match msg {
             DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
                 dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {
@@ -235,10 +236,14 @@ fn update_ui(
                         base_color: AlphaColor::TRANSPARENT,
                         width: texture.width,
                         height: texture.height,
-                        antialiasing_method: vello::AaConfig::Msaa16,
+                        antialiasing_method: vello::AaConfig::Area,
                     },
                 )
                 .expect("failed to render to texture");
+        }
+    } else {
+        if cached_texture.is_none() {
+            // texture not yet received from render world — normal on first frame
         }
     }
 }

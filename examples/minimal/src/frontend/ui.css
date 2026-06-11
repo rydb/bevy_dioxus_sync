@@ -1,8 +1,11 @@
+* {
+    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 html,
 body,
 #main {
     color: white;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     height: 100%;
     width: 100%;
     overflow: hidden;
@@ -10,6 +13,7 @@ body,
 }
 
 #panel {
+    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #C0C0C033;
     display: flex;
     flex-direction: column;
@@ -19,6 +23,7 @@ body,
 }
 
 #title {
+    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #FFFFFF;
     text-align: center;
     padding-top: 10px;
@@ -30,6 +35,7 @@ body,
 }
 
 #buttons {
+    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -120,7 +126,7 @@ body,
 }
 
 input[type="number"] {
-    width: 3em;
+    width: 5em;
     height: 1.5em;
     line-height: 1.5em;
     background: #444;
