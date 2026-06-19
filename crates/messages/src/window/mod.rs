@@ -1,8 +1,8 @@
 use bevy_asset::prelude::*;
 use bevy_dioxus_interop::DioxusDocuments;
+use bevy_dioxus_tracing::debug;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
-use bevy_log::debug;
 use bevy_math::prelude::*;
 use bevy_sprite_render::prelude::*;
 use bevy_transform::components::Transform;

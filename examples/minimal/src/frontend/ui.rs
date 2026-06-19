@@ -1,14 +1,11 @@
-use std::{cell::Ref, collections::HashMap, ops::Deref, sync::Arc};
-
 use crate::backend::*;
-use bevy::sprite_render::MeshMaterial2d;
 use bevy_color::{Color, Srgba};
 use bevy_dioxus_sync::panels::DioxusElementMarker;
 use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
-use dioxus_bevy_signals::{asset::{AssetNoneState, use_bevy_asset}, query::{single::use_bevy_single, use_bevy_query}, resource::use_bevy_resource};
+use dioxus_bevy_signals::{asset::{AssetNoneState, use_bevy_asset}, query::{single::use_bevy_single}, resource::use_bevy_resource};
 
 #[derive(Debug)]
 pub struct AppUi;
@@ -27,14 +24,9 @@ pub fn app_ui() -> Element {
 
     let cube = use_bevy_single::<(Entity, &mut Transform, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
 
-
-    let cube_transform = use_memo(move || {
-        cube.read_ok(|n| **n.1.read())
+    let cube_transform_str = use_memo(move || {
+        cube.read_ok(|n| (*n.1.read()).translation.to_string()).unwrap_or_else(|err| err.into())
     });
-
-    // let cube_transform_str = use_memo(move || {
-    //     cube.read_ok(|n| (*n.1.read()).translation.to_string()).unwrap_or_else(|err| err.into())
-    // });
 
     let cube_color_handle = use_memo(move || {
         cube
@@ -43,45 +35,41 @@ pub fn app_ui() -> Element {
     });
     let cube_color = use_bevy_asset(cube_color_handle);
 
-    // let cube_color_str = use_memo(move || {
-    //     cube_color.read_ok(|n| format!("{:#?}", n.base_color.to_srgba())).unwrap_or_else(|err| err.into())
-    // });
 
+    let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
+    let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
 
-
-    // let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
-    // let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
-
-    // let rotation_speed_display = use_memo(move || {
-    //     cube_rotation_speed.read_ok(|n| n.0.to_string()).unwrap_or_else(|_| "0.0".to_string())
-    // });
-    // let translation_speed_display = use_memo(move || {
-    //     cube_translation_speed.read_ok(|n| n.0.to_string()).unwrap_or_else(|_| "0.0".to_string())
-    // });
-
-    // let set_rotation_speed = move |evt: Event<FormData>| {
-    //     if let Ok(speed) = evt.value().parse::<f32>() {
-    //         cube_rotation_speed.mutate(move |n| *n = CubeRotationSpeed(speed));
-    //     }
-    // };
-
-    // let set_translation_speed = move |evt: Event<FormData> | {
-    //     if let Ok(speed) = evt.value().parse::<f32>() {
-    //         cube_translation_speed.mutate(move |n| *n = CubeTranslationSpeed(speed));
-    //     }
-    // };
-
-    let rgba = use_memo(move || {
-        let mut value = Srgba::default();
-
-        if let Ok(color) = &**cube_color.read() {
-            value = color.base_color.to_srgba();
-        }
-        value
+    // Local signals prevent cursor jumping: the value prop is decoupled
+    // from the bevy resource, so re-renders don't re-push the same value
+    // through blitz-dom's set_text (which would reset cursor position).
+    let mut translation_speed_display = use_signal(|| {
+        cube_translation_speed.read_ok(|n| n.0.to_string()).unwrap_or_else(|_| "0.0".to_string())
+    });
+    let mut rotation_speed_display = use_signal(|| {
+        cube_rotation_speed.read_ok(|n| n.0.to_string()).unwrap_or_else(|_| "0.0".to_string())
     });
 
+    let set_rotation_speed = move |evt: Event<FormData>| {
+        let val = evt.value();
+        rotation_speed_display.set(val.clone());
+        if let Ok(speed) = val.parse::<f32>() {
+            cube_rotation_speed.mutate(move |n| *n = CubeRotationSpeed(speed));
+        }
+    };
+
+    let set_translation_speed = move |evt: Event<FormData>| {
+        let val = evt.value();
+        translation_speed_display.set(val.clone());
+        if let Ok(speed) = val.parse::<f32>() {
+            cube_translation_speed.mutate(move |n| *n = CubeTranslationSpeed(speed));
+        }
+    };
+
     let rgba_css = use_memo(move || {
-        let rgba = rgba.read();
+        let rgba = match &**cube_color.read() {
+            Ok(value) => &value.base_color.to_srgba(),
+            Err(_) => &Srgba::default(),
+        };
         format!(
             "rgba({}, {}, {}, {})",
             (rgba.red * 255.0) as u8,
@@ -138,35 +126,34 @@ pub fn app_ui() -> Element {
                 label {
                     class: "bevy-display",
                     {
-                        {cube_transform.read().as_ref().map(|n| n.translation.to_string()).unwrap_or_else(|n| n.clone().into())}
+                        {cube_transform_str}
                     }
                 }
             }
-            // commented out due to font rendeirng bug on nixos when no font is found, TODO: re-add after porting to latest blitz
-            // div {
-            //     id: "translation-speed-control",
-            //     label { "Translation Speed:" }
-            //     input {
-            //         r#type: "number",
-            //         min: "0.0",
-            //         max: "10.0",
-            //         step: "0.1",
-            //         value: translation_speed_display,
-            //         oninput: set_translation_speed,
-            //     }
-            // }
-            // div {
-            //     // id: "rotation-speed-control",
-            //     label { "Rotation Speed:" }
-            //     input {
-            //         r#type: "number",
-            //         min: "0.0",
-            //         max: "10.0",
-            //         step: "0.1",
-            //         value: rotation_speed_display,
-            //         oninput: set_rotation_speed,
-            //     }
-            // }
+            div {
+                id: "translation-speed-control",
+                label { "Translation Speed:" }
+                input {
+                    r#type: "number",
+                    min: "0.0",
+                    max: "10.0",
+                    step: "0.1",
+                    value: translation_speed_display,
+                    oninput: set_translation_speed,
+                }
+            }
+            div {
+                id: "rotation-speed-control",
+                label { "Rotation Speed:" }
+                input {
+                    r#type: "number",
+                    min: "0.0",
+                    max: "10.0",
+                    step: "0.1",
+                    value: rotation_speed_display,
+                    oninput: set_rotation_speed,
+                }
+            }
             div {
                 flex: "0 0 150px",
                 display: "grid",

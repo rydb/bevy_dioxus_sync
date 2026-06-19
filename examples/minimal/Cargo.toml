@@ -4,7 +4,12 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy = {workspace = true, features = ["trace_tracy"]}
+# regression in naga 26 causes webgl2 to break debug mode, until bevy 0.19 update, features must be manually imported in bevy.
+bevy = { workspace = true, features = [
+    "std", "bevy_render", "bevy_winit", "bevy_window", "bevy_pbr",
+    "bevy_sprite", "bevy_sprite_render", "bevy_core_pipeline",
+    "png", "multi_threaded", "trace_tracy", "webgl2",
+] }
 bevy_ecs = {workspace = true}
 bevy_app = {workspace = true}
 bevy_color = {workspace = true}
@@ -14,7 +19,7 @@ bevy_transform = {workspace = true}
 bevy_derive = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
-dioxus_bevy_signals = {workspace = true, features = ["tracing"]}
+dioxus_bevy_signals = {workspace = true, features = ["trace"]}
 
 dioxus = {workspace = true, default-features = false, features = ["html", "signals", "hooks", "macro", "native", "asset", "document", "launch", "devtools"]}
 tracing-subscriber = "0.3"

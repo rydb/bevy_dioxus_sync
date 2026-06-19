@@ -6,6 +6,8 @@ pub mod plugins;
 pub mod window;
 
 pub const CATCH_EVENTS_CLASS: &str = "catch-events";
+pub use bevy_dioxus_tracing::*;
+
 
 fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
     if let Some(node) = dioxus_doc.get_node(node_id) {

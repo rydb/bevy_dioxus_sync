@@ -7,10 +7,7 @@ use crate::{
     // plugins::DioxusAppKind,
 };
 use async_std::task::sleep;
-// use bevy_dioxus_hooks::resource::command::BevyResourcesSignalsCache;
-use bevy_dioxus_interop::{InfoRefershRateMS};
 use bevy_ecs::entity::Entity;
-use dioxus_bevy_signals::BevyCommandChannels;
 use dioxus_core::Element;
 use dioxus_core_macro::rsx;
 use dioxus_hooks::{use_context_provider, use_future, use_signal};
@@ -61,10 +58,6 @@ pub fn dioxus_app(props: DioxusPluginProps) -> Element {
             }
         }
     });
-
-    let refresh_rate_ms = 1000 / dioxus_props.fps.clone();
-
-    let _info_refresh_rate = use_context_provider(|| InfoRefershRateMS(refresh_rate_ms.into()));
 
     // Only insert the main window panel once to avoid infinite re-renders.
     // Without this guard, each re-render would write to dioxus_panels again,

@@ -23,7 +23,10 @@ pub fn main() {
     subscriber.init();
 
     App::new()
-        .add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
+        .add_plugins(
+            DefaultPlugins.build()
+            .disable::<LogPlugin>()
+        )
         .add_plugins(DioxusPlugin {
             bevy_info_refresh_fps: 30,
             main_window_ui: Some(DioxusPanel::new(AppUi {})),

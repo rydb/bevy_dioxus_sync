@@ -4,7 +4,7 @@ use std::sync::Arc;
 use bevy_app::prelude::*;
 // use bevy_dioxus_hooks::resource::BevyResourcesSignalsPlugin;
 use bevy_dioxus_interop::DioxusDocuments;
-use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
+// use bevy_dioxus_interop::plugins::DioxusBevyInteropPlugin;
 use bevy_dioxus_messages::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_render::DioxusMessages;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
@@ -23,41 +23,23 @@ use dioxus_native_dom::DioxusDocument;
 use linebender_resource_handle::Blob;
 use parley::FontContext;
 
-/// Embedded DejaVu Sans font provides basic sans-serif text rendering
-/// when no system fonts are available (e.g. NixOS, containers, headless Linux).
-const DEJAVU_SANS: &[u8] = include_bytes!("../assets/DejaVuSans.ttf");
+// /// Embedded DejaVu Sans font provides basic sans-serif text rendering
+// /// when no system fonts are available (e.g. NixOS, containers, headless Linux).
+// const DEJAVU_SANS: &[u8] = include_bytes!("../../assets/DejaVuSans.ttf");
 
 pub struct DioxusPlugin {
     /// how many times per second does dioxus refresh info from bevy.
-    pub bevy_info_refresh_fps: u16,
+    pub bevy_info_refresh_fps: u32,
 
     pub main_window_ui: Option<DioxusPanel>,
 }
-// #[derive(Clone)]
-// pub struct DioxusPropsNative {
-//     pub fps: u16,
-//     pub main_window_ui: Option<fn() -> Element>,
-// }
 
-// #[derive(Clone)]
-// pub struct DioxusPropsNativeBevy {
-//     pub(crate) dioxus_props: DioxusPropsNative,
-//     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
-//     pub(crate) command_queues_tx: Sender<CommandQueue>,
-// }
-
-// #[derive(Clone)]
-// pub enum DioxusAppKind {
-//     NativeBevy(DioxusPropsNativeBevy),
-//     NativeOnly(DioxusPropsNative),
-// }
 #[derive(Clone)]
 pub struct DioxusPluginProps {
-    pub fps: u16,
+    // pub fps: u16,
     pub main_window_ui: Option<(Entity, DioxusPanel)>,
     pub(crate) dioxus_panel_updates: Receiver<DioxusPanelUpdates>,
     pub command_queue_sender: CommandQueueSender,
-    // pub(crate) command_queues_tx: Sender<CommandQueue>,
 }
 
 impl Plugin for DioxusPlugin {
@@ -68,8 +50,11 @@ impl Plugin for DioxusPlugin {
         let mut documents = HashMap::new();
 
 
-        let dioxus_signals_mirror_plugin = DioxusBevyMirrorPlugin::default();
-        let bevy_dioxus_interop_plugin = DioxusBevyInteropPlugin::new();
+        let dioxus_signals_mirror_plugin = DioxusBevyMirrorPlugin {
+            dioxus_sync_fps: self.bevy_info_refresh_fps,
+            bevy_command_txrx: Default::default(),
+        };
+        // let bevy_dioxus_interop_plugin = DioxusBevyInteropPlugin::new();
         let dioxus_panels_plugin = DioxusPanelsPlugin::new();
 
         let panels_rx = dioxus_panels_plugin.dioxus_panel_updates_rx.clone();
@@ -80,7 +65,7 @@ impl Plugin for DioxusPlugin {
             let entity = app.world_mut().spawn(main_window_ui.clone()).id();
 
             let props = DioxusPluginProps {
-                fps: self.bevy_info_refresh_fps,
+                // fps: self.bevy_info_refresh_fps,
                 main_window_ui: Some((entity, main_window_ui.clone())),
                 dioxus_panel_updates: panels_rx,
                 command_queue_sender: CommandQueueSender { tx: dioxus_signals_mirror_plugin.bevy_command_txrx.tx() },
@@ -92,14 +77,30 @@ impl Plugin for DioxusPlugin {
             let vdom = VirtualDom::new_with_props(dioxus_app, props);
 
             // for sanity, force include a font with this library for testing for when linux isn't giving a proper font because of xyz
-            let mut font_ctx = FontContext::default();
-            // Use Blob::from(Vec<u8>) to avoid any `as _` coercion issues.
-            // The font data must be owned by the Blob for fontique to parse it.
-            font_ctx.collection.register_fonts(
-                Blob::from(DEJAVU_SANS.to_vec()),
-                None,
-            );
+            // let mut font_ctx = FontContext::default();
+            // // Use Blob::from(Vec<u8>) to avoid any `as _` coercion issues.
+            // // The font data must be owned by the Blob for fontique to parse it.
+            // font_ctx.collection.register_fonts(
+            //     Blob::from(DEJAVU_SANS.to_vec()),
+            //     None,
+            // );
+            let font_data: &'static [u8] = include_bytes!("../../assets/DejaVuSans.ttf");
 
+
+            let mut font_ctx = FontContext::default();
+            let families = font_ctx
+                .collection
+                .register_fonts(Blob::from(font_data.to_vec()), None);
+            if let Some((family_id, _)) = families.first() {
+                use parley::fontique::GenericFamily::*;
+                for generic in [Serif, SansSerif, Monospace, Cursive, Fantasy, SystemUi] {
+                    font_ctx
+                        .collection
+                        .set_generic_families(generic, std::iter::once(*family_id));
+                }
+            }
+
+            
             let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig {
                 font_ctx: Some(font_ctx),
                 ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
@@ -124,11 +125,10 @@ impl Plugin for DioxusPlugin {
             documents.insert(entity, dioxus_doc);
         }
 
-        app.add_plugins(bevy_dioxus_interop_plugin);
+        // app.add_plugins(bevy_dioxus_interop_plugin);
         app.add_plugins(DioxusRenderPlugin);
         app.add_plugins(DioxusEventSyncPlugin);
         app.add_plugins(dioxus_signals_mirror_plugin);
         app.insert_non_send_resource(DioxusDocuments(documents));
-        println!("finished initializing dioxus plugin");
     }
 }

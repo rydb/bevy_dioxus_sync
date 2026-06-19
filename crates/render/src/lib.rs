@@ -5,9 +5,9 @@ use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_camera::{Camera, Camera2d};
 use bevy_derive::Deref;
 use bevy_dioxus_interop::DioxusDocuments;
+use bevy_dioxus_tracing::debug;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
-use bevy_log::debug;
 use bevy_math::prelude::*;
 use bevy_mesh::{Mesh, Mesh2d};
 use bevy_render::{
@@ -31,6 +31,7 @@ use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
+
 
 /// placeholder const for dioxus animations
 /// TODO: implement this

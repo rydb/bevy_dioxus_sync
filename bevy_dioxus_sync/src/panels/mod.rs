@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use bevy_dioxus_tracing::warn;
 use bevy_ecs::{
     component::{Immutable, StorageType},
     prelude::*,
 };
-use bevy_log::warn;
 use crossbeam_channel::Sender;
 use dioxus_core::Element;
 use std::fmt::Debug;

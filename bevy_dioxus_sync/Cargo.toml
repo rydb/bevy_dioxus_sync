@@ -1,0 +1,48 @@
+[package]
+name = "bevy_dioxus_sync"
+description = "Top crate for bevy-dioxus interop through syncronization"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rydb/bevy_dioxus_sync"
+keywords = ["dom", "ui", "gui", "bevy", "dioxus"]
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy_dioxus_render = {workspace = true}
+bevy_dioxus_interop = {workspace = true}
+bevy_dioxus_messages = {workspace = true}
+bevy_dioxus_tracing = {workspace = true}
+dioxus-asset-resolver = {workspace = true}
+dioxus-devtools = {workspace = true}
+
+bevy_input = {workspace = true}
+# bevy_log = {workspace = true}
+bevy_time = {workspace = true}
+bevy_app = {workspace = true}
+bevy_ecs = {workspace = true}
+bevy_tasks = {workspace = true}
+bevy_utils = {workspace = true}
+bevy_math = {workspace = true}
+bevy_derive = {workspace = true}
+bevy_asset = {workspace = true}
+bevy_image = {workspace = true}
+wgpu-types = {workspace = true}
+
+async-std = {workspace = true}
+crossbeam-channel = {workspace = true}
+linebender_resource_handle = {workspace = true}
+parley = {workspace = true}
+data-url = {workspace = true}
+bytes = {workspace = true}
+
+blitz-dom = {workspace = true}
+blitz-traits = {workspace = true}
+blitz-html = {workspace = true}
+
+dioxus-core = {workspace = true}
+dioxus-native-dom = {workspace = true}
+dioxus-signals = {workspace = true}
+dioxus-hooks = {workspace = true}
+dioxus-core-macro = {workspace = true}
+dioxus-document = {workspace = true}
+dioxus_bevy_signals = {workspace = true}
