@@ -1,11 +1,12 @@
 [package]
 name = "bevy_dioxus_interop"
-version = "0.1.0"
-edition = "2024"
-description = "channels and other misc things for bevy_dioxus_interop"
+version.workspace = true
+edition.workspace = true
+description = "Miscellaneous bevy_dioxus_sync features that don't fit in the other crates"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rydb/bevy_dioxus_sync"
 keywords = ["dom", "ui", "gui", "bevy", "dioxus"]
+categories = ["game-development", "gui"]
 
 [dependencies]
 bevy_ecs = {workspace = true}
@@ -13,7 +14,6 @@ bevy_app = {workspace = true}
 
 crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true, features = ["derive"]}
-# bevy_log = {workspace = true}
 dioxus-signals = {workspace = true}
 dioxus-native-dom = {workspace = true}
 tokio = {workspace = true, features = ["sync"]}

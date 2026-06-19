@@ -1,11 +1,12 @@
 [package]
 name = "bevy_dioxus_messages"
-version = "0.1.0"
-edition = "2024"
-description = "channels and other misc things for bevy_dioxus_interop"
+version.workspace = true
+edition.workspace = true
+description = "Keyboard, mouse, and window event synchronization from bevy to dioxus"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rydb/bevy_dioxus_sync"
 keywords = ["dom", "bevy", "dioxus", "events", "messages"]
+categories = ["game-development", "gui"]
 
 [dependencies]
 bevy_app = {workspace = true}

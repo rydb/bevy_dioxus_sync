@@ -1,9 +1,10 @@
 [package]
 name = "bevy_dioxus_sync"
-description = "Top crate for bevy-dioxus interop through syncronization"
+description = "Top crate for bevy-dioxus interop through synchronization"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rydb/bevy_dioxus_sync"
 keywords = ["dom", "ui", "gui", "bevy", "dioxus"]
+categories = ["game-development", "gui"]
 version.workspace = true
 edition.workspace = true
 
@@ -16,7 +17,6 @@ dioxus-asset-resolver = {workspace = true}
 dioxus-devtools = {workspace = true}
 
 bevy_input = {workspace = true}
-# bevy_log = {workspace = true}
 bevy_time = {workspace = true}
 bevy_app = {workspace = true}
 bevy_ecs = {workspace = true}

@@ -1,11 +1,12 @@
 [package]
 name = "bevy_dioxus_render"
-version = "0.1.0"
-edition = "2024"
-description = "channels and other misc things for bevy_dioxus_interop"
+version.workspace = true
+edition.workspace = true
+description = "Blitz rendering for dioxus in bevy"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rydb/bevy_dioxus_sync"
 keywords = ["dom", "ui", "gui", "bevy", "dioxus"]
+categories = ["game-development", "gui", "rendering"]
 
 [dependencies]
 bevy_app = {workspace = true}

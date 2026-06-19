@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bevy_dioxus_tracing::warn;
+use bevy_dioxus_tracing::{trace, warn};
 use bevy_ecs::{
     component::{Immutable, StorageType},
     prelude::*,
@@ -62,12 +62,12 @@ pub fn push_panel_updates(
     panel_update_sender: ResMut<DioxusPanelUpdatesSender>,
 ) {
     let mut updates = Vec::new();
-    println!("ran push panel update: {:#?}", panel_updates.0);
+    trace!("ran push panel update: {:#?}", panel_updates.0);
 
     updates.extend(panel_updates.bypass_change_detection().0.drain(..));
 
     let _ = panel_update_sender
         .0
         .send(DioxusPanelUpdates(updates))
-        .inspect_err(|_err| warn!("{:#}", err));
+        .inspect_err(|_err| warn!("{:#}", _err));
 }

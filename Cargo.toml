@@ -1,11 +1,12 @@
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 
 [workspace]
 resolver = "3"
 members = [
+    "bevy_dioxus_sync",
     "crates/*",
     "examples/*"
 ]
@@ -26,11 +27,11 @@ dioxus-document = {version = "0.7", default-features = false}
 dioxus-asset-resolver = {version = "0.7", default-features = false}
 generational-box = {version = "0.7", default-features = false}
 
-bevy_dioxus_render = {path = "./crates/render", version = "0.1"}
-bevy_dioxus_interop = {path = "./crates/interop", version = "0.1"}
-bevy_dioxus_messages = {path = "./crates/messages", version = "0.1"}
-bevy_dioxus_tracing = {path = "./crates/tracing", version = "0.1"}
-bevy_dioxus_sync = {path = "./bevy_dioxus_sync", version = "0.1"}
+bevy_dioxus_render = {path = "./crates/render", version = "0.2"}
+bevy_dioxus_interop = {path = "./crates/interop", version = "0.2"}
+bevy_dioxus_messages = {path = "./crates/messages", version = "0.2"}
+bevy_dioxus_tracing = {path = "./crates/tracing", version = "0.2"}
+bevy_dioxus_sync = {path = "./bevy_dioxus_sync", version = "0.2"}
 
 bevy = {version = "0.17", default-features = false}
 bevy_ecs = {version = "0.17"}
@@ -43,7 +44,6 @@ bevy_window = {version = "0.17"}
 bevy_math = {version = "0.17"}
 bevy_winit = {version = "0.17"}
 bevy_asset = {version = "0.17"}
-# bevy_log = {version = "0.17"}
 bevy_input = {version = "0.17"}
 bevy_time = {version = "0.17"}
 bevy_image = {version = "0.17"}

@@ -36,7 +36,7 @@ impl Plugin for DioxusPanelsPlugin {
                 let Some(value) = world.entity(hook.entity).get::<DioxusPanel>() else {
                     warn!(
                         "could not get {:#} on {:#}",
-                        type_name::<DioxusPanel>(),
+                        std::any::type_name::<DioxusPanel>(),
                         hook.entity
                     );
                     return;

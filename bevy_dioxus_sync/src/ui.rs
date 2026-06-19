@@ -1,12 +1,9 @@
 use std::collections::HashMap;
 
-// use crate::hooks::one_component_kind::hook::BevyComponentsSignals;
 use crate::plugins::DioxusPluginProps;
-use crate::{
-    panels::{DioxusPanel, PanelUpdateKind},
-    // plugins::DioxusAppKind,
-};
+use crate::panels::{DioxusPanel, PanelUpdateKind};
 use async_std::task::sleep;
+use bevy_dioxus_tracing::trace;
 use bevy_ecs::entity::Entity;
 use dioxus_core::Element;
 use dioxus_core_macro::rsx;
@@ -16,31 +13,21 @@ use dioxus_signals::*;
 #[derive(Clone, Default)]
 pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
 
-pub enum AppKind {}
-
 pub fn dioxus_app(props: DioxusPluginProps) -> Element {
-    // let props = match app_kind {
-    //     DioxusAppKind::NativeBevy(bevy_props) => {
     let update_frequency = 1000;
-    // let register_updates = use_context_provider(|| bevy_props.clone());
     let dioxus_props = use_context_provider(|| props.clone());
     let mut dioxus_panels = use_context_provider(|| DioxusPanels::default());
 
     let _command_queue_tx = use_context_provider(|| props.command_queue_sender);
-    // let _command_queue_tx =
-    //     use_context_provider(|| BevyCommandsSignal(dioxus_props.command_queues_sender.clone()));
     use_future(move || {
         {
-            println!("spawning dioxus app future");
+            trace!("spawning dioxus app future");
             let value = dioxus_props.dioxus_panel_updates.clone();
             async move {
                 loop {
-                    // println!("awaiting panel update...");
-
-                    // Update UI every 1s in this demo.
                     sleep(std::time::Duration::from_millis(update_frequency)).await;
                     while let Ok(messages) = value.try_recv() {
-                        println!("panel update recieved: {:#?}", messages);
+                        trace!("panel update received: {:#?}", messages);
 
                         let mut dioxus_panels = dioxus_panels.0.write();
                         for update in messages.0 {
