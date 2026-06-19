@@ -1,4 +1,3 @@
-use std::any::type_name;
 
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;

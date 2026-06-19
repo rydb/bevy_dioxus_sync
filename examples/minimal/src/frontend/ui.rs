@@ -5,7 +5,11 @@ use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
-use dioxus_bevy_signals::{asset::{AssetNoneState, use_bevy_asset}, query::{single::use_bevy_single}, resource::use_bevy_resource};
+use dioxus_bevy_signals::{
+    asset::{AssetNoneState, use_bevy_asset},
+    query::single::use_bevy_single,
+    resource::use_bevy_resource,
+};
 
 #[derive(Debug)]
 pub struct AppUi;
@@ -22,19 +26,25 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 pub fn app_ui() -> Element {
     let fps = use_bevy_resource::<FPS>();
 
-    let cube = use_bevy_single::<(Entity, &mut Transform, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
+    let cube = use_bevy_single::<
+        (
+            Entity,
+            &mut Transform,
+            &mut MeshMaterial3d<StandardMaterial>,
+        ),
+        With<DynamicCube>,
+    >();
 
     let cube_transform_str = use_memo(move || {
-        cube.read_ok(|n| (*n.1.read()).translation.to_string()).unwrap_or_else(|err| err.into())
+        cube.read_ok(|n| (*n.1.read()).translation.to_string())
+            .unwrap_or_else(|err| err.into())
     });
 
     let cube_color_handle = use_memo(move || {
-        cube
-        .read_ok(|n| Ok(n.2.read().0.id()))
-        .unwrap_or_else(|err| Err(AssetNoneState::Error(err.into())))
+        cube.read_ok(|n| Ok(n.2.read().0.id()))
+            .unwrap_or_else(|err| Err(AssetNoneState::Error(err.into())))
     });
     let cube_color = use_bevy_asset(cube_color_handle);
-
 
     let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
@@ -43,10 +53,14 @@ pub fn app_ui() -> Element {
     // from the bevy resource, so re-renders don't re-push the same value
     // through blitz-dom's set_text (which would reset cursor position).
     let mut translation_speed_display = use_signal(|| {
-        cube_translation_speed.read_ok(|n| n.0.to_string()).unwrap_or_else(|_| "0.0".to_string())
+        cube_translation_speed
+            .read_ok(|n| n.0.to_string())
+            .unwrap_or_else(|_| "0.0".to_string())
     });
     let mut rotation_speed_display = use_signal(|| {
-        cube_rotation_speed.read_ok(|n| n.0.to_string()).unwrap_or_else(|_| "0.0".to_string())
+        cube_rotation_speed
+            .read_ok(|n| n.0.to_string())
+            .unwrap_or_else(|_| "0.0".to_string())
     });
 
     let set_rotation_speed = move |evt: Event<FormData>| {

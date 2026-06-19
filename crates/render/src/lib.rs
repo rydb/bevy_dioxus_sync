@@ -32,7 +32,6 @@ use wgpu::{Extent3d, TextureDimension, TextureFormat};
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 
-
 /// placeholder const for dioxus animations
 /// TODO: implement this
 pub const ANIMATION_TIME_PLACEHOLDER: f32 = 0.0;
@@ -167,7 +166,6 @@ fn update_ui(
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
     while let Ok(msg) = dioxus_messages.0.try_recv() {
-
         match msg {
             DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
                 dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {

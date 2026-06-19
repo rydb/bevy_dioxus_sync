@@ -69,5 +69,5 @@ pub fn push_panel_updates(
     let _ = panel_update_sender
         .0
         .send(DioxusPanelUpdates(updates))
-        .inspect_err(|err| warn!("{:#}", err));
+        .inspect_err(|_err| warn!("{:#}", err));
 }

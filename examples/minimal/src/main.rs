@@ -3,7 +3,7 @@
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy_dioxus_sync::{panels::DioxusPanel, plugins::DioxusPlugin};
-use tracing_subscriber::{fmt, prelude::*, registry, filter::filter_fn};
+use tracing_subscriber::{filter::filter_fn, fmt, prelude::*, registry};
 
 use crate::{backend::bevy_scene_plugin::BevyScenePlugin, frontend::AppUi};
 
@@ -12,9 +12,7 @@ pub mod frontend;
 
 pub fn main() {
     // Only show dioxus_bevy_signals trace/debug logs, suppress everything else
-    let filter = filter_fn(|metadata| {
-        metadata.target().starts_with("dioxus_bevy_signals")
-    });
+    let filter = filter_fn(|metadata| metadata.target().starts_with("dioxus_bevy_signals"));
 
     let stdout_layer = fmt::layer().with_writer(std::io::stdout);
 
@@ -23,10 +21,7 @@ pub fn main() {
     subscriber.init();
 
     App::new()
-        .add_plugins(
-            DefaultPlugins.build()
-            .disable::<LogPlugin>()
-        )
+        .add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
         .add_plugins(DioxusPlugin {
             bevy_info_refresh_fps: 30,
             main_window_ui: Some(DioxusPanel::new(AppUi {})),

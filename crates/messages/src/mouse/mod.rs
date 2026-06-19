@@ -33,7 +33,7 @@ pub(crate) fn handle_mouse_messages(
     for cursor_event in cursor_moved.read() {
         mouse_state.x = cursor_event.position.x;
         mouse_state.y = cursor_event.position.y;
-        for (entiy, dioxus_doc) in &mut dioxus_docs.0 {
+        for (_entiy, dioxus_doc) in &mut dioxus_docs.0 {
             dioxus_doc.handle_ui_event(UiEvent::MouseMove(BlitzMouseButtonEvent {
                 x: mouse_state.x,
                 y: mouse_state.y,
@@ -48,7 +48,7 @@ pub(crate) fn handle_mouse_messages(
         .get_cursor()
         .read(&mouse_button_input_events)
     {
-        for (entity, dioxus_doc) in &mut dioxus_docs.0 {
+        for (_entity, dioxus_doc) in &mut dioxus_docs.0 {
             let button_blitz = match event.button {
                 MouseButton::Left => MouseEventButton::Main,
                 MouseButton::Right => MouseEventButton::Secondary,

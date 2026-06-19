@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::sync::Arc;
 
 use bevy_app::prelude::*;
 // use bevy_dioxus_hooks::resource::BevyResourcesSignalsPlugin;
@@ -8,7 +7,6 @@ use bevy_dioxus_interop::DioxusDocuments;
 use bevy_dioxus_messages::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_render::DioxusMessages;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
-use bevy_ecs::world::CommandQueue;
 use dioxus_bevy_signals::{CommandQueueSender, DioxusBevyMirrorPlugin};
 
 use crate::net_provider::{BevyNetProvider, DioxusDocumentProxy};
@@ -17,7 +15,7 @@ use crate::panels::{DioxusPanel, DioxusPanelUpdates};
 use crate::{ui::dioxus_app, *};
 use bevy_utils::default;
 use blitz_dom::DocumentConfig;
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::Receiver;
 use dioxus_core::{ScopeId, VirtualDom, provide_context};
 use dioxus_native_dom::DioxusDocument;
 use linebender_resource_handle::Blob;
@@ -49,7 +47,6 @@ impl Plugin for DioxusPlugin {
 
         let mut documents = HashMap::new();
 
-
         let dioxus_signals_mirror_plugin = DioxusBevyMirrorPlugin {
             dioxus_sync_fps: self.bevy_info_refresh_fps,
             bevy_command_txrx: Default::default(),
@@ -68,7 +65,9 @@ impl Plugin for DioxusPlugin {
                 // fps: self.bevy_info_refresh_fps,
                 main_window_ui: Some((entity, main_window_ui.clone())),
                 dioxus_panel_updates: panels_rx,
-                command_queue_sender: CommandQueueSender { tx: dioxus_signals_mirror_plugin.bevy_command_txrx.tx() },
+                command_queue_sender: CommandQueueSender {
+                    tx: dioxus_signals_mirror_plugin.bevy_command_txrx.tx(),
+                },
                 // command_queues_tx: bevy_dioxus_interop_plugin.command_tx.clone(),
             };
 
@@ -86,7 +85,6 @@ impl Plugin for DioxusPlugin {
             // );
             let font_data: &'static [u8] = include_bytes!("../../assets/DejaVuSans.ttf");
 
-
             let mut font_ctx = FontContext::default();
             let families = font_ctx
                 .collection
@@ -100,12 +98,14 @@ impl Plugin for DioxusPlugin {
                 }
             }
 
-            
-            let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig {
-                font_ctx: Some(font_ctx),
-                ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
-                ..default()
-            });
+            let mut dioxus_doc = DioxusDocument::new(
+                vdom,
+                DocumentConfig {
+                    font_ctx: Some(font_ctx),
+                    ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
+                    ..default()
+                },
+            );
             // Setup NetProvider
             let net_provider = BevyNetProvider::shared(s.clone());
 
