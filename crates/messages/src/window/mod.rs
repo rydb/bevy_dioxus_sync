@@ -1,54 +1,41 @@
 use bevy_asset::prelude::*;
-use bevy_dioxus_interop::DioxusDocuments;
 use bevy_dioxus_tracing::debug;
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_math::prelude::*;
-use bevy_sprite_render::prelude::*;
 use bevy_transform::components::Transform;
 use bevy_window::WindowResized;
-use blitz_traits::shell::Viewport;
 
-use bevy_dioxus_render::{
-    COLOR_SCHEME, DioxusUiQuad, SCALE_FACTOR, TextureImage, create_ui_texture,
-};
+use bevy_dioxus_render::{DioxusUiQuad, TextureImage, create_ui_texture};
 
 pub(crate) fn handle_window_resize(
-    mut dioxus_docs: NonSendMut<DioxusDocuments>,
     mut resize_events: MessageReader<WindowResized>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    texture_image: Option<Res<TextureImage>>,
-    mut query: Query<(&mut Transform, &mut MeshMaterial2d<ColorMaterial>), With<DioxusUiQuad>>,
+    mut quad_query: Query<&mut Transform, With<DioxusUiQuad>>,
 ) {
-    for resize_event in resize_events.read() {
+    // Process only the last resize event per frame to prevent texture
+    // thrashing from starving the GPU pipeline during live resize.
+    let last_event = resize_events.read().last();
+
+    if let Some(resize_event) = last_event {
         let width = resize_event.width as u32;
         let height = resize_event.height as u32;
 
         debug!("Window resized to: {}x{}", width, height);
 
-        for (_, dioxus_doc) in &mut dioxus_docs.0 {
-            // Update the dioxus viewport
-            dioxus_doc.inner.borrow_mut().set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-        }
-
-        // Create a new texture with the new size
+        // Create a new texture with the new size.
         let new_image = create_ui_texture(width, height);
         let new_handle = images.add(new_image);
 
-        // Update the quad mesh to match the new size
-        if let Ok((mut trans, mut mat)) = query.single_mut() {
+        // Scale the quad to fill the new window dimensions immediately
+        // so the old texture stretches to fill rather than leaving gaps.
+        if let Ok(mut trans) = quad_query.single_mut() {
             *trans = Transform::from_scale(Vec3::new(width as f32, height as f32, 0.0));
-            materials.get_mut(&mut mat.0).unwrap().texture = Some(new_handle.clone());
         }
 
-        // Remove the old texture
-        if let Some(texture_image) = texture_image.as_ref() {
-            images.remove(&texture_image.0);
-        }
-
-        // Insert the new texture resource
+        // Old texture stays in Assets to keep cached texture views valid
+        // until the render world sends back the replacement GPU texture.
         commands.insert_resource(TextureImage(new_handle));
     }
 }

@@ -73,13 +73,23 @@ pub fn extract_texture_image(
     mut commands: Commands,
     texture_image: Extract<Option<Res<TextureImage>>>,
     mut last_texture_image: Local<Option<Handle<Image>>>,
+    extracted_image: Option<Res<ExtractedTextureImage>>,
 ) {
     if let Some(texture_image) = texture_image.as_ref() {
-        if let Some(last_texture_image) = &*last_texture_image {
-            if last_texture_image == &texture_image.0 {
-                return;
-            }
+        // Check if the render world still has a pending extraction that
+        // texture_getter_system has not yet consumed (GPU image not ready).
+        let prev_still_pending = extracted_image
+            .as_ref()
+            .map_or(false, |e| e.0.is_some());
+
+        let handle_changed = last_texture_image.as_ref() != Some(&texture_image.0);
+
+        // If the previous handle still has not been processed async by the GPU,
+        // and it is the same handle, wait instead of overwriting.
+        if prev_still_pending && !handle_changed {
+            return;
         }
+
         commands.insert_resource(ExtractedTextureImage(Some(texture_image.0.clone())));
         *last_texture_image = Some(texture_image.0.clone());
     }
@@ -139,6 +149,10 @@ fn update_ui(
     render_queue: Res<RenderQueue>,
     receiver: Res<MainWorldReceiver>,
     animation_epoch: Res<AnimationTime>,
+    texture_image: Option<Res<TextureImage>>,
+    images: Res<Assets<Image>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut quad_query: Query<(&mut Transform, &mut MeshMaterial2d<ColorMaterial>), With<DioxusUiQuad>>,
     mut cached_texture: Local<Option<RenderTexture>>,
 ) {
     while let Ok(msg) = dioxus_messages.0.try_recv() {
@@ -180,6 +194,28 @@ fn update_ui(
     }
 
     while let Ok(texture) = receiver.try_recv() {
+        // When the render world sends back a GPU texture whose dimensions
+        // match the current TextureImage, swap the display quad to point
+        // to the new texture. This defers the swap until the texture is
+        // actually ready to be rendered to, avoiding blank frames.
+        if let Some(ti) = texture_image.as_ref() {
+            if let Some(img) = images.get(&ti.0) {
+                let sz = img.texture_descriptor.size;
+                if texture.width == sz.width && texture.height == sz.height {
+                    // Atomically update viewport, quad transform, and material
+                    // so layout, paint area, and display all match.
+                    for (_, dioxus_doc) in &mut dioxus_docs.0 {
+                        dioxus_doc.inner.borrow_mut().set_viewport(
+                            Viewport::new(texture.width, texture.height, SCALE_FACTOR, COLOR_SCHEME),
+                        );
+                    }
+                    if let Ok((mut trans, mut mat)) = quad_query.single_mut() {
+                        *trans = Transform::from_scale(Vec3::new(texture.width as f32, texture.height as f32, 0.0));
+                        materials.get_mut(&mut mat.0).unwrap().texture = Some(ti.0.clone());
+                    }
+                }
+            }
+        }
         *cached_texture = Some(texture);
     }
 
