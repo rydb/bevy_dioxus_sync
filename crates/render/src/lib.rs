@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
-use bevy_camera::{Camera, Camera2d};
+use bevy_camera::{Camera, Camera2d, ClearColorConfig};
 use bevy_derive::Deref;
 use bevy_dioxus_interop::DioxusDocuments;
 use bevy_dioxus_tracing::debug;
@@ -13,8 +13,7 @@ use bevy_mesh::{Mesh, Mesh2d};
 use bevy_render::{
     Extract,
     render_asset::RenderAssets,
-    render_graph::{self, NodeRunError, RenderGraphContext, RenderLabel},
-    renderer::{RenderContext, RenderDevice, RenderQueue},
+    renderer::{RenderDevice, RenderQueue},
     texture::GpuImage,
 };
 use bevy_sprite_render::{ColorMaterial, MeshMaterial2d};
@@ -92,46 +91,23 @@ struct MainWorldReceiver(Receiver<RenderTexture>);
 #[derive(Resource, Deref)]
 struct RenderWorldSender(Sender<RenderTexture>);
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash, RenderLabel)]
-struct TextureGetterNode;
-
-#[derive(Default)]
-struct TextureGetterNodeDriver;
-
-impl render_graph::Node for TextureGetterNodeDriver {
-    fn update(&mut self, world: &mut World) {
-        // Get the GPU texture from the texture image, and send it to the main world
-        if let Some(sender) = world.get_resource::<RenderWorldSender>() {
-            if let Some(image) = world
-                .get_resource::<ExtractedTextureImage>()
-                .and_then(|e| e.0.as_ref())
-            {
-                if let Some(gpu_images) = world
-                    .get_resource::<RenderAssets<GpuImage>>()
-                    .and_then(|a| a.get(image))
-                {
-                    let _ = sender.send(RenderTexture {
-                        texture_view: (*gpu_images.texture_view).clone(),
-                        width: gpu_images.size.width,
-                        height: gpu_images.size.height,
-                    });
-                    if let Some(mut extracted_image) =
-                        world.get_resource_mut::<ExtractedTextureImage>()
-                    {
-                        // Reset the image, so it is not sent again, unless it changes
-                        extracted_image.0 = None;
-                    }
-                }
-            }
+/// System that reads the prepared GpuImage and sends it to the main world.
+/// Runs in the Render schedule after assets are prepared.
+fn texture_getter_system(
+    sender: Res<RenderWorldSender>,
+    mut extracted_image: ResMut<ExtractedTextureImage>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
+) {
+    if let Some(image) = extracted_image.0.as_ref() {
+        if let Some(gpu_image) = gpu_images.get(image) {
+            let _ = sender.send(RenderTexture {
+                texture_view: (*gpu_image.texture_view).clone(),
+                width: gpu_image.texture_descriptor.size.width,
+                height: gpu_image.texture_descriptor.size.height,
+            });
+            // Reset the image so it is not sent again unless it changes.
+            extracted_image.0 = None;
         }
-    }
-    fn run(
-        &self,
-        _graph: &mut RenderGraphContext,
-        _render_context: &mut RenderContext,
-        _world: &World,
-    ) -> Result<(), NodeRunError> {
-        Ok(())
     }
 }
 
@@ -176,7 +152,7 @@ fn update_ui(
                         // Reload changed assets
                         for asset_path in &hotreload_message.assets {
                             if let Some(url) = asset_path.to_str() {
-                                dioxus_doc.reload_resource_by_href(url);
+                                dioxus_doc.inner.borrow_mut().reload_resource_by_href(url);
                             }
                         }
                     }
@@ -192,7 +168,12 @@ fn update_ui(
             }
             DioxusMessage::ResourceLoad(resource) => {
                 for (_, dioxus_doc) in &mut dioxus_docs.0 {
-                    dioxus_doc.load_resource(resource.clone());
+                    dioxus_doc.inner.borrow_mut().load_resource(blitz_dom::net::ResourceLoadResponse {
+                        request_id: 0,
+                        node_id: None,
+                        resolved_url: None,
+                        result: Ok(resource.clone()),
+                    });
                 }
             }
         };
@@ -210,7 +191,7 @@ fn update_ui(
 
             // Refresh the document
             let animation_time = animation_epoch.0.elapsed().as_secs_f64();
-            dioxus_doc.resolve(animation_time);
+            dioxus_doc.inner.borrow_mut().resolve(animation_time);
 
             // Create a `vello::Scene` to paint into
             let mut scene = Scene::new();
@@ -218,10 +199,12 @@ fn update_ui(
             // Paint the document
             paint_scene(
                 &mut VelloScenePainter::new(&mut scene),
-                &dioxus_doc,
+                &mut *dioxus_doc.inner.borrow_mut(),
                 SCALE_FACTOR as f64,
                 texture.width,
                 texture.height,
+                0,
+                0
             );
 
             // Render the `vello::Scene` to the Texture using the `VelloRenderer`
@@ -276,8 +259,8 @@ fn setup_ui(
     let Some((_, dioxus_doc)) = dioxus_docs.0.iter_mut().next() else {
         panic!("Can't get first document in dioxus documents. Map empty.")
     };
-    dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-    dioxus_doc.resolve(0.0);
+    dioxus_doc.inner.borrow_mut().set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
+    dioxus_doc.inner.borrow_mut().resolve(0.0);
 
     // Create Bevy Image from the texture data
     let image = create_ui_texture(width, height);
@@ -297,6 +280,7 @@ fn setup_ui(
         Camera2d,
         Camera {
             order: isize::MAX,
+            clear_color: ClearColorConfig::None,
             ..default()
         },
     ));

@@ -15,7 +15,8 @@ bevy_app = {workspace = true}
 crossbeam-channel = {workspace = true}
 bytemuck = {workspace = true, features = ["derive"]}
 dioxus-signals = {workspace = true}
-dioxus-native-dom = {workspace = true}
+dioxus-native = {workspace = true}
+# dioxus-native-dom = {workspace = true}
 tokio = {workspace = true, features = ["sync"]}
 generational-box = {workspace = true}
 arc-swap = {workspace = true}

@@ -14,18 +14,32 @@ members = [
 [workspace.dependencies]
 # TODO: dioxus-native fails to publish without these features, even though the crate doesn't need them. 
 # remove net and html when that is resolved.
-dioxus-native = { version = "0.7", default-features = false, features = ["net", "html"]}
-dioxus-native-dom = {version = "0.7", default-features = false}
-dioxus = {version = "0.7", default-features = false}
-dioxus-signals = {version = "0.7", default-features = false}
-dioxus-hooks = {version = "0.7", default-features = false}
-dioxus-core = {version = "0.7", default-features = false}
-dioxus-html = {version = "0.7", default-features = false}
-dioxus-core-macro = {version = "0.7", default-features = false}
-dioxus-devtools = {version = "0.7", default-features = false}
-dioxus-document = {version = "0.7", default-features = false}
-dioxus-asset-resolver = {version = "0.7", default-features = false}
-generational-box = {version = "0.7", default-features = false}
+# dioxus-native = { git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b", default-features = false, features = ["net", "html", "vello"]}
+# dioxus-native-dom = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b", default-features = false}
+# dioxus-signals = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-hooks = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-core = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-html = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-core-macro = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-devtools = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-document = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# dioxus-asset-resolver = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+# generational-box = {git = "https://github.com/DioxusLabs/dioxus", rev = "b00ff7525901984f3a07fa5cfa175b537b64630b"}
+
+
+dioxus-native = { path = "../dioxus/packages/native", default-features = false, features = ["net", "html", "vello"]}
+# dioxus-native-dom = {path = "../dioxus/packages/native-dom"}
+dioxus = {path = "../dioxus/packages/dioxus", default-features = false}
+dioxus-signals = {path = "../dioxus/packages/signals"}
+dioxus-hooks = {path = "../dioxus/packages/hooks"}
+dioxus-core = {path = "../dioxus/packages/core"}
+dioxus-html = {path = "../dioxus/packages/html"}
+dioxus-core-macro = {path = "../dioxus/packages/core-macro"}
+dioxus-devtools = {path = "../dioxus/packages/devtools"}
+dioxus-document = {path = "../dioxus/packages/document"}
+dioxus-asset-resolver = {path = "../dioxus/packages/asset-resolver"}
+generational-box = {path = "../dioxus/packages/generational-box"}
 
 bevy_dioxus_render = {path = "./crates/render", version = "0.2"}
 bevy_dioxus_interop = {path = "./crates/interop", version = "0.2"}
@@ -33,31 +47,30 @@ bevy_dioxus_messages = {path = "./crates/messages", version = "0.2"}
 bevy_dioxus_tracing = {path = "./crates/tracing", version = "0.2"}
 bevy_dioxus_sync = {path = "./bevy_dioxus_sync", version = "0.2"}
 
-bevy = {version = "0.17", default-features = false}
-bevy_ecs = {version = "0.17"}
-bevy_render = {version = "0.17"}
-bevy_app = {version = "0.17"}
-bevy_transform = {version = "0.17"}
-bevy_mesh = {version = "0.17"}
-bevy_utils = {version = "0.17"}
-bevy_window = {version = "0.17"}
-bevy_math = {version = "0.17"}
-bevy_winit = {version = "0.17"}
-bevy_asset = {version = "0.17"}
-bevy_input = {version = "0.17"}
-bevy_time = {version = "0.17"}
-bevy_image = {version = "0.17"}
-bevy_picking = {version = "0.17"}
-bevy_derive = {version = "0.17"}
-bevy_color = {version = "0.17"}
-bevy_sprite = {version = "0.17"}
-bevy_pbr = {version = "0.17"}
-bevy_core_pipeline = {version = "0.17"}
-bevy_tasks = {version = "0.17"}
-bevy_camera = {version = "0.17"}
-bevy_sprite_render = {version = "0.17"}
+bevy = {version = "0.19", default-features = false}
+bevy_ecs = {version = "0.19"}
+bevy_render = {version = "0.19"}
+bevy_app = {version = "0.19"}
+bevy_transform = {version = "0.19"}
+bevy_mesh = {version = "0.19"}
+bevy_utils = {version = "0.19"}
+bevy_window = {version = "0.19"}
+bevy_math = {version = "0.19"}
+bevy_winit = {version = "0.19"}
+bevy_asset = {version = "0.19"}
+bevy_input = {version = "0.19"}
+bevy_time = {version = "0.19"}
+bevy_image = {version = "0.19"}
+bevy_picking = {version = "0.19"}
+bevy_derive = {version = "0.19"}
+bevy_color = {version = "0.19"}
+bevy_sprite = {version = "0.19"}
+bevy_pbr = {version = "0.19"}
+bevy_core_pipeline = {version = "0.19"}
+bevy_tasks = {version = "0.19"}
+bevy_camera = {version = "0.19"}
+bevy_sprite_render = {version = "0.19"}
 
-vello = {version = "0.6"}
 rustc-hash = "1"
 bytemuck = "1.23"
 data-url = "0.3.2"
@@ -69,18 +82,20 @@ macro-v = "0.1.4"
 tracing = {version = "0.1.44"}
 
 
-anyrender_vello = {version = "0.6", default-features = false}
-blitz-net = { version = "0.2", default-features = false}
-blitz-paint = { version = "0.2", default-features = false}
-blitz-traits = { version = "0.2", default-features = false}
-blitz-dom = { version = "0.2.4", default-features = false }
+anyrender_vello = {version = "0.10", default-features = false}
+blitz-net = {version = "=0.3.0-alpha.4", default-features = false}
+blitz-paint = { version = "=0.3.0-alpha.4", default-features = false}
+blitz-traits = { version = "=0.3.0-alpha.4", default-features = false}
+blitz-dom = { version = "=0.3.0-alpha.4", default-features = false }
+# blitz-shell = { version = "=0.3.0-alpha.4", default-features = false }
+blitz-html = {version = "=0.3.0-alpha.4", default-features = false}
+vello = {version = "0.9"}
 linebender_resource_handle = "0.1"
-parley = "0.6"
-blitz-shell = { version = "0.2", default-features = false }
-blitz-html = {version = "0.2", default-features = false}
+parley = "0.9"
+
 
 async-std = "1.13"
 crossbeam-channel = "0.5"
-wgpu = "26"
-wgpu-types = "26"
+wgpu = "29.0.3"
+wgpu-types = "29.0.3"
 dioxus_bevy_signals = {path = "../queued_signal/crates/dioxus_bevy_signals"}

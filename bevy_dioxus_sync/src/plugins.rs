@@ -12,7 +12,8 @@ use blitz_dom::DocumentConfig;
 use crossbeam_channel::Receiver;
 use dioxus_bevy_signals::{CommandQueueSender, DioxusBevyMirrorPlugin};
 use dioxus_core::{ScopeId, VirtualDom, provide_context};
-use dioxus_native_dom::DioxusDocument;
+// use dioxus_native_dom::DioxusDocument;
+use dioxus_native::DioxusDocument;
 use linebender_resource_handle::Blob;
 use parley::FontContext;
 
@@ -41,7 +42,7 @@ pub struct DioxusPluginProps {
 /// This work around also points blitz's default stylesheet fonts to this font.
 #[cfg(target_os = "linux")]
 fn setup_fallback_font() -> FontContext {
-    let font_data: &'static [u8] = include_bytes!("../../assets/DejaVuSans.ttf");
+    let font_data: &'static [u8] = include_bytes!("../../assets/JetBrainsMono-Medium.ttf");
     let mut font_ctx = FontContext::default();
     let families = font_ctx
         .collection
@@ -104,9 +105,9 @@ impl Plugin for DioxusPlugin {
                 },
             );
             // Setup NetProvider
-            let net_provider = BevyNetProvider::shared(s.clone());
+            let net_provider = BevyNetProvider::shared();
 
-            dioxus_doc.set_net_provider(net_provider);
+            dioxus_doc.inner.borrow_mut().set_net_provider(net_provider);
 
             // Setup DocumentProxy to process CreateHeadElement messages
             let proxy = Rc::new(DioxusDocumentProxy::new(s.clone()));
@@ -125,6 +126,6 @@ impl Plugin for DioxusPlugin {
         app.add_plugins(DioxusRenderPlugin);
         app.add_plugins(DioxusEventSyncPlugin);
         app.add_plugins(dioxus_signals_mirror_plugin);
-        app.insert_non_send_resource(DioxusDocuments(documents));
+        app.insert_non_send(DioxusDocuments(documents));
     }
 }

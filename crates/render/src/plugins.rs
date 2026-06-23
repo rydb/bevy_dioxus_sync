@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use bevy_app::prelude::*;
-use bevy_render::{RenderApp, render_graph::RenderGraph, renderer::RenderDevice};
+use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
 use vello::RendererOptions;
 
 use crate::*;
@@ -19,7 +19,7 @@ impl Plugin for DioxusRenderPlugin {
         }
         let waker = std::task::Waker::from(std::sync::Arc::new(NullWake));
 
-        app.insert_non_send_resource(waker);
+        app.insert_non_send(waker);
 
         app.insert_resource(epoch);
         app.add_systems(Startup, setup_ui)
@@ -31,7 +31,7 @@ impl Plugin for DioxusRenderPlugin {
         let render_device = render_app.world().resource::<RenderDevice>();
         let device = render_device.wgpu_device();
         let vello_renderer = VelloRenderer::new(device, RendererOptions::default()).unwrap();
-        app.insert_non_send_resource(vello_renderer);
+        app.insert_non_send(vello_renderer);
 
         // Setup communication between main world and render world, to send
         // and receive the texture
@@ -41,9 +41,10 @@ impl Plugin for DioxusRenderPlugin {
         render_app.add_systems(bevy_render::ExtractSchedule, extract_texture_image);
         render_app.insert_resource(RenderWorldSender(s));
 
-        // Add a render graph node to get the GPU texture
-        let mut graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        graph.add_node(TextureGetterNode, TextureGetterNodeDriver);
-        graph.add_node_edge(bevy_render::graph::CameraDriverLabel, TextureGetterNode);
+        // Add a system to get the GPU texture after assets are prepared
+        render_app.add_systems(
+            Render,
+            texture_getter_system.after(RenderSystems::PrepareAssets),
+        );
     }
 }

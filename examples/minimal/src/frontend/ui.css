@@ -1,5 +1,5 @@
 * {
-    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "JetBrains Mono Medium", "JetBrains Mono", monospace;
 }
 
 html,
@@ -13,7 +13,6 @@ body,
 }
 
 #panel {
-    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #C0C0C033;
     display: flex;
     flex-direction: column;
@@ -23,7 +22,6 @@ body,
 }
 
 #title {
-    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #FFFFFF;
     text-align: center;
     padding-top: 10px;
@@ -35,7 +33,6 @@ body,
 }
 
 #buttons {
-    font-family: "DejaVu Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -98,38 +95,48 @@ body,
 #rotation-display {
     display: flex;
     flex-direction: row;
-    align-items: start;
-    padding: 20px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 20px;
     gap: 10px;
 }
 
+.section-header {
+    color: #888;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 12px 20px 4px 20px;
+    border-bottom: 1px solid #555;
+}
 
 .bevy-display {
     background-color: #444;
     border: 2px solid #666;
     border-radius: 4px;
     color: #ffffff;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
-    text-align: center;
+    text-align: left;
     padding: 4px 10px;
-    min-width: 200px;
+    min-width: 0;
     display: inline-block;
     vertical-align: middle;
     line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: pre;
     max-width: 100%;
     box-sizing: border-box;
-    top: -8px;
+    cursor: default;
 }
 
 input[type="number"] {
     width: 5em;
     height: 1.5em;
     line-height: 1.5em;
-    background: #444;
+    background: #555;
     border: 2px solid #666;
     border-radius: 4px;
     color: #ffffff;
@@ -137,12 +144,24 @@ input[type="number"] {
     font-weight: bold;
     text-align: center;
     padding: 0 10px;
-    outline: none;
+    outline: 2px solid transparent;
     margin-left: 1%;
-    top: -4px
+    top: -4px;
+    cursor: text;
+    transition: border-color 0.15s ease, outline-color 0.15s ease;
+}
+
+input[type="number"]:hover {
+    border-color: #999;
+}
+
+input[type="number"]:focus {
+    outline-color: #4a9eff;
+    border-color: #4a9eff;
 }
 
 #footer {
+    font-family: inherit;
     margin-top: auto;
     margin-left: 10px;
 }

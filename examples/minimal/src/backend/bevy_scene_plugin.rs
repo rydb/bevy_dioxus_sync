@@ -25,7 +25,6 @@ pub struct BevyScenePlugin;
 
 impl Plugin for BevyScenePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0)));
         app.insert_resource(CubeTranslationSpeed::default());
         app.insert_resource(FPS(0.0));
         app.insert_resource(CubeRotationSpeed::default());
@@ -56,13 +55,13 @@ fn setup(
         DirectionalLight {
             color: bevy::color::Color::WHITE,
             illuminance: 10000.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_xyz(1.0, 1.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    commands.insert_resource(AmbientLight {
+    commands.insert_resource(GlobalAmbientLight {
         color: bevy::color::Color::WHITE,
         brightness: 100.0,
         affects_lightmapped_meshes: true,

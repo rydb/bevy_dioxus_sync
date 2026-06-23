@@ -53,6 +53,8 @@ pub(crate) fn handle_keyboard_messages(
                 ButtonState::Pressed => KeyState::Pressed,
                 ButtonState::Released => KeyState::Released,
             };
+            // Due to bevy/blitz smol str version mis-match, SmolStr must be converted to string, then back into SmolStr
+            let event_text = event.text.as_ref().map(|n| n.to_string().into());
             let blitz_key_event = BlitzKeyEvent {
                 key: bevy_key_to_blitz_key(&event.logical_key),
                 code: bevy_key_code_to_blitz_code(&event.key_code),
@@ -61,7 +63,7 @@ pub(crate) fn handle_keyboard_messages(
                 is_auto_repeating: event.repeat,
                 is_composing: false,
                 state: key_state,
-                text: event.text.clone(),
+                text: event_text,
             };
 
             match key_state {
@@ -73,6 +75,7 @@ pub(crate) fn handle_keyboard_messages(
                 }
             }
             let flip_catch_events = dioxus_doc
+                .inner.borrow()
                 .hit(last_mouse_state.x, last_mouse_state.y)
                 .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
                 .unwrap_or(false);

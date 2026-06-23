@@ -1,77 +1,51 @@
-struct BevyNetCallback {
-    sender: Sender<DioxusMessage>,
-}
-
 use std::sync::Arc;
 
 use bevy_dioxus_render::{DioxusMessage, HeadElement};
-use blitz_dom::net::Resource as BlitzResource;
-use blitz_traits::net::{NetCallback, NetHandler, NetProvider};
+use bevy_dioxus_tracing::warn;
+use blitz_traits::net::{NetHandler, NetProvider};
 use bytes::Bytes;
 use crossbeam_channel::Sender;
 use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
 
-impl NetCallback<BlitzResource> for BevyNetCallback {
-    fn call(&self, _doc_id: usize, result: core::result::Result<BlitzResource, Option<String>>) {
-        if let Ok(res) = result {
-            self.sender.send(DioxusMessage::ResourceLoad(res)).unwrap();
-        }
-    }
-}
+pub struct BevyNetProvider;
 
-pub struct BevyNetProvider {
-    pub(crate) callback: Arc<dyn NetCallback<BlitzResource> + 'static>,
-}
 impl BevyNetProvider {
-    pub(crate) fn shared(sender: Sender<DioxusMessage>) -> Arc<dyn NetProvider<BlitzResource>> {
-        Arc::new(Self::new(sender)) as _
-    }
-
-    fn new(sender: Sender<DioxusMessage>) -> Self {
-        Self {
-            callback: Arc::new(BevyNetCallback { sender }) as _,
-        }
+    pub(crate) fn shared() -> Arc<dyn NetProvider> {
+        Arc::new(Self) as _
     }
 }
 
-impl NetProvider<BlitzResource> for BevyNetProvider {
+impl NetProvider for BevyNetProvider {
     fn fetch(
         &self,
-        doc_id: usize,
+        _doc_id: usize,
         request: blitz_traits::net::Request,
-        handler: Box<dyn NetHandler<BlitzResource>>,
+        handler: Box<dyn NetHandler>,
     ) {
         match request.url.scheme() {
             // Load Dioxus assets
             "dioxus" => match dioxus_asset_resolver::native::serve_asset(request.url.path()) {
-                Ok(res) => handler.bytes(doc_id, res.into_body().into(), self.callback.clone()),
-                Err(_) => {
-                    self.callback.call(
-                        doc_id,
-                        Err(Some(String::from("Error loading Dioxus asset"))),
-                    );
+                Ok(res) => handler.bytes(request.url.to_string(), res.into_body().into()),
+                Err(err) => {
+                    warn!("{err}");
+
                 }
             },
             // Decode data URIs
             "data" => {
                 let Ok(data_url) = DataUrl::process(request.url.as_str()) else {
-                    self.callback
-                        .call(doc_id, Err(Some(String::from("Failed to parse data uri"))));
                     return;
                 };
                 let Ok(decoded) = data_url.decode_to_vec() else {
-                    self.callback
-                        .call(doc_id, Err(Some(String::from("Failed to decode data uri"))));
                     return;
                 };
                 let bytes = Bytes::from(decoded.0);
-                handler.bytes(doc_id, bytes, Arc::clone(&self.callback));
+                handler.bytes(request.url.to_string(), bytes);
             }
             // TODO: support http requests
             _ => {
-                self.callback
-                    .call(doc_id, Err(Some(String::from("UnsupportedScheme"))));
+                warn!("unsupported scheme detected for {_doc_id} for request {:#?}", request);
             }
         }
     }

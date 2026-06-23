@@ -16,7 +16,7 @@ pub struct FPS(pub f32);
 
 impl Display for FPS {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{:.2}", self.0)
     }
 }
 

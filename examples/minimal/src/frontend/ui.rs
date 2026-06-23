@@ -35,9 +35,12 @@ pub fn app_ui() -> Element {
         With<DynamicCube>,
     >();
 
-    let cube_transform_str = use_memo(move || {
-        cube.read_ok(|n| (*n.1.read()).translation.to_string())
-            .unwrap_or_else(|err| err.into())
+    let cube_translation_str = use_memo(move || {
+        cube.read_ok(|n| {
+            let t = &n.1.read().translation;
+            format!("{:>5.2} {:>5.2} {:>5.2}", t.x, t.y, t.z)
+        })
+        .unwrap_or_else(|err| err.into())
     });
 
     let cube_color_handle = use_memo(move || {
@@ -52,20 +55,35 @@ pub fn app_ui() -> Element {
     // Local signals prevent cursor jumping: the value prop is decoupled
     // from the bevy resource, so re-renders don't re-push the same value
     // through blitz-dom's set_text (which would reset cursor position).
-    let mut translation_speed_display = use_signal(|| {
-        cube_translation_speed
-            .read_ok(|n| n.0.to_string())
-            .unwrap_or_else(|_| "0.0".to_string())
+    let mut translation_speed_str = use_signal(|| "0.0".to_string());
+    let mut rotation_speed_str = use_signal(|| "0.0".to_string());
+    let mut translation_edited = use_signal(|| false);
+    let mut rotation_edited = use_signal(|| false);
+
+    // copy the bevy resource value into the local display
+    // signal when it first becomes available. After the user starts
+    // editing, the effect stays dormant to avoid overwriting input.
+    use_effect(move || {
+        if *translation_edited.read() {
+            return;
+        }
+        if let Ok(val) = cube_translation_speed.read_ok(|n| n.0.to_string()) {
+            translation_speed_str.set(val);
+        }
     });
-    let mut rotation_speed_display = use_signal(|| {
-        cube_rotation_speed
-            .read_ok(|n| n.0.to_string())
-            .unwrap_or_else(|_| "0.0".to_string())
+    use_effect(move || {
+        if *rotation_edited.read() {
+            return;
+        }
+        if let Ok(val) = cube_rotation_speed.read_ok(|n| n.0.to_string()) {
+            rotation_speed_str.set(val);
+        }
     });
 
     let set_rotation_speed = move |evt: Event<FormData>| {
         let val = evt.value();
-        rotation_speed_display.set(val.clone());
+        rotation_edited.set(true);
+        rotation_speed_str.set(val.clone());
         if let Ok(speed) = val.parse::<f32>() {
             cube_rotation_speed.mutate(move |n| *n = CubeRotationSpeed(speed));
         }
@@ -73,7 +91,8 @@ pub fn app_ui() -> Element {
 
     let set_translation_speed = move |evt: Event<FormData>| {
         let val = evt.value();
-        translation_speed_display.set(val.clone());
+        translation_edited.set(true);
+        translation_speed_str.set(val.clone());
         if let Ok(speed) = val.parse::<f32>() {
             cube_translation_speed.mutate(move |n| *n = CubeTranslationSpeed(speed));
         }
@@ -133,16 +152,24 @@ pub fn app_ui() -> Element {
                 }
             }
             div {
+                class: "section-header",
+                "Status"
+            }
+            div {
                 id: "rotation-display",
                 label {
-                    {"Cube Rotation: ".to_string()}
+                    {"Cube Position: ".to_string()}
                 }
                 label {
                     class: "bevy-display",
                     {
-                        {cube_transform_str}
+                        {cube_translation_str}
                     }
                 }
+            }
+            div {
+                class: "section-header",
+                "Controls"
             }
             div {
                 id: "translation-speed-control",
@@ -152,7 +179,7 @@ pub fn app_ui() -> Element {
                     min: "0.0",
                     max: "10.0",
                     step: "0.1",
-                    value: translation_speed_display,
+                    value: translation_speed_str,
                     oninput: set_translation_speed,
                 }
             }
@@ -164,7 +191,7 @@ pub fn app_ui() -> Element {
                     min: "0.0",
                     max: "10.0",
                     step: "0.1",
-                    value: rotation_speed_display,
+                    value: rotation_speed_str,
                     oninput: set_rotation_speed,
                 }
             }

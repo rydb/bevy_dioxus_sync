@@ -30,7 +30,7 @@ pub(crate) fn handle_window_resize(
 
         for (_, dioxus_doc) in &mut dioxus_docs.0 {
             // Update the dioxus viewport
-            dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
+            dioxus_doc.inner.borrow_mut().set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
         }
 
         // Create a new texture with the new size

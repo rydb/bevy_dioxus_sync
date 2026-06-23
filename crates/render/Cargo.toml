@@ -36,7 +36,7 @@ blitz-paint = {workspace = true}
 blitz-traits = {workspace = true}
 vello = {workspace = true}
 anyrender_vello = {workspace = true}
-dioxus-native = {workspace = true}
+# dioxus-native = {workspace = true}
 dioxus-devtools = {workspace = true}
 
 bevy_dioxus_interop = {workspace = true}
