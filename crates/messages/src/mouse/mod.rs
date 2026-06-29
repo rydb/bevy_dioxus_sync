@@ -33,8 +33,8 @@ pub(crate) fn handle_mouse_messages(
     for cursor_event in cursor_moved.read() {
         mouse_state.x = cursor_event.position.x;
         mouse_state.y = cursor_event.position.y;
-        for (_entiy, dioxus_doc) in &mut dioxus_docs.0 {
-            dioxus_doc.handle_ui_event(UiEvent::PointerMove(BlitzPointerEvent {
+        for (e, info) in &mut dioxus_docs.0 {
+            info.document.handle_ui_event(UiEvent::PointerMove(BlitzPointerEvent {
                 id: BlitzPointerId::Mouse,
                 is_primary: true,
                 coords: PointerCoords {
@@ -57,7 +57,7 @@ pub(crate) fn handle_mouse_messages(
         .get_cursor()
         .read(&mouse_button_input_events)
     {
-        for (_entity, dioxus_doc) in &mut dioxus_docs.0 {
+        for (_entity, info) in &mut dioxus_docs.0 {
             let button_blitz = match event.button {
                 MouseButton::Left => MouseEventButton::Main,
                 MouseButton::Right => MouseEventButton::Secondary,
@@ -86,17 +86,17 @@ pub(crate) fn handle_mouse_messages(
             match event.state {
                 ButtonState::Pressed => {
                     mouse_state.buttons |= buttons_blitz;
-                    dioxus_doc.handle_ui_event(UiEvent::PointerDown(pointer_event));
+                    info.document.handle_ui_event(UiEvent::PointerDown(pointer_event));
                 }
                 ButtonState::Released => {
                     mouse_state.buttons &= !buttons_blitz;
-                    dioxus_doc.handle_ui_event(UiEvent::PointerUp(pointer_event));
+                    info.document.handle_ui_event(UiEvent::PointerUp(pointer_event));
                 }
             }
-            let flip_catch_events = dioxus_doc
+            let flip_catch_events = info.document
                 .inner.borrow()
                 .hit(mouse_state.x, mouse_state.y)
-                .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
+                .map(|hit| does_catch_events(&info.document, hit.node_id))
                 .unwrap_or(false);
 
             if flip_catch_events {

@@ -24,6 +24,7 @@ bevy_tasks = {workspace = true}
 bevy_utils = {workspace = true}
 bevy_math = {workspace = true}
 bevy_derive = {workspace = true}
+bevy_window = {workspace = true}
 bevy_asset = {workspace = true}
 bevy_image = {workspace = true}
 wgpu-types = {workspace = true}

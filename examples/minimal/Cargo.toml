@@ -20,6 +20,10 @@ bevy_transform = {workspace = true}
 bevy_derive = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
+bevy_dioxus_render = {workspace = true}
+blitz-dom = {workspace = true}
+dioxus-core = {workspace = true}
+dioxus-native = {workspace = true}
 dioxus_bevy_signals = {workspace = true, features = ["trace"]}
 
 dioxus = {workspace = true, features = ["html", "signals", "hooks", "macro", "asset", "document", "launch", "devtools"]}

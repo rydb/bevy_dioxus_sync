@@ -4,15 +4,14 @@ use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_math::prelude::*;
 use bevy_transform::components::Transform;
-use bevy_window::WindowResized;
+use bevy_window::{Window, WindowResized};
 
-use bevy_dioxus_render::{DioxusUiQuad, TextureImage, create_ui_texture};
+use bevy_dioxus_render::{DioxusUiQuad, create_ui_texture};
 
 pub(crate) fn handle_window_resize(
     mut resize_events: MessageReader<WindowResized>,
-    mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
-    mut quad_query: Query<&mut Transform, With<DioxusUiQuad>>,
+    mut quad_query: Query<(&mut Transform, &mut DioxusUiQuad), With<Window>>,
 ) {
     // Process only the last resize event per frame to prevent texture
     // thrashing from starving the GPU pipeline during live resize.
@@ -30,12 +29,10 @@ pub(crate) fn handle_window_resize(
 
         // Scale the quad to fill the new window dimensions immediately
         // so the old texture stretches to fill rather than leaving gaps.
-        if let Ok(mut trans) = quad_query.single_mut() {
+        for (mut trans, mut quad) in quad_query.iter_mut() {
             *trans = Transform::from_scale(Vec3::new(width as f32, height as f32, 0.0));
+            quad.handle = Some(new_handle.clone());
         }
 
-        // Old texture stays in Assets to keep cached texture views valid
-        // until the render world sends back the replacement GPU texture.
-        commands.insert_resource(TextureImage(new_handle));
     }
 }

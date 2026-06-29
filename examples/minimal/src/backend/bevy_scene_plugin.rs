@@ -1,6 +1,5 @@
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
-
 use crate::backend::*;
 
 #[derive(Component)]
@@ -21,6 +20,10 @@ impl Default for OrbitCamera {
         }
     }
 }
+
+#[derive(Component)]
+pub struct Signpost;
+
 pub struct BevyScenePlugin;
 
 impl Plugin for BevyScenePlugin {
@@ -28,17 +31,100 @@ impl Plugin for BevyScenePlugin {
         app.insert_resource(CubeTranslationSpeed::default());
         app.insert_resource(FPS(0.0));
         app.insert_resource(CubeRotationSpeed::default());
-        app.add_systems(Startup, setup);
+        app.insert_resource(SignDistance::default());
+        app.add_systems(Startup, (setup_scene, setup_sign).chain());
         app.add_systems(Update, (sync_with_ui, animate, orbit_camera_system));
     }
 }
 
-fn setup(
+// fn setup_sign_document(
+//     mut commands: Commands,
+//     mut documents: NonSendMut<DioxusDocuments>,
+// ) {
+//     let sign_element = SignUi.element();
+//     let sign_vdom = VirtualDom::new_with_props(
+//         move |_: ()| sign_element.clone(),
+//         (),
+//     );
+
+//     let mut sign_doc = DioxusDocument::new(
+//         sign_vdom,
+//         DocumentConfig {
+//             ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
+//             ..default()
+//         },
+//     );
+//     sign_doc.initial_build();
+
+//     let sign_entity = commands.spawn((
+//         DioxusUiQuad {
+//             handle: None,
+//             width: 512,
+//             height: 128,
+//         },
+//     )).id();
+
+//     documents.0.insert(sign_entity, sign_doc);
+// }
+
+fn setup_sign(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    println!("run setup!");
+    // Platform
+    commands.spawn((
+        // Mesh3d(meshes.add(Cuboid::new(2.0, 0.2, 1.0))),
+        Mesh3d(meshes.add(Plane3d::new(Vec3::new(0.0, 1.0, 0.0), Vec2::new(2.0, 2.0)))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::Srgba(bevy::color::Srgba::new(0.3, 0.3, 0.35, 1.0)),
+            ..default()
+        })),
+        Transform::from_xyz(3.0, -0.9, -1.0),
+    ));
+
+    // Sign
+    commands.spawn(
+        Signpost,
+    ).with_children(|parent| {
+        // Stem
+        parent.spawn((
+            Mesh3d(meshes.add(Cuboid::new(0.15, 1.2, 0.15))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::Srgba(bevy::color::Srgba::new(0.4, 0.35, 0.3, 1.0)),
+                ..default()
+            })),
+            Transform::from_xyz(3.0, -0.2, -1.0),
+        ));
+        // Body
+        parent.spawn((
+            Mesh3d(meshes.add(Cuboid::new(1.4, 0.5, 0.08))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::Srgba(bevy::color::Srgba::new(0.25, 0.25, 0.3, 1.0)),
+                ..default()
+            })),
+            Transform::from_xyz(3.0, 0.45, -1.0),
+        ));
+        // // Front
+        // parent.spawn((       
+        //     Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
+        //     MeshMaterial3d(materials.add(StandardMaterial {
+        //         base_color_texture: None,
+        //         unlit: true,
+        //         alpha_mode: AlphaMode::Blend,
+        //         ..default()
+        //     })),
+        //     Transform::from_xyz(3.0, 0.45, -0.96),
+        // ));
+    });
+}
+
+fn setup_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Dynamic cube
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -47,13 +133,14 @@ fn setup(
             perceptual_roughness: 0.5,
             ..default()
         })),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Transform::from_xyz(-0.3, -0.3, 0.0),
         DynamicCube,
     ));
 
+    // Light
     commands.spawn((
         DirectionalLight {
-            color: bevy::color::Color::WHITE,
+            color: Color::WHITE,
             illuminance: 10000.0,
             shadow_maps_enabled: false,
             ..default()
@@ -62,19 +149,40 @@ fn setup(
     ));
 
     commands.insert_resource(GlobalAmbientLight {
-        color: bevy::color::Color::WHITE,
+        color: Color::WHITE,
         brightness: 100.0,
         affects_lightmapped_meshes: true,
     });
-    //TODO: add this back in when bevy_dioxus_panels is implemented, for now, panel is spawned through plugin instead
-    // commands.spawn(DioxusPanel::new(AppUi {}));
+
+    // Main camera
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 0.0, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
+        Transform::from_xyz(0.0, 0.5, 5.0).looking_at(Vec3::new(-0.3, -0.1, 0.0), Vec3::Y),
         Name::new("MainCamera"),
         OrbitCamera::default(),
     ));
 }
+
+// /// Copies the sign entity's DioxusUiQuad texture handle into the SignFaceQuad's
+// /// StandardMaterial so the DOM-rendered texture appears on the 3D sign face.
+// fn sync_sign_material(
+//     sign_query: Query<&DioxusUiQuad, Without<SignFaceQuad>>,
+//     mut face_query: Query<&mut MeshMaterial3d<StandardMaterial>, With<SignFaceQuad>>,
+//     mut materials: ResMut<Assets<StandardMaterial>>,
+// ) {
+//     // Collect the sign handle first to avoid nested borrow issues.
+//     let sign_handle = sign_query.iter().find_map(|q| q.handle.clone());
+//     let Some(handle) = sign_handle else {
+//         return;
+//     };
+
+//     for mut face_mat in face_query.iter_mut() {
+//         let current = materials.get(&face_mat.0).map(|m| m.base_color_texture.clone()).flatten();
+//         if current.as_ref() != Some(&handle) {
+//             materials.get_mut(&mut face_mat.0).unwrap().base_color_texture = Some(handle.clone());
+//         }
+//     }
+// }
 
 fn sync_with_ui(mut fps: ResMut<FPS>, time: Res<Time>) {
     let new_fps = 1000.0 / time.delta().as_millis() as f32;
@@ -86,10 +194,12 @@ fn animate(
     mut cube_query: Query<&mut Transform, With<DynamicCube>>,
     translation_speed: Res<CubeTranslationSpeed>,
     rotation_speed: Res<CubeRotationSpeed>,
+    sign_distance: Res<SignDistance>,
 ) {
     for mut transform in cube_query.iter_mut() {
         transform.rotation = Quat::from_rotation_y(time.elapsed_secs() * rotation_speed.0);
-        transform.translation.x = (time.elapsed_secs() * translation_speed.0).sin() * 0.5;
+        // Cube oscillates on x; offset by SignDistance so it moves toward/away from the signpost.
+        transform.translation.x = (time.elapsed_secs() * translation_speed.0).sin() * (sign_distance.0 * 0.5);
     }
 }
 
@@ -99,18 +209,14 @@ fn orbit_camera_system(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
 ) {
     for (mut transform, mut orbit_camera) in camera_query.iter_mut() {
-        // Handle mouse input for camera rotation
         if mouse_button_input.pressed(MouseButton::Left) {
             for mouse_motion in mouse_motion_events.read() {
                 orbit_camera.yaw -= mouse_motion.delta.x * orbit_camera.sensitivity;
                 orbit_camera.pitch -= mouse_motion.delta.y * orbit_camera.sensitivity;
-
-                // Clamp pitch to prevent camera flipping
                 orbit_camera.pitch = orbit_camera.pitch.clamp(-1.5, 1.5);
             }
         }
 
-        // Calculate camera position based on spherical coordinates
         let yaw_quat = Quat::from_rotation_y(orbit_camera.yaw);
         let pitch_quat = Quat::from_rotation_x(orbit_camera.pitch);
 

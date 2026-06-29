@@ -46,3 +46,18 @@ impl Default for CubeRotationSpeed {
         Self(2.0)
     }
 }
+
+#[derive(Resource, Clone, Debug, Deref, DerefMut)]
+pub struct SignDistance(pub f32);
+
+impl Display for SignDistance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Default for SignDistance {
+    fn default() -> Self {
+        Self(2.0)
+    }
+}

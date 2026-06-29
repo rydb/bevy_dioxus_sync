@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
-use bevy_dioxus_render::{DioxusMessage, HeadElement};
+use bevy_dioxus_interop::HeadElement;
 use bevy_dioxus_tracing::warn;
 use blitz_traits::net::{NetHandler, NetProvider};
 use bytes::Bytes;
 use crossbeam_channel::Sender;
 use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
+
+use crate::{DioxusMessage};
 
 pub struct BevyNetProvider;
 
@@ -27,8 +29,8 @@ impl NetProvider for BevyNetProvider {
             // Load Dioxus assets
             "dioxus" => match dioxus_asset_resolver::native::serve_asset(request.url.path()) {
                 Ok(res) => handler.bytes(request.url.to_string(), res.into_body().into()),
-                Err(err) => {
-                    warn!("{err}");
+                Err(_err) => {
+                    warn!("{_err}");
 
                 }
             },

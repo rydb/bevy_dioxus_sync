@@ -2,10 +2,10 @@
 
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
-use bevy_dioxus_sync::{panels::DioxusPanel, plugins::DioxusPlugin};
+use bevy_dioxus_sync::{plugins::DioxusPlugin};
 use tracing_subscriber::{filter::filter_fn, fmt, prelude::*, registry};
 
-use crate::{backend::bevy_scene_plugin::BevyScenePlugin, frontend::AppUi};
+use crate::{backend::bevy_scene_plugin::BevyScenePlugin, frontend::{AppUi, app_ui}};
 
 pub mod backend;
 pub mod frontend;
@@ -24,7 +24,7 @@ pub fn main() {
         .add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
         .add_plugins(DioxusPlugin {
             bevy_info_refresh_fps: 30,
-            main_window_ui: Some(DioxusPanel::new(AppUi {})),
+            main_window_ui: Some(app_ui),
         })
         .add_plugins(BevyScenePlugin)
         .run();

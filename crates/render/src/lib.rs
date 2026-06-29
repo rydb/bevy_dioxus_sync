@@ -1,22 +1,26 @@
+use std::collections::{HashMap};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Instant;
 
 use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
-use bevy_camera::{Camera, Camera2d, ClearColorConfig};
+use bevy_color::Color;
 use bevy_derive::Deref;
-use bevy_dioxus_interop::DioxusDocuments;
-use bevy_dioxus_tracing::debug;
+use bevy_dioxus_interop::{DioxusDocuments, DioxusMessage};
+use bevy_dioxus_tracing::{debug, warn};
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
+use bevy_material::AlphaMode;
 use bevy_math::prelude::*;
-use bevy_mesh::{Mesh, Mesh2d};
+use bevy_mesh::{Mesh, Mesh3d, VertexAttributeValues};
+use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_render::{
     Extract,
     render_asset::RenderAssets,
     renderer::{RenderDevice, RenderQueue},
     texture::GpuImage,
 };
-use bevy_sprite_render::{ColorMaterial, MeshMaterial2d};
 use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
@@ -24,26 +28,157 @@ use blitz_dom::Document;
 use blitz_paint::paint_scene;
 use blitz_traits::shell::{ColorScheme, Viewport};
 use crossbeam_channel::{Receiver, Sender};
+use dioxus_core::Element;
+use dioxus_core_macro::{component, rsx};
 use dioxus_devtools::DevserverMsg;
+use dioxus_hooks::{use_context, use_future, use_signal};
+use dioxus_signals::{ReadableExt, WritableExt};
 use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
+
+use crate::panels::{DioxusPanels, DioxusPanelsReceiver};
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 
-/// placeholder const for dioxus animations
-/// TODO: implement this
+/// Placeholder const for dioxus animations.
+/// TODO: implement this.
 pub const ANIMATION_TIME_PLACEHOLDER: f32 = 0.0;
 pub mod plugins;
+pub mod panels;
+pub(crate) mod net_provider;
 
-#[derive(Resource)]
-pub struct TextureImage(pub Handle<Image>);
+/// Extraction-side mirror of texture handles, keyed by the quad entity.
+#[derive(Resource, Default)]
+struct ExtractedTextureImages(pub HashMap<Entity, Handle<Image>>);
 
-#[derive(Resource)]
-pub struct ExtractedTextureImage(pub Option<Handle<Image>>);
 
+/// root ui that all dioxus panels render inside of
+#[component]
+pub fn dioxus_ui() -> Element {
+    let panel_receiver = use_context::<DioxusPanelsReceiver>();
+    let mut panels = use_signal(|| DioxusPanels::default());
+    
+
+    // recieve updates for panels
+    use_future(move || {
+        {
+        let value = panel_receiver.clone();
+        async move {
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+            std::thread::spawn(move || {
+                while let Ok(updated_panels) = value.0.recv() {
+                    if tx.send(updated_panels).is_err() {
+                        break; 
+                    }
+                }
+            });
+
+            loop {
+                tokio::select! {
+                    Some(updated_panels) = rx.recv() => {
+                        *panels.write() = updated_panels;
+                    }
+                }
+            }
+        }
+        }
+    });
+    rsx! {
+        for panel in panels.read().cloned().panels {
+            {panel()}
+        }
+    }
+}
+
+/// Marker for the Camera3d that the dioxus UI should follow.
 #[derive(Component)]
-pub struct DioxusUiQuad;
+pub struct DioxusUiCamera;
+
+/// Marks an entity as a DOM-backed render surface.
+#[derive(Component)]
+#[require(Mesh3d)]
+pub struct DioxusUiQuad {
+    pub handle: Option<Handle<Image>>,
+    /// computed width and height of render surface based on attached bevy mesh
+    pub(crate) computed_wh: Option<Vec2>
+}
+
+impl Default for DioxusUiQuad {
+    fn default() -> Self {
+        Self { handle: None, computed_wh: None }
+    }
+}
+
+/// Recompute dioxus ui quad surface whenever the associated mesh for it edited
+fn recompute_dioxus_ui_quad_surface(
+    surfaces: Query<(&Mesh3d, &mut DioxusUiQuad), Changed<Mesh3d>>,
+    meshes: Res<Assets<Mesh>>,
+) {
+    for (surface , mut ui) in surfaces {
+        let id = surface.id();
+        let Some(surface) = meshes.get(id) else {
+            warn!("surface id not valid for? {}", id);
+            continue;
+        };
+
+        let Some(VertexAttributeValues::Float32x3(positions)) = surface.attribute(Mesh::ATTRIBUTE_POSITION) else {
+            warn!("surface doesn't have Float32x3 positions? {}", id);
+            continue;
+        };
+
+        let Some(points) = positions.get(0..4) else {
+            warn!("shape does not have 4 points. Point total for {}: {}", id, positions.len());
+            continue;
+        };
+
+        if points.len() > 4 {
+            warn!("quads are computed from rectangles, not other shapes. Exiting early for performance. Expected 4 points for: {}, got: {}", id, positions.len());
+            continue;
+        }
+
+        let first = points[0];
+
+        let mut x_max = first[0];
+        let mut x_min = first[0];
+        let mut y_max = first[1];
+        let mut y_min = first[1];
+
+        for point in points.iter().skip(1) {
+            let x = point[0];
+            let y = point[1];
+            if x > x_max { x_max = x; }
+            if x < x_min { x_min = x; }
+            if y > y_max { y_max = y; }
+            if y < y_min { y_min = y; }
+        }
+
+        let width = x_max - x_min;
+        let height = y_max - y_min;
+        ui.computed_wh = Some(Vec2 { x: width, y: height });
+    }
+}
+
+/// recomputes the render surface for blitz after the ui quad has been re-computed 
+fn recompute_blitz_render_surfaces(
+    quads: Query<(Entity, &DioxusUiQuad), Changed<DioxusUiQuad>>,
+    mut dioxus_docs: NonSendMut<DioxusDocuments>
+) {
+    for (entity, quad) in quads {
+        let Some(wh) = quad.computed_wh else {
+            continue;
+        };
+        let Some(doc) = dioxus_docs.0.get_mut(&entity) else {
+            warn!("no doc found for: {}", entity);
+            continue;
+        };
+
+        let mut doc = doc.document.inner.as_ref().borrow_mut();
+        let mut view_port = doc.viewport_mut();
+        view_port.window_size = (wh.x as u32, wh.y as u32) 
+    }
+}
 
 struct RenderTexture {
     pub texture_view: wgpu::TextureView,
@@ -69,257 +204,236 @@ pub fn create_ui_texture(width: u32, height: u32) -> Image {
     image
 }
 
-pub fn extract_texture_image(
+fn extract_texture_images(
     mut commands: Commands,
-    texture_image: Extract<Option<Res<TextureImage>>>,
-    mut last_texture_image: Local<Option<Handle<Image>>>,
-    extracted_image: Option<Res<ExtractedTextureImage>>,
+    quad_query: Extract<Query<(Entity, &DioxusUiQuad)>>,
+    mut last_handles: Local<HashMap<Entity, Handle<Image>>>,
+    extracted_images: Option<Res<ExtractedTextureImages>>,
 ) {
-    if let Some(texture_image) = texture_image.as_ref() {
-        // Check if the render world still has a pending extraction that
-        // texture_getter_system has not yet consumed (GPU image not ready).
-        let prev_still_pending = extracted_image
+    let mut to_extract = HashMap::new();
+
+    for (entity, quad) in &quad_query {
+        let Some(handle) = &quad.handle else {
+            continue;
+        };
+        let prev_still_pending = extracted_images
             .as_ref()
-            .map_or(false, |e| e.0.is_some());
+            .map_or(false, |e| e.0.contains_key(&entity));
+        let handle_changed = last_handles.get(&entity) != Some(handle);
 
-        let handle_changed = last_texture_image.as_ref() != Some(&texture_image.0);
-
-        // If the previous handle still has not been processed async by the GPU,
-        // and it is the same handle, wait instead of overwriting.
         if prev_still_pending && !handle_changed {
-            return;
+            continue;
         }
 
-        commands.insert_resource(ExtractedTextureImage(Some(texture_image.0.clone())));
-        *last_texture_image = Some(texture_image.0.clone());
+        to_extract.insert(entity, handle.clone());
+        last_handles.insert(entity, handle.clone());
+    }
+
+    if !to_extract.is_empty() {
+        commands.insert_resource(ExtractedTextureImages(to_extract));
     }
 }
 
 #[derive(Resource, Deref)]
-struct MainWorldReceiver(Receiver<RenderTexture>);
+struct MainWorldReceiver(Receiver<(Entity, RenderTexture)>);
 
 #[derive(Resource, Deref)]
-struct RenderWorldSender(Sender<RenderTexture>);
+struct RenderWorldSender(Sender<(Entity, RenderTexture)>);
 
-/// System that reads the prepared GpuImage and sends it to the main world.
-/// Runs in the Render schedule after assets are prepared.
 fn texture_getter_system(
     sender: Res<RenderWorldSender>,
-    mut extracted_image: ResMut<ExtractedTextureImage>,
+    mut extracted_images: ResMut<ExtractedTextureImages>,
     gpu_images: Res<RenderAssets<GpuImage>>,
 ) {
-    if let Some(image) = extracted_image.0.as_ref() {
-        if let Some(gpu_image) = gpu_images.get(image) {
-            let _ = sender.send(RenderTexture {
+    let mut processed: Vec<Entity> = Vec::new();
+
+    for (entity, image_handle) in &extracted_images.0 {
+        if let Some(gpu_image) = gpu_images.get(image_handle) {
+            let _ = sender.send((*entity, RenderTexture {
                 texture_view: (*gpu_image.texture_view).clone(),
                 width: gpu_image.texture_descriptor.size.width,
                 height: gpu_image.texture_descriptor.size.height,
-            });
-            // Reset the image so it is not sent again unless it changes.
-            extracted_image.0 = None;
+            }));
+            processed.push(*entity);
         }
+    }
+
+    for entity in processed {
+        extracted_images.0.remove(&entity);
     }
 }
 
 #[derive(Resource)]
 struct AnimationTime(Instant);
 
-pub enum DioxusMessage {
-    Devserver(DevserverMsg),
-    CreateHeadElement(HeadElement),
-    ResourceLoad(blitz_dom::net::Resource),
-}
+/// Flag set by the dioxus waker when a future becomes ready.
+/// Cleared after the document is polled so the next wake can be detected.
+#[derive(Clone, Deref)]
+struct DioxusWakerFlag(Arc<AtomicBool>);
 
-pub struct HeadElement {
-    pub name: String,
-    pub attributes: Vec<(String, String)>,
-    pub contents: Option<String>,
-}
-
-#[derive(Resource, Deref)]
-pub struct DioxusMessages(pub Receiver<DioxusMessage>);
-
-#[allow(clippy::too_many_arguments)]
-fn update_ui(
+/// recieve dioxus messages
+fn recv_dioxus_messages(
     mut dioxus_docs: NonSendMut<DioxusDocuments>,
-    dioxus_messages: Res<DioxusMessages>,
     waker: NonSendMut<std::task::Waker>,
-    vello_renderer: Option<NonSendMut<VelloRenderer>>,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    receiver: Res<MainWorldReceiver>,
-    animation_epoch: Res<AnimationTime>,
-    texture_image: Option<Res<TextureImage>>,
-    images: Res<Assets<Image>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut quad_query: Query<(&mut Transform, &mut MeshMaterial2d<ColorMaterial>), With<DioxusUiQuad>>,
-    mut cached_texture: Local<Option<RenderTexture>>,
 ) {
-    while let Ok(msg) = dioxus_messages.0.try_recv() {
-        match msg {
-            DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
-                dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {
-                    // Apply changes to vdom
-                    for (_, dioxus_doc) in &mut dioxus_docs.0 {
-                        dioxus_devtools::apply_changes(&dioxus_doc.vdom, &hotreload_message);
-
-                        // Reload changed assets
+    for (_,info) in &mut dioxus_docs.0 {
+        while let Ok(msg) = info.messages_recv.try_recv() {
+            match msg {
+                DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
+                    dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {
+                        dioxus_devtools::apply_changes(&info.document.vdom, &hotreload_message);
                         for asset_path in &hotreload_message.assets {
                             if let Some(url) = asset_path.to_str() {
-                                dioxus_doc.inner.borrow_mut().reload_resource_by_href(url);
+                                info.document.inner.borrow_mut().reload_resource_by_href(url);
                             }
                         }
                     }
+                    dioxus_devtools::DevserverMsg::FullReloadStart => {}
+                    _ => {}
+                },
+                DioxusMessage::CreateHeadElement(el) => {
+                    info.document.create_head_element(&el.name, &el.attributes, &el.contents);
+                    info.document.poll(Some(std::task::Context::from_waker(&waker)));
                 }
-                dioxus_devtools::DevserverMsg::FullReloadStart => {}
-                _ => {}
-            },
-            DioxusMessage::CreateHeadElement(el) => {
-                for (_, dioxus_doc) in &mut dioxus_docs.0 {
-                    dioxus_doc.create_head_element(&el.name, &el.attributes, &el.contents);
-                    dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
-                }
-            }
-            DioxusMessage::ResourceLoad(resource) => {
-                for (_, dioxus_doc) in &mut dioxus_docs.0 {
-                    dioxus_doc.inner.borrow_mut().load_resource(blitz_dom::net::ResourceLoadResponse {
+                DioxusMessage::ResourceLoad(resource) => {
+                    info.document.inner.borrow_mut().load_resource(blitz_dom::net::ResourceLoadResponse {
                         request_id: 0,
                         node_id: None,
                         resolved_url: None,
                         result: Ok(resource.clone()),
                     });
                 }
-            }
-        };
-    }
-
-    while let Ok(texture) = receiver.try_recv() {
-        // When the render world sends back a GPU texture whose dimensions
-        // match the current TextureImage, swap the display quad to point
-        // to the new texture. This defers the swap until the texture is
-        // actually ready to be rendered to, avoiding blank frames.
-        if let Some(ti) = texture_image.as_ref() {
-            if let Some(img) = images.get(&ti.0) {
-                let sz = img.texture_descriptor.size;
-                if texture.width == sz.width && texture.height == sz.height {
-                    // Atomically update viewport, quad transform, and material
-                    // so layout, paint area, and display all match.
-                    for (_, dioxus_doc) in &mut dioxus_docs.0 {
-                        dioxus_doc.inner.borrow_mut().set_viewport(
-                            Viewport::new(texture.width, texture.height, SCALE_FACTOR, COLOR_SCHEME),
-                        );
-                    }
-                    if let Ok((mut trans, mut mat)) = quad_query.single_mut() {
-                        *trans = Transform::from_scale(Vec3::new(texture.width as f32, texture.height as f32, 0.0));
-                        materials.get_mut(&mut mat.0).unwrap().texture = Some(ti.0.clone());
-                    }
-                }
-            }
-        }
-        *cached_texture = Some(texture);
-    }
-
-    if let (Some(texture), Some(mut vello_renderer)) = ((*cached_texture).as_ref(), vello_renderer)
-    {
-        for (_, dioxus_doc) in &mut dioxus_docs.0 {
-            // Poll the vdom
-            dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
-
-            // Refresh the document
-            let animation_time = animation_epoch.0.elapsed().as_secs_f64();
-            dioxus_doc.inner.borrow_mut().resolve(animation_time);
-
-            // Create a `vello::Scene` to paint into
-            let mut scene = Scene::new();
-
-            // Paint the document
-            paint_scene(
-                &mut VelloScenePainter::new(&mut scene),
-                &mut *dioxus_doc.inner.borrow_mut(),
-                SCALE_FACTOR as f64,
-                texture.width,
-                texture.height,
-                0,
-                0
-            );
-
-            // Render the `vello::Scene` to the Texture using the `VelloRenderer`
-            vello_renderer
-                .render_to_texture(
-                    render_device.wgpu_device(),
-                    &render_queue.0,
-                    &scene,
-                    &texture.texture_view,
-                    &RenderParams {
-                        base_color: AlphaColor::TRANSPARENT,
-                        width: texture.width,
-                        height: texture.height,
-                        antialiasing_method: vello::AaConfig::Area,
-                    },
-                )
-                .expect("failed to render to texture");
-        }
-    } else {
-        if cached_texture.is_none() {
-            // texture not yet received from render world — normal on first frame
+            };
         }
     }
 }
 
-fn setup_ui(
+fn update_uis(
+    mut dioxus_docs: NonSendMut<DioxusDocuments>,
+    waker: NonSendMut<std::task::Waker>,
+    waker_flag: NonSend<DioxusWakerFlag>,
+    mut vello_renderer: NonSendMut<VelloRenderer>,
+    render_device: Res<RenderDevice>,
+    render_queue: Res<RenderQueue>,
+    receiver: Res<MainWorldReceiver>,
+    animation_epoch: Res<AnimationTime>,
+    images: Res<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut quad_query: Query<(
+        Entity,
+        &mut MeshMaterial3d<StandardMaterial>,
+        &DioxusUiQuad,
+    )>,
+    mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
+) {
+    cached_textures.retain(|entity, _| quad_query.contains(*entity));
+
+    while let Ok((entity, texture)) = receiver.try_recv() {
+        for (quad_entity, mut mat, quad) in quad_query.iter_mut() {
+            if quad_entity != entity {
+                continue;
+            }
+            let Some(handle) = &quad.handle else {
+                continue;
+            };
+            if let Some(img) = images.get(handle) {
+                let sz = img.texture_descriptor.size;
+                if texture.width == sz.width && texture.height == sz.height {
+                    if let Some(info) = dioxus_docs.0.get_mut(&entity) {
+                        info.document.inner.borrow_mut().set_viewport(
+                            Viewport::new(texture.width, texture.height, SCALE_FACTOR, COLOR_SCHEME),
+                        );
+                    }
+                    materials.get_mut(&mut mat.0).unwrap().base_color_texture = Some(handle.clone());
+                }
+            }
+        }
+        cached_textures.insert(entity, texture);
+    }
+
+    for (entity, info) in &mut dioxus_docs.0 {
+        let Some(texture) = cached_textures.get(entity) else {
+            continue;
+        };
+
+        // Poll until no more async work is flagged as ready.
+        loop {
+            waker_flag.0.store(false, Ordering::SeqCst);
+            info.document.poll(Some(std::task::Context::from_waker(&waker)));
+            if !waker_flag.0.load(Ordering::SeqCst) {
+                break;
+            }
+        }
+
+        let animation_time = animation_epoch.0.elapsed().as_secs_f64();
+        info.document.inner.borrow_mut().resolve(animation_time);
+
+        let mut scene = Scene::new();
+        paint_scene(
+            &mut VelloScenePainter::new(&mut scene),
+            &mut *info.document.inner.borrow_mut(),
+            SCALE_FACTOR as f64,
+            texture.width,
+            texture.height,
+            0,
+            0,
+        );
+        vello_renderer
+            .render_to_texture(
+                render_device.wgpu_device(),
+                &render_queue.0,
+                &scene,
+                &texture.texture_view,
+                &RenderParams {
+                    base_color: AlphaColor::TRANSPARENT,
+                    width: texture.width,
+                    height: texture.height,
+                    antialiasing_method: vello::AaConfig::Area,
+                },
+            )
+            .expect("failed to render to texture");
+    }
+}
+
+/// Sets up the UI entity as a 3D quad rendered by the 3D camera.
+fn setup_window_surface(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    mut dioxus_docs: NonSendMut<DioxusDocuments>,
-    mut animation_epoch: ResMut<AnimationTime>,
-    windows: Query<&Window>,
+    windows: Query<(Entity, &Window)>,
 ) {
-    let window = windows
-        .iter()
-        .next()
-        .expect("Should have at least one window");
-    let width = window.physical_width();
-    let height = window.physical_height();
-
-    debug!("Initial window size: {}x{}", width, height);
-
-    // Set the initial viewport
-    animation_epoch.0 = Instant::now();
-
-    if dioxus_docs.0.len() > 1 {
-        panic!(
-            "rework for multi-surface support in process. Fix this function to be integrated into that rework."
-        )
-    }
-    let Some((_, dioxus_doc)) = dioxus_docs.0.iter_mut().next() else {
-        panic!("Can't get first document in dioxus documents. Map empty.")
+    let Some((_e, window)) = windows.iter().next() else {
+        warn!("no window found, skipping dioxus ui initialization");
+        return
     };
-    dioxus_doc.inner.borrow_mut().set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-    dioxus_doc.inner.borrow_mut().resolve(0.0);
+    if windows.iter().len() > 1 {
+        warn!("window setup only implemented for one window. TODO: decide how to resolve multiple windows, for now. Skipping");
+        return;
+    }
 
-    // Create Bevy Image from the texture data
-    let image = create_ui_texture(width, height);
+    let wh = window.physical_size();
+    let image = create_ui_texture(wh.x, wh.y);
     let handle = images.add(image);
 
-    // Create a quad to display the texture
-    commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
-        MeshMaterial2d(materials.add(ColorMaterial {
-            texture: Some(handle.clone()),
+    // Spawn a new entity for the 3D UI quad, positioned in front of the default Camera3d.
+    // Uses StandardMaterial with unlit=true so it ignores scene lighting.
+    let ui_entity = commands.spawn((
+        Mesh3d(meshes.add(Rectangle::new(5.0, 3.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color_texture: Some(handle.clone()),
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
             ..default()
         })),
-        Transform::from_scale(Vec3::new(width as f32, height as f32, 0.0)),
-        DioxusUiQuad,
-    ));
-    commands.spawn((
-        Camera2d,
-        Camera {
-            order: isize::MAX,
-            clear_color: ClearColorConfig::None,
-            ..default()
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        DioxusUiQuad {
+            handle: Some(handle),
+            computed_wh: None,
         },
-    ));
+        DioxusPanels::default(),
+    )).id();
 
-    commands.insert_resource(TextureImage(handle));
+    // Store the entity for DioxusDocuments lookup.
+    // The UI entity is separate from the window entity.
 }

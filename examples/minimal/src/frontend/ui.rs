@@ -1,6 +1,6 @@
 use crate::backend::*;
 use bevy_color::{Color, Srgba};
-use bevy_dioxus_sync::panels::DioxusElementMarker;
+// use bevy_dioxus_sync::panels::DioxusElementMarker;
 use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_transform::components::Transform;
@@ -14,13 +14,74 @@ use dioxus_bevy_signals::{
 #[derive(Debug)]
 pub struct AppUi;
 
-impl DioxusElementMarker for AppUi {
-    fn element(&self) -> Element {
-        app_ui()
-    }
-}
+// impl DioxusElementMarker for AppUi {
+//     fn element(&self) -> Element {
+//         app_ui()
+//     }
+// }
 
 pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
+
+#[component]
+pub fn sign_ui() -> Element { 
+    
+    let sign_distance = use_bevy_resource::<SignDistance>();
+
+    let mut distance_edited = use_signal(|| false);
+    let mut distance_str = use_signal(|| "???".to_string());
+    
+    use_effect(move || {
+        if *distance_edited.read() {
+            return;
+        }
+        if let Ok(val) = sign_distance.read_ok(|n| n.0.to_string()) {
+            distance_str.set(val);
+        }
+    });
+
+
+
+    let set_distance = move |evt: Event<FormData>| {
+        let val = evt.value();
+        distance_edited.set(true);
+        distance_str.set(val.clone());
+        if let Ok(dist) = val.parse::<f32>() {
+            sign_distance.mutate(move |n| *n = SignDistance(dist));
+        }
+    };
+    
+    rsx! {
+        h1 {
+            "Second dom!"
+        }
+        h3 {
+            "distance slider: O-----"
+        }
+        h3 {
+            "Alternate Cube Colors:"
+        }
+        ul {
+            li {
+                "Purple"
+            }
+            li {
+                "Yellow"
+            }
+        }
+        div {
+            id: "distance-control",
+            label { "Sign Distance:" }
+            input {
+                r#type: "number",
+                min: "0.5",
+                max: "5.0",
+                step: "0.1",
+                value: distance_str,
+                oninput: set_distance,
+            }
+        }
+    }
+}
 
 #[component]
 pub fn app_ui() -> Element {
@@ -52,17 +113,12 @@ pub fn app_ui() -> Element {
     let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
 
-    // Local signals prevent cursor jumping: the value prop is decoupled
-    // from the bevy resource, so re-renders don't re-push the same value
-    // through blitz-dom's set_text (which would reset cursor position).
-    let mut translation_speed_str = use_signal(|| "0.0".to_string());
-    let mut rotation_speed_str = use_signal(|| "0.0".to_string());
+    // Local signals prevent cursor jumping.
+    let mut translation_speed_str = use_signal(|| "???".to_string());
+    let mut rotation_speed_str = use_signal(|| "???".to_string());
     let mut translation_edited = use_signal(|| false);
     let mut rotation_edited = use_signal(|| false);
 
-    // copy the bevy resource value into the local display
-    // signal when it first becomes available. After the user starts
-    // editing, the effect stays dormant to avoid overwriting input.
     use_effect(move || {
         if *translation_edited.read() {
             return;
@@ -79,6 +135,7 @@ pub fn app_ui() -> Element {
             rotation_speed_str.set(val);
         }
     });
+
 
     let set_rotation_speed = move |evt: Event<FormData>| {
         let val = evt.value();
@@ -195,6 +252,7 @@ pub fn app_ui() -> Element {
                     oninput: set_rotation_speed,
                 }
             }
+
             div {
                 flex: "0 0 150px",
                 display: "grid",

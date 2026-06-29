@@ -21,23 +21,36 @@ bevy_transform = {workspace = true}
 bevy_ecs = {workspace = true}
 bevy_derive = {workspace = true}
 bevy_math = {workspace = true}
+bevy_color = {workspace = true}
 bevy_sprite_render = {workspace = true}
 bevy_window = {workspace = true}
+bevy_pbr = {workspace = true}
+bevy_material = {workspace = true}
 bevy_camera = {workspace = true}
 bevy_utils = {workspace = true}
 
 rustc-hash = {workspace = true}
 crossbeam-channel = {workspace = true}
-
-
+data-url = {workspace = true}
+bytes = {workspace = true}
+tokio = {workspace = true}
 wgpu = {workspace = true}
+
 blitz-dom = {workspace = true}
 blitz-paint = {workspace = true}
 blitz-traits = {workspace = true}
+parley = {workspace = true}
 vello = {workspace = true}
 anyrender_vello = {workspace = true}
-# dioxus-native = {workspace = true}
+dioxus-core = {workspace = true}
 dioxus-devtools = {workspace = true}
+dioxus-signals = {workspace = true}
+dioxus-hooks = {workspace = true}
+dioxus-core-macro = {workspace = true}
+dioxus-document = {workspace = true}
+dioxus-native = {workspace = true}
+dioxus-asset-resolver = {workspace = true}
 
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_tracing = {workspace = true}
+dioxus_bevy_signals = {workspace = true}

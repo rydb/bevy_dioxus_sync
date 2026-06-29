@@ -25,7 +25,7 @@ pub(crate) fn handle_keyboard_messages(
         .get_cursor()
         .read(&keyboard_input_events)
     {
-        for (_, dioxus_doc) in &mut dioxus_docs.0 {
+        for (_, info) in &mut dioxus_docs.0 {
             let modifier = match event.logical_key {
                 BevyKey::Alt => Some(Modifiers::ALT),
                 BevyKey::AltGraph => Some(Modifiers::ALT_GRAPH),
@@ -68,16 +68,16 @@ pub(crate) fn handle_keyboard_messages(
 
             match key_state {
                 KeyState::Pressed => {
-                    dioxus_doc.handle_ui_event(UiEvent::KeyDown(blitz_key_event));
+                    info.document.handle_ui_event(UiEvent::KeyDown(blitz_key_event));
                 }
                 KeyState::Released => {
-                    dioxus_doc.handle_ui_event(UiEvent::KeyUp(blitz_key_event));
+                    info.document.handle_ui_event(UiEvent::KeyUp(blitz_key_event));
                 }
             }
-            let flip_catch_events = dioxus_doc
+            let flip_catch_events = info.document
                 .inner.borrow()
                 .hit(last_mouse_state.x, last_mouse_state.y)
-                .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
+                .map(|hit| does_catch_events(&info.document, hit.node_id))
                 .unwrap_or(false);
 
             if flip_catch_events {
