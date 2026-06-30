@@ -12,11 +12,15 @@ pub mod frontend;
 
 pub fn main() {
     // Only show dioxus_bevy_signals trace/debug logs, suppress everything else
-    let filter = filter_fn(|metadata| metadata.target().starts_with("dioxus_bevy_signals"));
+    // let filter = filter_fn(|metadata| metadata.target().starts_with("dioxus_bevy_signals"));
+
+    let filter = filter_fn(|metadata| metadata.target().starts_with("bevy_dioxus_render"));
 
     let stdout_layer = fmt::layer().with_writer(std::io::stdout);
 
-    let subscriber = registry().with(filter).with(stdout_layer);
+    let subscriber = registry()
+    .with(filter)
+    .with(stdout_layer);
 
     subscriber.init();
 

@@ -1,6 +1,8 @@
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
+use bevy_dioxus_render::panels::DioxusPanels;
 use crate::backend::*;
+use crate::frontend::sign_ui;
 
 #[derive(Component)]
 pub struct OrbitCamera {
@@ -36,36 +38,6 @@ impl Plugin for BevyScenePlugin {
         app.add_systems(Update, (sync_with_ui, animate, orbit_camera_system));
     }
 }
-
-// fn setup_sign_document(
-//     mut commands: Commands,
-//     mut documents: NonSendMut<DioxusDocuments>,
-// ) {
-//     let sign_element = SignUi.element();
-//     let sign_vdom = VirtualDom::new_with_props(
-//         move |_: ()| sign_element.clone(),
-//         (),
-//     );
-
-//     let mut sign_doc = DioxusDocument::new(
-//         sign_vdom,
-//         DocumentConfig {
-//             ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
-//             ..default()
-//         },
-//     );
-//     sign_doc.initial_build();
-
-//     let sign_entity = commands.spawn((
-//         DioxusUiQuad {
-//             handle: None,
-//             width: 512,
-//             height: 128,
-//         },
-//     )).id();
-
-//     documents.0.insert(sign_entity, sign_doc);
-// }
 
 fn setup_sign(
     mut commands: Commands,
@@ -105,17 +77,18 @@ fn setup_sign(
             })),
             Transform::from_xyz(3.0, 0.45, -1.0),
         ));
-        // // Front
-        // parent.spawn((       
-        //     Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
-        //     MeshMaterial3d(materials.add(StandardMaterial {
-        //         base_color_texture: None,
-        //         unlit: true,
-        //         alpha_mode: AlphaMode::Blend,
-        //         ..default()
-        //     })),
-        //     Transform::from_xyz(3.0, 0.45, -0.96),
-        // ));
+        // Front
+        parent.spawn((       
+            Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color_texture: None,
+                unlit: true,
+                alpha_mode: AlphaMode::Blend,
+                ..default()
+            })),
+            Transform::from_xyz(3.0, 0.45, -0.96),
+            DioxusPanels::new(vec![sign_ui])
+        ));
     });
 }
 

@@ -5,6 +5,9 @@ use std::time::Instant;
 
 use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
+use bevy_camera::visibility::RenderLayers;
+use bevy_camera::{Camera, Camera3d, ClearColorConfig};
+use bevy_camera::{OrthographicProjection, Projection, ScalingMode};
 use bevy_color::Color;
 use bevy_derive::Deref;
 use bevy_dioxus_interop::{DioxusDocuments, DioxusMessage};
@@ -92,9 +95,13 @@ pub fn dioxus_ui() -> Element {
     }
 }
 
-/// Marker for the Camera3d that the dioxus UI should follow.
+/// Marker for the camera that the dioxus UI should follow.
 #[derive(Component)]
 pub struct DioxusUiCamera;
+
+/// Marker for the main window entity that hosts the primary dioxus UI.
+#[derive(Component)]
+pub struct MainDioxusWindow;
 
 /// Marks an entity as a DOM-backed render surface.
 #[derive(Component)]
@@ -113,10 +120,10 @@ impl Default for DioxusUiQuad {
 
 /// Recompute dioxus ui quad surface whenever the associated mesh for it edited
 fn recompute_dioxus_ui_quad_surface(
-    surfaces: Query<(&Mesh3d, &mut DioxusUiQuad), Changed<Mesh3d>>,
+    mut surfaces: Query<(Entity, &Mesh3d, &mut DioxusUiQuad)>,
     meshes: Res<Assets<Mesh>>,
 ) {
-    for (surface , mut ui) in surfaces {
+    for (_e, surface, mut ui) in &mut surfaces {
         let id = surface.id();
         let Some(surface) = meshes.get(id) else {
             warn!("surface id not valid for? {}", id);
@@ -156,7 +163,16 @@ fn recompute_dioxus_ui_quad_surface(
 
         let width = x_max - x_min;
         let height = y_max - y_min;
-        ui.computed_wh = Some(Vec2 { x: width, y: height });
+        let new_wh = Some(Vec2 { x: width, y: height });
+
+        // Only change the quad if the underlying value actually changed
+        if ui.computed_wh == new_wh {
+            continue;
+        }
+
+        ui.computed_wh = new_wh;
+
+        debug!("re-computed wh for {}: {:?}", _e, ui.computed_wh);
     }
 }
 
@@ -165,18 +181,21 @@ fn recompute_blitz_render_surfaces(
     quads: Query<(Entity, &DioxusUiQuad), Changed<DioxusUiQuad>>,
     mut dioxus_docs: NonSendMut<DioxusDocuments>
 ) {
-    for (entity, quad) in quads {
+    for (e, quad) in quads {
         let Some(wh) = quad.computed_wh else {
             continue;
         };
-        let Some(doc) = dioxus_docs.0.get_mut(&entity) else {
-            warn!("no doc found for: {}", entity);
+        let Some(doc) = dioxus_docs.0.get_mut(&e) else {
+            warn!("no doc found for: {}", e);
             continue;
         };
 
         let mut doc = doc.document.inner.as_ref().borrow_mut();
         let mut view_port = doc.viewport_mut();
-        view_port.window_size = (wh.x as u32, wh.y as u32) 
+        view_port.window_size = (wh.x as u32, wh.y as u32);
+
+        debug!("re-computed view-port for {}: {:?}", e, view_port.window_size);
+
     }
 }
 
@@ -395,7 +414,12 @@ fn update_uis(
     }
 }
 
-/// Sets up the UI entity as a 3D quad rendered by the 3D camera.
+const WINDOW_UI_RENDER_LAYER: RenderLayers = RenderLayers::layer(1);
+
+#[derive(Component)]
+pub struct DioxusWindowUiQuad;
+
+/// Set up window surface + camera for window.
 fn setup_window_surface(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -416,10 +440,13 @@ fn setup_window_surface(
     let image = create_ui_texture(wh.x, wh.y);
     let handle = images.add(image);
 
-    // Spawn a new entity for the 3D UI quad, positioned in front of the default Camera3d.
-    // Uses StandardMaterial with unlit=true so it ignores scene lighting.
-    let ui_entity = commands.spawn((
-        Mesh3d(meshes.add(Rectangle::new(5.0, 3.0))),
+    // Size the quad to match the window aspect ratio so the UI fills the view.
+    let aspect = wh.x as f32 / wh.y as f32;
+    let quad_h = 2.0;
+    let quad_w = quad_h * aspect;
+
+    let _ui_entity = commands.spawn((
+        Mesh3d(meshes.add(Rectangle::new(quad_w, quad_h))),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color_texture: Some(handle.clone()),
             unlit: true,
@@ -432,8 +459,23 @@ fn setup_window_surface(
             computed_wh: None,
         },
         DioxusPanels::default(),
+        DioxusWindowUiQuad,
+        WINDOW_UI_RENDER_LAYER,
     )).id();
 
-    // Store the entity for DioxusDocuments lookup.
-    // The UI entity is separate from the window entity.
+    let _camera = commands.spawn((
+        Camera3d::default(),
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical { viewport_height: quad_h },
+            ..OrthographicProjection::default_2d()
+        }),
+        Camera {
+            order: isize::MAX,
+            clear_color: ClearColorConfig::None,
+            ..default()
+        },
+        Transform::from_xyz(0.0, 0.0, 4.0),
+        WINDOW_UI_RENDER_LAYER,
+        DioxusUiCamera,
+    ));
 }

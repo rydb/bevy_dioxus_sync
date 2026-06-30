@@ -14,12 +14,6 @@ use dioxus_bevy_signals::{
 #[derive(Debug)]
 pub struct AppUi;
 
-// impl DioxusElementMarker for AppUi {
-//     fn element(&self) -> Element {
-//         app_ui()
-//     }
-// }
-
 pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 
 #[component]

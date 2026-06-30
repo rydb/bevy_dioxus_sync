@@ -21,6 +21,7 @@ bevy_derive = {workspace = true}
 bevy_dioxus_sync = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_render = {workspace = true}
+bevy_dioxus_tracing = {workspace = true, features = ["trace"]}
 blitz-dom = {workspace = true}
 dioxus-core = {workspace = true}
 dioxus-native = {workspace = true}

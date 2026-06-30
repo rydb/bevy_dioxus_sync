@@ -29,6 +29,17 @@ impl Default for DioxusPanels {
     }
 }
 
+impl DioxusPanels {
+    pub fn new(panels: Vec<fn() -> Element>) -> Self {
+        let mut map = HashSet::default();
+        for panel in panels {
+            map.insert(panel);
+        }
+        Self {
+            panels: map
+        }
+    }
+}
 
 
 #[derive(Component)]
