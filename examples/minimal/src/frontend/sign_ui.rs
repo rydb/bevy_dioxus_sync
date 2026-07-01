@@ -7,12 +7,6 @@ use crate::backend::SignDistance;
 #[derive(Debug)]
 pub struct SignUi;
 
-// impl DioxusElementMarker for SignUi {
-//     fn element(&self) -> Element {
-//         sign_ui()
-//     }
-// }
-
 #[component]
 pub fn sign_ui() -> Element { 
     
@@ -43,7 +37,8 @@ pub fn sign_ui() -> Element {
     
     rsx! {
         div {
-            background_color: "yellow",
+            id: "panel",
+            document::Stylesheet { href: asset!("src/frontend/ui.css") },
             h1 {
                 "Second dom!"
             }
