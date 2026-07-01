@@ -522,6 +522,7 @@ fn handle_window_resize(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut window_quad: Query<(Entity, &mut DioxusUiResolution, &mut DioxusUiQuad), With<DioxusWindowUiQuad>>,
+    mut camera: Query<&mut Transform, With<DioxusUiCamera>>,
     window: Single<&Window>,
     mut last_size: Local<UVec2>,
 ) {
@@ -531,10 +532,12 @@ fn handle_window_resize(
         return;
     }
     if wh != *last_size {
+        let fov = std::f32::consts::PI / 4.0;
         let aspect = wh.x as f32 / wh.y as f32;
-        let visible_height = last_size.y as f32 / RESOLUTION_SCALE;
+        let visible_height = wh.y as f32 / RESOLUTION_SCALE;
         let visible_width = visible_height * aspect;
-        
+        let distance = visible_height / (2.0 * (fov / 2.0).tan());
+
         *last_size = wh;
 
         for (entity, mut resolution, mut quad) in &mut window_quad {
@@ -542,6 +545,10 @@ fn handle_window_resize(
             let new_image = create_ui_texture(wh.x, wh.y);
             quad.handle = Some(images.add(new_image));
             commands.entity(entity).insert(Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))));
+        }
+
+        for mut transform in &mut camera {
+            transform.translation.z = distance;
         }
     }
 }
