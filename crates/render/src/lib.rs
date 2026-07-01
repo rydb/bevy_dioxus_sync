@@ -7,7 +7,6 @@ use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_camera::visibility::RenderLayers;
 use bevy_camera::{Camera, Camera3d, ClearColorConfig};
-use bevy_camera::{OrthographicProjection, Projection, ScalingMode};
 use bevy_color::Color;
 use bevy_derive::Deref;
 use bevy_dioxus_interop::{DioxusDocuments, DioxusMessage};
@@ -43,6 +42,9 @@ use crate::panels::{DioxusPanels, DioxusPanelsReceiver};
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
+
+/// Multiplier applied to mesh dimensions to determine UI render resolution.
+pub const RESOLUTION_SCALE: f32 = 500.0;
 
 /// Placeholder const for dioxus animations.
 /// TODO: implement this.
@@ -161,8 +163,8 @@ fn recompute_dioxus_ui_quad_surface(
             if y < y_min { y_min = y; }
         }
 
-        let width = x_max - x_min;
-        let height = y_max - y_min;
+        let width = (x_max - x_min) * RESOLUTION_SCALE;
+        let height = (y_max - y_min) * RESOLUTION_SCALE;
         let new_wh = Some(Vec2 { x: width, y: height });
 
         // Only change the quad if the underlying value actually changed
@@ -419,12 +421,48 @@ const WINDOW_UI_RENDER_LAYER: RenderLayers = RenderLayers::layer(1);
 #[derive(Component)]
 pub struct DioxusWindowUiQuad;
 
+
+/// initialize textures for quads
+fn initialize_textures_for_quads(
+    quads: Query<(Entity, &mut DioxusUiQuad, Option<&Window>), Without<MeshMaterial3d<StandardMaterial>>>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
+) {
+    for (e, mut quad, window) in quads {
+        // initialize texture after computed_wh is created
+        let Some(wh) = quad.computed_wh else {
+            continue
+        };
+
+        // let aspect_ratio_scale = match window {
+        //     Some(_) => todo!(),
+        //     None => todo!(),
+        // };
+
+        // let image = create_ui_texture(wh.x as u32 * 500 , wh.y as u32 * 500);
+        let image = create_ui_texture(wh.x as u32 , wh.y as u32);
+
+        let handle = images.add(image);
+        commands.entity(e)
+        .insert(MeshMaterial3d(materials.add(StandardMaterial {
+                base_color_texture: Some(handle.clone()),
+                unlit: true,
+                alpha_mode: AlphaMode::Blend,
+                ..default()
+            }))
+        );
+        quad.handle = Some(handle);
+        debug!("Initialized texture for: {}", e);
+    }
+}
+
 /// Set up window surface + camera for window.
 fn setup_window_surface(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    // mut materials: ResMut<Assets<StandardMaterial>>,
+    // mut images: ResMut<Assets<Image>>,
     windows: Query<(Entity, &Window)>,
 ) {
     let Some((_e, window)) = windows.iter().next() else {
@@ -437,25 +475,19 @@ fn setup_window_surface(
     }
 
     let wh = window.physical_size();
-    let image = create_ui_texture(wh.x, wh.y);
-    let handle = images.add(image);
-
-    // Size the quad to match the window aspect ratio so the UI fills the view.
     let aspect = wh.x as f32 / wh.y as f32;
-    let quad_h = 2.0;
-    let quad_w = quad_h * aspect;
+
+    // Derive frustum height so that viewport resolution matches the window:
+    let fov = std::f32::consts::PI / 4.0;
+    let visible_height = wh.y as f32 / RESOLUTION_SCALE;
+    let visible_width = visible_height * aspect;
+    let distance = visible_height / (2.0 * (fov / 2.0).tan());
 
     let _ui_entity = commands.spawn((
-        Mesh3d(meshes.add(Rectangle::new(quad_w, quad_h))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color_texture: Some(handle.clone()),
-            unlit: true,
-            alpha_mode: AlphaMode::Blend,
-            ..default()
-        })),
+        Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))),
         Transform::from_xyz(0.0, 0.0, 0.0),
         DioxusUiQuad {
-            handle: Some(handle),
+            handle: None,
             computed_wh: None,
         },
         DioxusPanels::default(),
@@ -465,16 +497,12 @@ fn setup_window_surface(
 
     let _camera = commands.spawn((
         Camera3d::default(),
-        Projection::Orthographic(OrthographicProjection {
-            scaling_mode: ScalingMode::FixedVertical { viewport_height: quad_h },
-            ..OrthographicProjection::default_2d()
-        }),
         Camera {
             order: isize::MAX,
             clear_color: ClearColorConfig::None,
             ..default()
         },
-        Transform::from_xyz(0.0, 0.0, 4.0),
+        Transform::from_xyz(0.0, 0.0, distance),
         WINDOW_UI_RENDER_LAYER,
         DioxusUiCamera,
     ));

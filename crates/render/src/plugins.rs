@@ -4,7 +4,7 @@ use bevy_app::prelude::*;
 use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
 use vello::RendererOptions;
 
-use crate::{panels::DioxusUiPanelsPlugin, *};
+use crate::{panels::{initialize_vdoms, sync_dioxus_ui_with_panels}, *};
 
 pub struct DioxusRenderPlugin;
 
@@ -15,8 +15,6 @@ impl Plugin for DioxusRenderPlugin {
         let documents = HashMap::new();
         app.insert_non_send(DioxusDocuments(documents));
         
-        app.add_plugins(DioxusUiPanelsPlugin);
-
         // Waker that sets a flag when dioxus futures become ready.
         // The flag is checked in update_uis to re-poll the document.
         struct DioxusWaker {
@@ -38,7 +36,15 @@ impl Plugin for DioxusRenderPlugin {
 
         app
         .add_systems(Startup, setup_window_surface)
-        .add_systems(Update, (recv_dioxus_messages, recompute_dioxus_ui_quad_surface, recompute_blitz_render_surfaces, update_uis).chain());
+        .add_systems(PreUpdate, initialize_vdoms)
+        .add_systems(Update, (
+            sync_dioxus_ui_with_panels,
+            recv_dioxus_messages, 
+            recompute_dioxus_ui_quad_surface, 
+            recompute_blitz_render_surfaces, 
+            initialize_textures_for_quads, 
+            update_uis
+        ).chain());
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer

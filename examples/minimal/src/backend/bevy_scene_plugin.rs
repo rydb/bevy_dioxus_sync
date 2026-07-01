@@ -2,8 +2,7 @@ use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use bevy_dioxus_render::panels::DioxusPanels;
 use crate::backend::*;
-use crate::frontend::sign_ui;
-
+use crate::frontend::sign_ui::sign_ui;
 #[derive(Component)]
 pub struct OrbitCamera {
     pub distance: f32,
@@ -59,33 +58,27 @@ fn setup_sign(
     commands.spawn(
         Signpost,
     ).with_children(|parent| {
-        // Stem
-        parent.spawn((
-            Mesh3d(meshes.add(Cuboid::new(0.15, 1.2, 0.15))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::Srgba(bevy::color::Srgba::new(0.4, 0.35, 0.3, 1.0)),
-                ..default()
-            })),
-            Transform::from_xyz(3.0, -0.2, -1.0),
-        ));
-        // Body
-        parent.spawn((
-            Mesh3d(meshes.add(Cuboid::new(1.4, 0.5, 0.08))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::Srgba(bevy::color::Srgba::new(0.25, 0.25, 0.3, 1.0)),
-                ..default()
-            })),
-            Transform::from_xyz(3.0, 0.45, -1.0),
-        ));
+        // // Stem
+        // parent.spawn((
+        //     Mesh3d(meshes.add(Cuboid::new(0.15, 1.2, 0.15))),
+        //     MeshMaterial3d(materials.add(StandardMaterial {
+        //         base_color: Color::Srgba(bevy::color::Srgba::new(0.4, 0.35, 0.3, 1.0)),
+        //         ..default()
+        //     })),
+        //     Transform::from_xyz(3.0, -0.2, -1.0),
+        // ));
+        // // Body
+        // parent.spawn((
+        //     Mesh3d(meshes.add(Cuboid::new(1.4, 0.5, 0.08))),
+        //     MeshMaterial3d(materials.add(StandardMaterial {
+        //         base_color: Color::Srgba(bevy::color::Srgba::new(0.25, 0.25, 0.3, 1.0)),
+        //         ..default()
+        //     })),
+        //     Transform::from_xyz(3.0, 0.45, -1.0),
+        // ));
         // Front
         parent.spawn((       
             Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color_texture: None,
-                unlit: true,
-                alpha_mode: AlphaMode::Blend,
-                ..default()
-            })),
             Transform::from_xyz(3.0, 0.45, -0.96),
             DioxusPanels::new(vec![sign_ui])
         ));
@@ -135,27 +128,6 @@ fn setup_scene(
         OrbitCamera::default(),
     ));
 }
-
-// /// Copies the sign entity's DioxusUiQuad texture handle into the SignFaceQuad's
-// /// StandardMaterial so the DOM-rendered texture appears on the 3D sign face.
-// fn sync_sign_material(
-//     sign_query: Query<&DioxusUiQuad, Without<SignFaceQuad>>,
-//     mut face_query: Query<&mut MeshMaterial3d<StandardMaterial>, With<SignFaceQuad>>,
-//     mut materials: ResMut<Assets<StandardMaterial>>,
-// ) {
-//     // Collect the sign handle first to avoid nested borrow issues.
-//     let sign_handle = sign_query.iter().find_map(|q| q.handle.clone());
-//     let Some(handle) = sign_handle else {
-//         return;
-//     };
-
-//     for mut face_mat in face_query.iter_mut() {
-//         let current = materials.get(&face_mat.0).map(|m| m.base_color_texture.clone()).flatten();
-//         if current.as_ref() != Some(&handle) {
-//             materials.get_mut(&mut face_mat.0).unwrap().base_color_texture = Some(handle.clone());
-//         }
-//     }
-// }
 
 fn sync_with_ui(mut fps: ResMut<FPS>, time: Res<Time>) {
     let new_fps = 1000.0 / time.delta().as_millis() as f32;

@@ -83,7 +83,7 @@ fn setup_fallback_font() -> FontContext {
 }
 
 /// initialize vdoms for UiQuads without them
-fn initialize_vdoms(
+pub(crate) fn initialize_vdoms(
     quads: Query<(Entity, &DioxusUiQuad), Without<InitializedVdom>>,
     mut documents: NonSendMut<DioxusDocuments>,
     command_queue_sender: Res<CommandQueueSender>,
@@ -151,7 +151,7 @@ fn initialize_vdoms(
 }
 
 /// sync dioxus ui for a window with its latest panels
-fn sync_dioxus_ui_with_panels(
+pub(crate) fn sync_dioxus_ui_with_panels(
     // mut panels: Query<(&DioxusPanels, &DioxusPanelsSender)> Changed<DioxusPanels>>
     panels: Query<(&DioxusPanels, &DioxusPanelsSender), Changed<DioxusPanels>>,
 ) {
@@ -160,14 +160,13 @@ fn sync_dioxus_ui_with_panels(
     }
 }
 
-/// systems for setting up support for panels in dioxus ui
-pub struct DioxusUiPanelsPlugin;
+// /// systems for setting up support for panels in dioxus ui
+// pub struct DioxusUiPanelsPlugin;
 
-impl Plugin for DioxusUiPanelsPlugin {
-    fn build(&self, app: &mut bevy_app::App) {
-        app
-        .add_systems(PreUpdate, initialize_vdoms)
-        .add_systems(Update, sync_dioxus_ui_with_panels)
-        ;
-    }
-}
+// impl Plugin for DioxusUiPanelsPlugin {
+//     fn build(&self, app: &mut bevy_app::App) {
+//         app
+//         .add_systems(PreUpdate, initialize_vdoms)
+//         ;
+//     }
+// }
