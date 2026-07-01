@@ -122,10 +122,10 @@ impl Default for DioxusUiQuad {
 
 /// Recompute dioxus ui quad surface whenever the associated mesh for it edited
 fn recompute_dioxus_ui_quad_surface(
-    mut surfaces: Query<(Entity, &Mesh3d, &mut DioxusUiQuad)>,
+    mut surfaces: Query<(Entity, &Mesh3d, &mut DioxusUiQuad, Option<&DioxusUiResolution>)>,
     meshes: Res<Assets<Mesh>>,
 ) {
-    for (_e, surface, mut ui) in &mut surfaces {
+    for (_e, surface, mut ui, resolution) in &mut surfaces {
         let id = surface.id();
         let Some(surface) = meshes.get(id) else {
             warn!("surface id not valid for? {}", id);
@@ -163,8 +163,11 @@ fn recompute_dioxus_ui_quad_surface(
             if y < y_min { y_min = y; }
         }
 
-        let width = (x_max - x_min) * RESOLUTION_SCALE;
-        let height = (y_max - y_min) * RESOLUTION_SCALE;
+        let (width, height) = if let Some(res) = resolution {
+            (res.0 as f32, res.1 as f32)
+        } else {
+            ((x_max - x_min) * RESOLUTION_SCALE, (y_max - y_min) * RESOLUTION_SCALE)
+        };
         let new_wh = Some(Vec2 { x: width, y: height });
 
         // Only change the quad if the underlying value actually changed
@@ -421,6 +424,10 @@ const WINDOW_UI_RENDER_LAYER: RenderLayers = RenderLayers::layer(1);
 #[derive(Component)]
 pub struct DioxusWindowUiQuad;
 
+/// Sets the logical CSS viewport resolution for a dioxus UI quad..
+#[derive(Component, Clone, Copy)]
+pub struct DioxusUiResolution(pub u32, pub u32);
+
 
 /// initialize textures for quads
 fn initialize_textures_for_quads(
@@ -490,6 +497,7 @@ fn setup_window_surface(
             handle: None,
             computed_wh: None,
         },
+        DioxusUiResolution(wh.x, wh.y),
         DioxusPanels::default(),
         DioxusWindowUiQuad,
         WINDOW_UI_RENDER_LAYER,
@@ -506,4 +514,34 @@ fn setup_window_surface(
         WINDOW_UI_RENDER_LAYER,
         DioxusUiCamera,
     ));
+}
+
+/// Updates the window UI quad and camera when the window is resized.
+fn handle_window_resize(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
+    mut window_quad: Query<(Entity, &mut DioxusUiResolution, &mut DioxusUiQuad), With<DioxusWindowUiQuad>>,
+    window: Single<&Window>,
+    mut last_size: Local<UVec2>,
+) {
+    let wh = window.physical_size();
+    if *last_size == UVec2::ZERO {
+        *last_size = wh;
+        return;
+    }
+    if wh != *last_size {
+        let aspect = wh.x as f32 / wh.y as f32;
+        let visible_height = last_size.y as f32 / RESOLUTION_SCALE;
+        let visible_width = visible_height * aspect;
+        
+        *last_size = wh;
+
+        for (entity, mut resolution, mut quad) in &mut window_quad {
+            *resolution = DioxusUiResolution(wh.x, wh.y);
+            let new_image = create_ui_texture(wh.x, wh.y);
+            quad.handle = Some(images.add(new_image));
+            commands.entity(entity).insert(Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))));
+        }
+    }
 }

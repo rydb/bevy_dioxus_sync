@@ -38,11 +38,12 @@ impl Plugin for DioxusRenderPlugin {
         .add_systems(Startup, setup_window_surface)
         .add_systems(PreUpdate, initialize_vdoms)
         .add_systems(Update, (
+            handle_window_resize,
             sync_dioxus_ui_with_panels,
-            recv_dioxus_messages, 
-            recompute_dioxus_ui_quad_surface, 
-            recompute_blitz_render_surfaces, 
-            initialize_textures_for_quads, 
+            recv_dioxus_messages,
+            recompute_dioxus_ui_quad_surface,
+            recompute_blitz_render_surfaces,
+            initialize_textures_for_quads,
             update_uis
         ).chain());
     }

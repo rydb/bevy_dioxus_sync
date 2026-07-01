@@ -1,5 +1,6 @@
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
+use bevy_dioxus_render::DioxusUiResolution;
 use bevy_dioxus_render::panels::DioxusPanels;
 use crate::backend::*;
 use crate::frontend::sign_ui::sign_ui;
@@ -77,10 +78,11 @@ fn setup_sign(
         //     Transform::from_xyz(3.0, 0.45, -1.0),
         // ));
         // Front
-        parent.spawn((       
+        parent.spawn((
             Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
             Transform::from_xyz(3.0, 0.45, -0.96),
-            DioxusPanels::new(vec![sign_ui])
+            DioxusPanels::new(vec![sign_ui]),
+            DioxusUiResolution(800, 450),
         ));
     });
 }
