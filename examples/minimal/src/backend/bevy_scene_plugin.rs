@@ -56,9 +56,10 @@ fn setup_sign(
     ));
 
     // Sign
-    commands.spawn(
+    commands.spawn((
         Signpost,
-    ).with_children(|parent| {
+        Transform::from_xyz(1.0, -0.5, 2.0),
+    )).with_children(|parent| {
         // // Stem
         // parent.spawn((
         //     Mesh3d(meshes.add(Cuboid::new(0.15, 1.2, 0.15))),
@@ -80,7 +81,7 @@ fn setup_sign(
         // Front
         parent.spawn((
             Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
-            Transform::from_xyz(3.0, 0.45, -0.96),
+            Transform::from_xyz(0.0, 0.45, -0.96),
             DioxusPanels::new(vec![sign_ui]),
             DioxusUiResolution(800, 450),
         ));
@@ -146,7 +147,9 @@ fn animate(
     for mut transform in cube_query.iter_mut() {
         transform.rotation = Quat::from_rotation_y(time.elapsed_secs() * rotation_speed.0);
         // Cube oscillates on x; offset by SignDistance so it moves toward/away from the signpost.
-        transform.translation.x = (time.elapsed_secs() * translation_speed.0).sin() * (sign_distance.0 * 0.5);
+        transform.translation.y = (time.elapsed_secs() * translation_speed.0).sin() * (sign_distance.0 * 0.5);
+
+        transform.translation.z = sign_distance.0;
     }
 }
 

@@ -22,6 +22,7 @@ bevy_dioxus_sync = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_render = {workspace = true}
 bevy_dioxus_tracing = {workspace = true, features = ["trace"]}
+bevy_picking = { workspace = true, features = ["mesh_picking"] }
 blitz-dom = {workspace = true}
 dioxus-core = {workspace = true}
 dioxus-native = {workspace = true}
@@ -29,3 +30,4 @@ dioxus_bevy_signals = {workspace = true, features = ["trace"]}
 
 dioxus = {workspace = true, features = ["html", "signals", "hooks", "macro", "asset", "document", "launch", "devtools"]}
 tracing-subscriber = "0.3"
+tracing-chrome = {workspace = true}

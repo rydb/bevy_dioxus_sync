@@ -1,71 +1,82 @@
+use bevy_color::Color;
+use bevy_ecs::{entity::Entity, query::With};
+use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 // use bevy_dioxus_sync::panels::DioxusElementMarker;
 use dioxus::prelude::*;
-use dioxus_bevy_signals::resource::use_bevy_resource;
+use dioxus_bevy_signals::{asset::{AssetNoneState, use_bevy_asset}, query::{single::use_bevy_single, use_bevy_query}, resource::use_bevy_resource};
 
-use crate::backend::SignDistance;
+use crate::backend::{DynamicCube, SignDistance};
 
 #[derive(Debug)]
 pub struct SignUi;
 
+const DISTANCE_INCREMENT: f32 = 1.0;
 #[component]
-pub fn sign_ui() -> Element { 
-    
+pub fn sign_ui() -> Element {
     let sign_distance = use_bevy_resource::<SignDistance>();
+    let cube = use_bevy_single::<(Entity, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
 
-    let mut distance_edited = use_signal(|| false);
-    let mut distance_str = use_signal(|| "???".to_string());
-    
-    use_effect(move || {
-        if *distance_edited.read() {
-            return;
-        }
-        if let Ok(val) = sign_distance.read_ok(|n| n.0.to_string()) {
-            distance_str.set(val);
-        }
+    let cube_color_handle = use_memo(move || {
+        cube.read_ok(|n| n.1.read().0.id()).map_err(|err| AssetNoneState::Error(err.into()))
     });
+    let cube_color = use_bevy_asset(cube_color_handle);
 
 
-
-    let set_distance = move |evt: Event<FormData>| {
-        let val = evt.value();
-        distance_edited.set(true);
-        distance_str.set(val.clone());
-        if let Ok(dist) = val.parse::<f32>() {
-            sign_distance.mutate(move |n| *n = SignDistance(dist));
-        }
+    let increment = move |_evt| {
+        sign_distance.mutate(|n| n.0 += DISTANCE_INCREMENT);
     };
-    
+
+    let decrement = move |_evt | {
+        sign_distance.mutate(|n| n.0 -= DISTANCE_INCREMENT);
+    };
+
     rsx! {
         div {
             id: "panel",
+            class: "catch-events",
             document::Stylesheet { href: asset!("src/frontend/ui.css") },
             h1 {
                 "Second dom!"
             }
-            h3 {
-                "distance slider: O-----"
+            div {
+                id: "distance-control",
+                label { "Sign Distance:" }
+                div {
+                    class: "stepper-row",
+                    button {
+                        class: "stepper-btn",
+                        onclick: decrement,
+                        "-"
+                    }
+                    span {
+                        class: "stepper-value",
+                        "{sign_distance}"
+                    }
+                    button {
+                        class: "stepper-btn",
+                        onclick: increment,
+                        "+"
+                    }
+                }
             }
             h3 {
                 "Alternate Cube Colors:"
             }
-            ul {
-                li {
-                    "Purple"
+           div {
+                id: "buttons",
+                button {
+                    background: "purple",
+                    class: "color-button",
+                    onclick: move |_| {
+                        cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(0.502, 0.0, 0.502, 1.0)))
+                    },
                 }
-                li {
-                    "Yellow"
-                }
-            }
-            div {
-                id: "distance-control",
-                label { "Sign Distance:" }
-                input {
-                    r#type: "number",
-                    min: "0.5",
-                    max: "5.0",
-                    step: "0.1",
-                    value: distance_str,
-                    oninput: set_distance,
+                button {
+                    background: "yellow",
+                    class: "color-button",
+                    onclick: move |_| {
+                        cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(1.0, 1.0, 0.0, 1.0)))
+                    },
                 }
             }
         }

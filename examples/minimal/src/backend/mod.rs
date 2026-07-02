@@ -58,6 +58,6 @@ impl Display for SignDistance {
 
 impl Default for SignDistance {
     fn default() -> Self {
-        Self(2.0)
+        Self(-2.0)
     }
 }

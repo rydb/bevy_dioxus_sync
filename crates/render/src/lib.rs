@@ -111,12 +111,15 @@ pub struct MainDioxusWindow;
 pub struct DioxusUiQuad {
     pub handle: Option<Handle<Image>>,
     /// computed width and height of render surface based on attached bevy mesh
-    pub(crate) computed_wh: Option<Vec2>
+    pub computed_wh: Option<Vec2>,
+    /// Half-extents of the quad in local mesh space.
+    /// Used to convert world-space raycast hits into UV coordinates for picking.
+    pub local_half_extents: Option<Vec2>,
 }
 
 impl Default for DioxusUiQuad {
     fn default() -> Self {
-        Self { handle: None, computed_wh: None }
+        Self { handle: None, computed_wh: None, local_half_extents: None }
     }
 }
 
@@ -163,6 +166,11 @@ fn recompute_dioxus_ui_quad_surface(
             if y < y_min { y_min = y; }
         }
 
+        let half_extents = Some(Vec2 {
+            x: (x_max - x_min) / 2.0,
+            y: (y_max - y_min) / 2.0,
+        });
+
         let (width, height) = if let Some(res) = resolution {
             (res.0 as f32, res.1 as f32)
         } else {
@@ -171,11 +179,12 @@ fn recompute_dioxus_ui_quad_surface(
         let new_wh = Some(Vec2 { x: width, y: height });
 
         // Only change the quad if the underlying value actually changed
-        if ui.computed_wh == new_wh {
+        if ui.computed_wh == new_wh && ui.local_half_extents == half_extents {
             continue;
         }
 
         ui.computed_wh = new_wh;
+        ui.local_half_extents = half_extents;
 
         debug!("re-computed wh for {}: {:?}", _e, ui.computed_wh);
     }
@@ -376,11 +385,7 @@ fn update_uis(
     }
 
     for (entity, info) in &mut dioxus_docs.0 {
-        let Some(texture) = cached_textures.get(entity) else {
-            continue;
-        };
-
-        // Poll until no more async work is flagged as ready.
+        // Poll
         loop {
             waker_flag.0.store(false, Ordering::SeqCst);
             info.document.poll(Some(std::task::Context::from_waker(&waker)));
@@ -388,6 +393,10 @@ fn update_uis(
                 break;
             }
         }
+
+        let Some(texture) = cached_textures.get(entity) else {
+            continue;
+        };
 
         let animation_time = animation_epoch.0.elapsed().as_secs_f64();
         info.document.inner.borrow_mut().resolve(animation_time);
@@ -496,6 +505,7 @@ fn setup_window_surface(
         DioxusUiQuad {
             handle: None,
             computed_wh: None,
+            local_half_extents: None,
         },
         DioxusUiResolution(wh.x, wh.y),
         DioxusPanels::default(),

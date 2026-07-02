@@ -23,8 +23,8 @@ impl Plugin for DioxusPlugin {
         };
 
         app.add_systems(PostStartup, setup_initial_window_ui);
-        app.add_plugins(DioxusRenderPlugin);
         app.add_plugins(DioxusEventSyncPlugin);
         app.add_plugins(dioxus_signals_mirror_plugin);
+        app.add_plugins(DioxusRenderPlugin);
     }
 }
