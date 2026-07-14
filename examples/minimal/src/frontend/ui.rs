@@ -5,6 +5,7 @@ use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
+use dioxus_bevy_signals::macros::debug;
 use dioxus_bevy_signals::{
     asset::{AssetNoneState, use_bevy_asset},
     query::single::use_bevy_single,
@@ -28,6 +29,12 @@ pub fn app_ui() -> Element {
         ),
         With<DynamicCube>,
     >();
+
+    #[allow(unused)]
+    let _cube_dbg2 = use_memo(move || {
+        let r = cube.read_ok(|n| Ok(n.2.read().0.id())).unwrap_or_else(|err| Err(format!("{:?}", err)));
+        debug!("ui: color_handle={:?}", r);
+    });
 
     let cube_translation_str = use_memo(move || {
         cube.read_ok(|n| {

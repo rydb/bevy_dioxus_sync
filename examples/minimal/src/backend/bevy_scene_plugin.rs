@@ -142,14 +142,14 @@ fn animate(
     mut cube_query: Query<&mut Transform, With<DynamicCube>>,
     translation_speed: Res<CubeTranslationSpeed>,
     rotation_speed: Res<CubeRotationSpeed>,
-    sign_distance: Res<SignDistance>,
+    cube_distance: Res<SignDistance>,
 ) {
     for mut transform in cube_query.iter_mut() {
         transform.rotation = Quat::from_rotation_y(time.elapsed_secs() * rotation_speed.0);
         // Cube oscillates on x; offset by SignDistance so it moves toward/away from the signpost.
-        transform.translation.y = (time.elapsed_secs() * translation_speed.0).sin() * (sign_distance.0 * 0.5);
+        transform.translation.y = (time.elapsed_secs() * translation_speed.0).sin();
 
-        transform.translation.z = sign_distance.0;
+        transform.translation.z = cube_distance.0;
     }
 }
 

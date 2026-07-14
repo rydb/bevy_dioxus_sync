@@ -17,6 +17,7 @@ pub fn main() {
     let stdout_filter = filter_fn(|metadata| {
         metadata.target().starts_with("bevy_dioxus_render")
             || metadata.target().starts_with("dioxus_bevy_signals")
+            || metadata.target().starts_with("minimal")
     });
 
     // performance logs filter:

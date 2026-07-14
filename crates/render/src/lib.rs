@@ -1,16 +1,13 @@
-use std::collections::{HashMap};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyrender_vello::VelloScenePainter;
 use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_camera::visibility::RenderLayers;
 use bevy_camera::{Camera, Camera3d, ClearColorConfig};
-use bevy_color::Color;
 use bevy_derive::Deref;
-use bevy_dioxus_interop::{DioxusDocuments, DioxusMessage};
-use bevy_dioxus_tracing::{debug, warn};
+use bevy_dioxus_interop::DioxusMessage;
+use bevy_dioxus_tracing::{debug, trace, warn};
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_material::AlphaMode;
@@ -27,18 +24,17 @@ use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
 use blitz_dom::Document;
-use blitz_paint::paint_scene;
 use blitz_traits::shell::{ColorScheme, Viewport};
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_core::Element;
 use dioxus_core_macro::{component, rsx};
-use dioxus_devtools::DevserverMsg;
 use dioxus_hooks::{use_context, use_future, use_signal};
 use dioxus_signals::{ReadableExt, WritableExt};
-use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
+use vello::{RenderParams, Renderer as VelloRenderer, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
 use crate::panels::{DioxusPanels, DioxusPanelsReceiver};
+use crate::worker::{VdomCommand, VdomResult, VdomThreadRegistry};
 
 pub const SCALE_FACTOR: f32 = 1.0;
 pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
@@ -52,6 +48,7 @@ pub const ANIMATION_TIME_PLACEHOLDER: f32 = 0.0;
 pub mod plugins;
 pub mod panels;
 pub(crate) mod net_provider;
+pub mod worker;
 
 /// Extraction-side mirror of texture handles, keyed by the quad entity.
 #[derive(Resource, Default)]
@@ -190,26 +187,26 @@ fn recompute_dioxus_ui_quad_surface(
     }
 }
 
-/// recomputes the render surface for blitz after the ui quad has been re-computed 
+/// Sends resize commands to VDOM workers when the ui quad dimensions change.
 fn recompute_blitz_render_surfaces(
     quads: Query<(Entity, &DioxusUiQuad), Changed<DioxusUiQuad>>,
-    mut dioxus_docs: NonSendMut<DioxusDocuments>
+    mut registry: NonSendMut<VdomThreadRegistry>,
 ) {
     for (e, quad) in quads {
         let Some(wh) = quad.computed_wh else {
             continue;
         };
-        let Some(doc) = dioxus_docs.0.get_mut(&e) else {
-            warn!("no doc found for: {}", e);
+        let Some(worker) = registry.workers.get(&e) else {
             continue;
         };
-
-        let mut doc = doc.document.inner.as_ref().borrow_mut();
-        let mut view_port = doc.viewport_mut();
-        view_port.window_size = (wh.x as u32, wh.y as u32);
-
-        debug!("re-computed view-port for {}: {:?}", e, view_port.window_size);
-
+        let _ = worker.cmd_tx.try_send(VdomCommand::Resize(
+            wh.x as u32,
+            wh.y as u32,
+        ));
+        trace!(
+            "sent resize command for {}: {}x{}",
+            e, wh.x as u32, wh.y as u32
+        );
     }
 }
 
@@ -299,57 +296,28 @@ fn texture_getter_system(
 #[derive(Resource)]
 struct AnimationTime(Instant);
 
-/// Flag set by the dioxus waker when a future becomes ready.
-/// Cleared after the document is polled so the next wake can be detected.
-#[derive(Clone, Deref)]
-struct DioxusWakerFlag(Arc<AtomicBool>);
-
-/// recieve dioxus messages
-fn recv_dioxus_messages(
-    mut dioxus_docs: NonSendMut<DioxusDocuments>,
-    waker: NonSendMut<std::task::Waker>,
+/// Sends a Poll command to every VDOM worker at the start of each frame.
+fn dispatch_vdom_polls(
+    mut registry: NonSendMut<VdomThreadRegistry>,
+    animation_epoch: Res<AnimationTime>,
 ) {
-    for (_,info) in &mut dioxus_docs.0 {
-        while let Ok(msg) = info.messages_recv.try_recv() {
-            match msg {
-                DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
-                    dioxus_devtools::DevserverMsg::HotReload(hotreload_message) => {
-                        dioxus_devtools::apply_changes(&info.document.vdom, &hotreload_message);
-                        for asset_path in &hotreload_message.assets {
-                            if let Some(url) = asset_path.to_str() {
-                                info.document.inner.borrow_mut().reload_resource_by_href(url);
-                            }
-                        }
-                    }
-                    dioxus_devtools::DevserverMsg::FullReloadStart => {}
-                    _ => {}
-                },
-                DioxusMessage::CreateHeadElement(el) => {
-                    info.document.create_head_element(&el.name, &el.attributes, &el.contents);
-                    info.document.poll(Some(std::task::Context::from_waker(&waker)));
-                }
-                DioxusMessage::ResourceLoad(resource) => {
-                    info.document.inner.borrow_mut().load_resource(blitz_dom::net::ResourceLoadResponse {
-                        request_id: 0,
-                        node_id: None,
-                        resolved_url: None,
-                        result: Ok(resource.clone()),
-                    });
-                }
-            };
-        }
+    let animation_time = animation_epoch.0.elapsed().as_secs_f64();
+    for (_entity, worker) in &mut registry.workers {
+        let _ = worker
+            .cmd_tx
+            .try_send(VdomCommand::Poll { animation_time });
     }
 }
 
-fn update_uis(
-    mut dioxus_docs: NonSendMut<DioxusDocuments>,
-    waker: NonSendMut<std::task::Waker>,
-    waker_flag: NonSend<DioxusWakerFlag>,
+/// Collects painted scenes from all VDOM workers and renders them to GPU
+/// textures. Combines scene collection and rendering into one system to
+/// avoid an intermediate resource for passing scenes.
+fn collect_and_render_vdom_scenes(
+    mut registry: NonSendMut<VdomThreadRegistry>,
     mut vello_renderer: NonSendMut<VelloRenderer>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
     receiver: Res<MainWorldReceiver>,
-    animation_epoch: Res<AnimationTime>,
     images: Res<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut quad_query: Query<(
@@ -359,6 +327,7 @@ fn update_uis(
     )>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
 ) {
+    // Handle incoming GPU textures from the render world.
     cached_textures.retain(|entity, _| quad_query.contains(*entity));
 
     while let Ok((entity, texture)) = receiver.try_recv() {
@@ -372,59 +341,68 @@ fn update_uis(
             if let Some(img) = images.get(handle) {
                 let sz = img.texture_descriptor.size;
                 if texture.width == sz.width && texture.height == sz.height {
-                    if let Some(info) = dioxus_docs.0.get_mut(&entity) {
-                        info.document.inner.borrow_mut().set_viewport(
-                            Viewport::new(texture.width, texture.height, SCALE_FACTOR, COLOR_SCHEME),
-                        );
-                    }
-                    materials.get_mut(&mut mat.0).unwrap().base_color_texture = Some(handle.clone());
+                    materials
+                        .get_mut(&mut mat.0)
+                        .unwrap()
+                        .base_color_texture = Some(handle.clone());
                 }
             }
         }
         cached_textures.insert(entity, texture);
     }
 
-    for (entity, info) in &mut dioxus_docs.0 {
-        // Poll
-        loop {
-            waker_flag.0.store(false, Ordering::SeqCst);
-            info.document.poll(Some(std::task::Context::from_waker(&waker)));
-            if !waker_flag.0.load(Ordering::SeqCst) {
-                break;
+    // Collect painted scenes from all workers and render them.
+    for (entity, worker) in &mut registry.workers {
+        while let Ok(result) = worker.result_rx.try_recv() {
+            match result {
+                VdomResult::SceneReady {
+                    scene,
+                    width,
+                    height,
+                } => {
+                    let Some(texture) = cached_textures.get(&entity) else {
+                        continue;
+                    };
+                    vello_renderer
+                        .render_to_texture(
+                            render_device.wgpu_device(),
+                            &render_queue.0,
+                            &scene,
+                            &texture.texture_view,
+                            &RenderParams {
+                                base_color: AlphaColor::TRANSPARENT,
+                                width,
+                                height,
+                                antialiasing_method: vello::AaConfig::Area,
+                            },
+                        )
+                        .expect("failed to render to texture");
+                }
+                VdomResult::ShutdownAck => {
+                    debug!(
+                        "vdom worker for {} acknowledged shutdown",
+                        entity
+                    );
+                }
+                VdomResult::InputCaught => {}
             }
         }
+    }
+}
 
-        let Some(texture) = cached_textures.get(entity) else {
-            continue;
-        };
-
-        let animation_time = animation_epoch.0.elapsed().as_secs_f64();
-        info.document.inner.borrow_mut().resolve(animation_time);
-
-        let mut scene = Scene::new();
-        paint_scene(
-            &mut VelloScenePainter::new(&mut scene),
-            &mut *info.document.inner.borrow_mut(),
-            SCALE_FACTOR as f64,
-            texture.width,
-            texture.height,
-            0,
-            0,
-        );
-        vello_renderer
-            .render_to_texture(
-                render_device.wgpu_device(),
-                &render_queue.0,
-                &scene,
-                &texture.texture_view,
-                &RenderParams {
-                    base_color: AlphaColor::TRANSPARENT,
-                    width: texture.width,
-                    height: texture.height,
-                    antialiasing_method: vello::AaConfig::Area,
-                },
-            )
-            .expect("failed to render to texture");
+/// Cleans up worker threads when their associated entities are despawned.
+fn cleanup_vdom_workers(
+    mut removed: RemovedComponents<DioxusUiQuad>,
+    mut registry: NonSendMut<VdomThreadRegistry>,
+) {
+    for entity in removed.read() {
+        if let Some(mut worker) = registry.workers.remove(&entity) {
+            let _ = worker.cmd_tx.send(VdomCommand::Shutdown);
+            if let Some(handle) = worker.thread.take() {
+                let _ = handle.join();
+            }
+            debug!("cleaned up vdom worker for {}", entity);
+        }
     }
 }
 
@@ -440,23 +418,17 @@ pub struct DioxusUiResolution(pub u32, pub u32);
 
 /// initialize textures for quads
 fn initialize_textures_for_quads(
-    quads: Query<(Entity, &mut DioxusUiQuad, Option<&Window>), Without<MeshMaterial3d<StandardMaterial>>>,
+    quads: Query<(Entity, &mut DioxusUiQuad), Without<MeshMaterial3d<StandardMaterial>>>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
-    for (e, mut quad, window) in quads {
+    for (e, mut quad) in quads {
         // initialize texture after computed_wh is created
         let Some(wh) = quad.computed_wh else {
             continue
         };
 
-        // let aspect_ratio_scale = match window {
-        //     Some(_) => todo!(),
-        //     None => todo!(),
-        // };
-
-        // let image = create_ui_texture(wh.x as u32 * 500 , wh.y as u32 * 500);
         let image = create_ui_texture(wh.x as u32 , wh.y as u32);
 
         let handle = images.add(image);

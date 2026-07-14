@@ -4,7 +4,6 @@ use dioxus_native::DioxusDocument;
 pub mod keyboard;
 pub mod mouse;
 pub mod plugins;
-pub mod window;
 
 pub const CATCH_EVENTS_CLASS: &str = "catch-events";
 pub use bevy_dioxus_tracing::*;

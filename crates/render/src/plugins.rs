@@ -4,7 +4,9 @@ use bevy_app::prelude::*;
 use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
 use vello::RendererOptions;
 
-use crate::{panels::{initialize_vdoms, sync_dioxus_ui_with_panels}, *};
+use crate::panels::{initialize_vdoms, sync_dioxus_ui_with_panels};
+use crate::worker::VdomThreadRegistry;
+use crate::*;
 
 pub struct DioxusRenderPlugin;
 
@@ -12,40 +14,24 @@ impl Plugin for DioxusRenderPlugin {
     fn build(&self, app: &mut App) {
         let epoch = AnimationTime(Instant::now());
 
-        let documents = HashMap::new();
-        app.insert_non_send(DioxusDocuments(documents));
-        
-        // Waker that sets a flag when dioxus futures become ready.
-        // The flag is checked in update_uis to re-poll the document.
-        struct DioxusWaker {
-            flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
-        }
-        impl std::task::Wake for DioxusWaker {
-            fn wake(self: std::sync::Arc<Self>) {
-                self.flag.store(true, std::sync::atomic::Ordering::SeqCst);
-            }
-        }
-        let waker_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let waker = std::task::Waker::from(std::sync::Arc::new(DioxusWaker {
-            flag: waker_flag.clone(),
-        }));
-
-        app.insert_non_send(waker);
-        app.insert_non_send(DioxusWakerFlag(waker_flag));
+        app.insert_non_send(VdomThreadRegistry::default());
         app.insert_resource(epoch);
 
-        app
-        .add_systems(Startup, setup_window_surface)
-        .add_systems(PreUpdate, initialize_vdoms)
-        .add_systems(Update, (
-            handle_window_resize,
-            sync_dioxus_ui_with_panels,
-            recv_dioxus_messages,
-            recompute_dioxus_ui_quad_surface,
-            recompute_blitz_render_surfaces,
-            initialize_textures_for_quads,
-            update_uis
-        ).chain());
+        app.add_systems(Startup, setup_window_surface)
+            .add_systems(PreUpdate, initialize_vdoms)
+            .add_systems(
+                Update,
+                (
+                    handle_window_resize,
+                    sync_dioxus_ui_with_panels,
+                    recompute_dioxus_ui_quad_surface,
+                    recompute_blitz_render_surfaces,
+                    initialize_textures_for_quads,
+                    dispatch_vdom_polls,
+                    collect_and_render_vdom_scenes,
+                )
+                    .chain(),
+            );
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer
