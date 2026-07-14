@@ -132,21 +132,21 @@ pub fn app_ui() -> Element {
                 button {
                     background: "red",
                     class: "color-button",
-                    onclick: move |_| {
+                    onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(1.0, 0.0, 0.0, 1.0)));
                     },
                 }
                 button {
                     background: "green",
                     class: "color-button",
-                    onclick: move |_| {
+                    onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(0.0, 1.0, 0.0, 1.0)))
                     },
                 }
                 button {
                     background: "blue",
                     class: "color-button",
-                    onclick: move |_| {
+                    onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(0.0, 0.0, 1.0, 1.0)))
                     },
                 }

@@ -22,6 +22,7 @@ impl Plugin for DioxusRenderPlugin {
             .add_systems(
                 Update,
                 (
+                    cleanup_vdom_workers,
                     handle_window_resize,
                     sync_dioxus_ui_with_panels,
                     recompute_dioxus_ui_quad_surface,

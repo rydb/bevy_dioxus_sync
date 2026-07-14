@@ -52,7 +52,7 @@ pub fn sign_ui() -> Element {
                     class: "stepper-row",
                     button {
                         class: "stepper-btn",
-                        onclick: decrement,
+                        onpointerdown: decrement,
                         "-"
                     }
                     span {
@@ -61,7 +61,7 @@ pub fn sign_ui() -> Element {
                     }
                     button {
                         class: "stepper-btn",
-                        onclick: increment,
+                        onpointerdown: increment,
                         "+"
                     }
                 }
@@ -74,14 +74,14 @@ pub fn sign_ui() -> Element {
                 button {
                     background: "purple",
                     class: "color-button",
-                    onclick: move |_| {
+                    onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(0.502, 0.0, 0.502, 1.0)))
                     },
                 }
                 button {
                     background: "yellow",
                     class: "color-button",
-                    onclick: move |_| {
+                    onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(1.0, 1.0, 0.0, 1.0)))
                     },
                 }
