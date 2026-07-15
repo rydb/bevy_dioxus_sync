@@ -8,6 +8,7 @@ use dioxus_native::DioxusDocument;
 
 pub struct DioxusDocuments(pub HashMap<Entity, DioxusDocumentInfo>);
 
+#[derive(Debug)]
 pub struct HeadElement {
     pub name: String,
     pub attributes: Vec<(String, String)>,
@@ -15,6 +16,7 @@ pub struct HeadElement {
 }
 
 /// Messages sent from dioxus
+#[derive(Debug)]
 pub enum DioxusMessage {
     Devserver(DevserverMsg),
     CreateHeadElement(HeadElement),

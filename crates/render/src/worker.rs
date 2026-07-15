@@ -87,6 +87,7 @@ impl<T> Drop for SendToThread<T> {
 }
 
 /// Commands sent from the main thread to a VDOM worker.
+#[derive(Debug)]
 pub enum VdomCommand {
     /// Poll the VDOM, resolve animations, paint, and send the scene back.
     Poll {
@@ -117,6 +118,7 @@ pub enum VdomResult {
 }
 
 /// Handle to a running VDOM worker thread.
+#[derive(Debug)]
 pub struct VdomWorker {
     /// Channel for sending commands into the worker.
     pub cmd_tx: Sender<VdomCommand>,
@@ -134,7 +136,7 @@ pub struct VdomWorker {
 ///
 /// Replaces the previous single-threaded document map as the ECS resource
 /// that tracks VDOM state per entity.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct VdomThreadRegistry {
     pub workers: HashMap<Entity, VdomWorker>,
 }
@@ -175,11 +177,15 @@ impl VdomWorker {
                 let mut scene = Scene::new();
 
                 loop {
+                    // Don't re-paint if nothing changed
+                    let mut needs_paint = false;
+
                     // Process input events before polling.
                     while let Ok((_ev_entity, ui_event)) =
                         input_rx.try_recv()
                     {
                         document.handle_ui_event(ui_event);
+                        needs_paint = true;
                         // Report that input was caught by this document.
                         let _ = result_tx
                             .try_send(VdomResult::InputCaught);
@@ -191,6 +197,7 @@ impl VdomWorker {
                             msg,
                             &waker,
                         );
+                        needs_paint = true;
                     }
 
                     while let Ok(cmd) = cmd_rx.try_recv() {
@@ -209,6 +216,7 @@ impl VdomWorker {
                                         SCALE_FACTOR,
                                         COLOR_SCHEME,
                                     ));
+                                needs_paint = true;
                             }
                             VdomCommand::Message(msg) => {
                                 process_dioxus_message(
@@ -216,6 +224,7 @@ impl VdomWorker {
                                     msg,
                                     &waker,
                                 );
+                                needs_paint = true;
                             }
                             VdomCommand::Poll { animation_time } => {
                                 let fresh = run_poll_and_paint(
@@ -225,23 +234,12 @@ impl VdomWorker {
                                     animation_time,
                                     scene,
                                     &result_tx,
+                                    needs_paint,
                                 );
                                 scene = fresh;
+                                needs_paint = false;
                             }
                         }
-                    }
-
-                    if waker_flag.load(Ordering::SeqCst) {
-                        let fresh = run_poll_and_paint(
-                            &mut document,
-                            &waker,
-                            &waker_flag,
-                            ANIMATION_TIME_PLACEHOLDER,
-                            scene,
-                            &result_tx,
-                        );
-                        scene = fresh;
-                        continue;
                     }
 
                     match cmd_rx.recv() {
@@ -258,6 +256,7 @@ impl VdomWorker {
                                 animation_time,
                                 scene,
                                 &result_tx,
+                                needs_paint,
                             );
                             scene = fresh;
                         }
@@ -270,6 +269,7 @@ impl VdomWorker {
                                     SCALE_FACTOR,
                                     COLOR_SCHEME,
                                 ));
+                            needs_paint = true;
                         }
                         Ok(VdomCommand::Message(msg)) => {
                             process_dioxus_message(
@@ -277,6 +277,7 @@ impl VdomWorker {
                                 msg,
                                 &waker,
                             );
+                            needs_paint = true;
                         }
                         Err(_) => {
                             debug!(
@@ -339,8 +340,6 @@ fn process_dioxus_message(
 
 /// Poll the VDOM until no more futures are ready, resolve animations,
 /// paint the scene, and send it to the main thread.
-///
-/// Returns a fresh `Scene` for the next frame.
 fn run_poll_and_paint(
     doc: &mut DioxusDocument,
     waker: &std::task::Waker,
@@ -348,10 +347,14 @@ fn run_poll_and_paint(
     animation_time: f64,
     mut scene: Scene,
     result_tx: &Sender<VdomResult>,
+    mut needs_paint: bool,
 ) -> Scene {
     loop {
         waker_flag.store(false, Ordering::SeqCst);
-        doc.poll(Some(std::task::Context::from_waker(waker)));
+        let had_work = doc.poll(Some(std::task::Context::from_waker(waker)));
+        if had_work {
+            needs_paint = true;
+        }
         if !waker_flag.load(Ordering::SeqCst) {
             break;
         }
@@ -367,6 +370,10 @@ fn run_poll_and_paint(
 
     if width == 0 || height == 0 {
         warn!("vdom worker: zero-size viewport, skipping paint");
+        return scene;
+    }
+
+    if !needs_paint {
         return scene;
     }
 

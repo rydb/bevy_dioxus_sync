@@ -14,3 +14,4 @@ tracing = {workspace = true, optional = true}
 
 [features]
 trace = ["dep:tracing"]
+default = ["trace"]

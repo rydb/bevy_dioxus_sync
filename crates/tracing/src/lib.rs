@@ -2,7 +2,7 @@
 
 #[cfg(feature = "trace")]
 #[allow(unused_imports)]
-pub use tracing::{debug, error, info, trace, warn};
+pub use tracing::{debug, error, info, trace, warn, span, Level};
 
 #[cfg(not(feature = "trace"))]
 use macro_v::macro_v;

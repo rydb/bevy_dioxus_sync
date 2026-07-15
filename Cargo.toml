@@ -88,7 +88,7 @@ anyrender_vello = {version = "0.10", default-features = false}
 blitz-net = {version = "=0.3.0-alpha.4", default-features = false}
 blitz-paint = { version = "=0.3.0-alpha.4", default-features = false}
 blitz-traits = { version = "=0.3.0-alpha.4", default-features = false}
-blitz-dom = { version = "=0.3.0-alpha.4", default-features = false }
+blitz-dom = { version = "=0.3.0-alpha.4", default-features = false, features = ["incremental"]}
 # blitz-shell = { version = "=0.3.0-alpha.4", default-features = false }
 blitz-html = {version = "=0.3.0-alpha.4", default-features = false}
 vello = {version = "0.9"}

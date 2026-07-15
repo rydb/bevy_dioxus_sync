@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy_dioxus_sync::plugins::DioxusPlugin;
 use bevy_picking::{PickingPlugin, input::PointerInputPlugin, mesh_picking::MeshPickingPlugin};
 use tracing_chrome::ChromeLayerBuilder;
-use tracing_subscriber::{filter::filter_fn, fmt, prelude::*, registry};
+use tracing_subscriber::{filter::filter_fn, fmt::{self, format::FmtSpan}, prelude::*, registry};
 
 use crate::{backend::bevy_scene_plugin::BevyScenePlugin, frontend::ui::app_ui};
 
@@ -21,8 +21,8 @@ pub fn main() {
     });
 
     // performance logs filter:
-    let chrome_filter = filter_fn(|_metadata| true);
-    let _ = std::fs::remove_file("./target/chrome_trace.json").inspect_err(|err| warn!("{err}"));
+    // let chrome_filter = filter_fn(|_metadata| true);
+    // let _ = std::fs::remove_file("./target/chrome_trace.json").inspect_err(|err| warn!("{err}"));
 
     // let (chrome_layer, _chrome_guard) = ChromeLayerBuilder::new()
     //     .file("./target/chrome_trace.json")
@@ -32,6 +32,7 @@ pub fn main() {
 
     let stdout_layer = fmt::layer()
         .with_writer(std::io::stdout)
+        .with_span_events(FmtSpan::CLOSE)
         .with_filter(stdout_filter);
 
     let subscriber = registry()
