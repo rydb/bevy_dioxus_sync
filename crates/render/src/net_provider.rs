@@ -8,7 +8,7 @@ use crossbeam_channel::Sender;
 use data_url::DataUrl;
 use dioxus_document::{LinkProps, MetaProps, NoOpDocument, ScriptProps, StyleProps};
 
-use crate::{DioxusMessage};
+use crate::DioxusMessage;
 
 pub struct BevyNetProvider;
 
@@ -31,7 +31,6 @@ impl NetProvider for BevyNetProvider {
                 Ok(res) => handler.bytes(request.url.to_string(), res.into_body().into()),
                 Err(_err) => {
                     warn!("{_err}");
-
                 }
             },
             // Decode data URIs
@@ -47,7 +46,10 @@ impl NetProvider for BevyNetProvider {
             }
             // TODO: support http requests
             _ => {
-                warn!("unsupported scheme detected for {_doc_id} for request {:#?}", request);
+                warn!(
+                    "unsupported scheme detected for {_doc_id} for request {:#?}",
+                    request
+                );
             }
         }
     }

@@ -23,9 +23,8 @@ pub enum DioxusMessage {
     ResourceLoad(blitz_dom::net::Resource),
 }
 
-
 /// Dioxus document + extra things required for bevy <-> dioxus interop
 pub struct DioxusDocumentInfo {
     pub document: DioxusDocument,
-    pub messages_recv: Receiver<DioxusMessage>
+    pub messages_recv: Receiver<DioxusMessage>,
 }

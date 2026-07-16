@@ -3,8 +3,12 @@ use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 // use bevy_dioxus_sync::panels::DioxusElementMarker;
 use dioxus::prelude::*;
-use dioxus_bevy_signals::{asset::{AssetNoneState, use_bevy_asset}, query::{single::use_bevy_single}, resource::use_bevy_resource};
 use dioxus_bevy_signals::macros::debug;
+use dioxus_bevy_signals::{
+    asset::{AssetNoneState, use_bevy_asset},
+    query::single::use_bevy_single,
+    resource::use_bevy_resource,
+};
 
 use crate::backend::{DynamicCube, SignDistance};
 
@@ -15,25 +19,28 @@ const DISTANCE_INCREMENT: f32 = 1.0;
 #[component]
 pub fn sign_ui() -> Element {
     let cube_distance = use_bevy_resource::<SignDistance>();
-    let cube = use_bevy_single::<(Entity, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
+    let cube =
+        use_bevy_single::<(Entity, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
 
     #[allow(unused)]
     let _cube_db = use_memo(move || {
-        let r = cube.read_ok(|n| n.1.read().0.id()).map_err(|err| format!("{:?}", err));
+        let r = cube
+            .read_ok(|n| n.1.read().0.id())
+            .map_err(|err| format!("{:?}", err));
         debug!("sign_ui: color_handle={:?}", r);
     });
 
     let cube_color_handle = use_memo(move || {
-        cube.read_ok(|n| n.1.read().0.id()).map_err(|err| AssetNoneState::Error(err.into()))
+        cube.read_ok(|n| n.1.read().0.id())
+            .map_err(|err| AssetNoneState::Error(err.into()))
     });
     let cube_color = use_bevy_asset(cube_color_handle);
-
 
     let increment = move |_evt| {
         cube_distance.mutate(|n| n.0 += DISTANCE_INCREMENT);
     };
 
-    let decrement = move |_evt | {
+    let decrement = move |_evt| {
         cube_distance.mutate(|n| n.0 -= DISTANCE_INCREMENT);
     };
 

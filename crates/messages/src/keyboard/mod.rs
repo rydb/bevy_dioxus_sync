@@ -5,7 +5,6 @@ use bevy_input::{
     keyboard::{Key as BevyKey, KeyCode as BevyKeyCode, KeyboardInput},
     prelude::*,
 };
-use blitz_dom::*;
 use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
 use dioxus_html::*;
 
@@ -53,10 +52,7 @@ pub(crate) fn handle_keyboard_messages(
             ButtonState::Pressed => KeyState::Pressed,
             ButtonState::Released => KeyState::Released,
         };
-        let event_text = event
-            .text
-            .as_ref()
-            .map(|n| n.to_string().into());
+        let event_text = event.text.as_ref().map(|n| n.to_string().into());
         let blitz_key_event = BlitzKeyEvent {
             key: bevy_key_to_blitz_key(&event.logical_key),
             code: bevy_key_code_to_blitz_code(&event.key_code),

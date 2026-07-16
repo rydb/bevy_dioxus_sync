@@ -7,8 +7,7 @@ use bevy_picking::backend::PointerHits;
 use bevy_transform::components::GlobalTransform;
 use bevy_window::CursorMoved;
 use blitz_traits::events::{
-    BlitzPointerEvent, BlitzPointerId, MouseEventButton, MouseEventButtons,
-    PointerCoords, UiEvent,
+    BlitzPointerEvent, BlitzPointerId, MouseEventButton, MouseEventButtons, PointerCoords, UiEvent,
 };
 use dioxus_html::Modifiers;
 
@@ -29,10 +28,7 @@ pub struct WorldSpacePickingState {
 
 pub(crate) fn update_world_space_picking(
     mut pointer_hits: MessageReader<PointerHits>,
-    world_quads: Query<
-        (&DioxusUiQuad, &GlobalTransform),
-        Without<DioxusWindowUiQuad>,
-    >,
+    world_quads: Query<(&DioxusUiQuad, &GlobalTransform), Without<DioxusWindowUiQuad>>,
     mut picking_state: ResMut<WorldSpacePickingState>,
 ) {
     *picking_state = WorldSpacePickingState::default();
@@ -50,10 +46,7 @@ pub(crate) fn update_world_space_picking(
                     continue;
                 };
 
-                let local_pos = transform
-                    .affine()
-                    .inverse()
-                    .transform_point3(world_pos);
+                let local_pos = transform.affine().inverse().transform_point3(world_pos);
 
                 let u = (local_pos.x + half.x) / (2.0 * half.x);
                 let v = (local_pos.y + half.y) / (2.0 * half.y);
@@ -62,8 +55,7 @@ pub(crate) fn update_world_space_picking(
                 let pixel_y = (1.0 - v) * wh.y;
 
                 picking_state.hit_entity = Some(*entity);
-                picking_state.local_coords =
-                    Some(Vec2::new(pixel_x, pixel_y));
+                picking_state.local_coords = Some(Vec2::new(pixel_x, pixel_y));
                 break;
             }
         }
@@ -114,10 +106,9 @@ pub(crate) fn handle_mouse_messages(
             if !window_overlay_entities.contains(&entity) {
                 continue;
             }
-            let _ = worker.input_tx.try_send((
-                entity,
-                UiEvent::PointerMove(pointer_event.clone()),
-            ));
+            let _ = worker
+                .input_tx
+                .try_send((entity, UiEvent::PointerMove(pointer_event.clone())));
             should_catch_events = true;
         }
 
@@ -141,10 +132,9 @@ pub(crate) fn handle_mouse_messages(
                     mods: mouse_state.mods,
                     details: Default::default(),
                 };
-                let _ = worker.input_tx.try_send((
-                    hit_entity,
-                    UiEvent::PointerMove(local_event),
-                ));
+                let _ = worker
+                    .input_tx
+                    .try_send((hit_entity, UiEvent::PointerMove(local_event)));
                 should_catch_events = true;
             }
         }
@@ -191,19 +181,16 @@ pub(crate) fn handle_mouse_messages(
                     if !window_overlay_entities.contains(&entity) {
                         continue;
                     }
-                    let _ = worker.input_tx.try_send((
-                        entity,
-                        UiEvent::PointerDown(pointer_event.clone()),
-                    ));
+                    let _ = worker
+                        .input_tx
+                        .try_send((entity, UiEvent::PointerDown(pointer_event.clone())));
                     should_catch_events = true;
                 }
 
                 if let (Some(hit_entity), Some(local_coords)) =
                     (picking_state.hit_entity, picking_state.local_coords)
                 {
-                    if let Some(worker) =
-                        registry.workers.get_mut(&hit_entity)
-                    {
+                    if let Some(worker) = registry.workers.get_mut(&hit_entity) {
                         let local_event = BlitzPointerEvent {
                             id: BlitzPointerId::Mouse,
                             is_primary: true,
@@ -220,10 +207,9 @@ pub(crate) fn handle_mouse_messages(
                             mods: mouse_state.mods,
                             details: Default::default(),
                         };
-                        let _ = worker.input_tx.try_send((
-                            hit_entity,
-                            UiEvent::PointerDown(local_event),
-                        ));
+                        let _ = worker
+                            .input_tx
+                            .try_send((hit_entity, UiEvent::PointerDown(local_event)));
                         should_catch_events = true;
                     }
                 }
@@ -245,19 +231,16 @@ pub(crate) fn handle_mouse_messages(
                     if !window_overlay_entities.contains(&entity) {
                         continue;
                     }
-                    let _ = worker.input_tx.try_send((
-                        entity,
-                        UiEvent::PointerUp(pointer_event.clone()),
-                    ));
+                    let _ = worker
+                        .input_tx
+                        .try_send((entity, UiEvent::PointerUp(pointer_event.clone())));
                     should_catch_events = true;
                 }
 
                 if let (Some(hit_entity), Some(local_coords)) =
                     (picking_state.hit_entity, picking_state.local_coords)
                 {
-                    if let Some(worker) =
-                        registry.workers.get_mut(&hit_entity)
-                    {
+                    if let Some(worker) = registry.workers.get_mut(&hit_entity) {
                         let local_event = BlitzPointerEvent {
                             id: BlitzPointerId::Mouse,
                             is_primary: true,
@@ -274,10 +257,9 @@ pub(crate) fn handle_mouse_messages(
                             mods: mouse_state.mods,
                             details: Default::default(),
                         };
-                        let _ = worker.input_tx.try_send((
-                            hit_entity,
-                            UiEvent::PointerUp(local_event),
-                        ));
+                        let _ = worker
+                            .input_tx
+                            .try_send((hit_entity, UiEvent::PointerUp(local_event)));
                         should_catch_events = true;
                     }
                 }

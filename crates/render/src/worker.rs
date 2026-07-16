@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::mem::ManuallyDrop;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::ThreadId;
 
 use anyrender_vello::VelloScenePainter;
@@ -169,10 +169,9 @@ impl VdomWorker {
                         self.flag.store(true, Ordering::SeqCst);
                     }
                 }
-                let waker =
-                    std::task::Waker::from(Arc::new(WorkerWaker {
-                        flag: waker_flag.clone(),
-                    }));
+                let waker = std::task::Waker::from(Arc::new(WorkerWaker {
+                    flag: waker_flag.clone(),
+                }));
 
                 let mut scene = Scene::new();
 
@@ -181,49 +180,35 @@ impl VdomWorker {
                     let mut needs_paint = false;
 
                     // Process input events before polling.
-                    while let Ok((_ev_entity, ui_event)) =
-                        input_rx.try_recv()
-                    {
+                    while let Ok((_ev_entity, ui_event)) = input_rx.try_recv() {
                         document.handle_ui_event(ui_event);
                         needs_paint = true;
                         // Report that input was caught by this document.
-                        let _ = result_tx
-                            .try_send(VdomResult::InputCaught);
+                        let _ = result_tx.try_send(VdomResult::InputCaught);
                     }
 
                     while let Ok(msg) = messages_recv.try_recv() {
-                        process_dioxus_message(
-                            &mut document,
-                            msg,
-                            &waker,
-                        );
+                        process_dioxus_message(&mut document, msg, &waker);
                         needs_paint = true;
                     }
 
                     while let Ok(cmd) = cmd_rx.try_recv() {
                         match cmd {
                             VdomCommand::Shutdown => {
-                                let _ = result_tx
-                                    .send(VdomResult::ShutdownAck);
+                                let _ = result_tx.send(VdomResult::ShutdownAck);
                                 return;
                             }
                             VdomCommand::Resize(w, h) => {
-                                document
-                                    .inner
-                                    .borrow_mut()
-                                    .set_viewport(Viewport::new(
-                                        w, h,
-                                        SCALE_FACTOR,
-                                        COLOR_SCHEME,
-                                    ));
+                                document.inner.borrow_mut().set_viewport(Viewport::new(
+                                    w,
+                                    h,
+                                    SCALE_FACTOR,
+                                    COLOR_SCHEME,
+                                ));
                                 needs_paint = true;
                             }
                             VdomCommand::Message(msg) => {
-                                process_dioxus_message(
-                                    &mut document,
-                                    msg,
-                                    &waker,
-                                );
+                                process_dioxus_message(&mut document, msg, &waker);
                                 needs_paint = true;
                             }
                             VdomCommand::Poll { animation_time } => {
@@ -244,8 +229,7 @@ impl VdomWorker {
 
                     match cmd_rx.recv() {
                         Ok(VdomCommand::Shutdown) => {
-                            let _ =
-                                result_tx.send(VdomResult::ShutdownAck);
+                            let _ = result_tx.send(VdomResult::ShutdownAck);
                             return;
                         }
                         Ok(VdomCommand::Poll { animation_time }) => {
@@ -261,29 +245,20 @@ impl VdomWorker {
                             scene = fresh;
                         }
                         Ok(VdomCommand::Resize(w, h)) => {
-                            document
-                                .inner
-                                .borrow_mut()
-                                .set_viewport(Viewport::new(
-                                    w, h,
-                                    SCALE_FACTOR,
-                                    COLOR_SCHEME,
-                                ));
+                            document.inner.borrow_mut().set_viewport(Viewport::new(
+                                w,
+                                h,
+                                SCALE_FACTOR,
+                                COLOR_SCHEME,
+                            ));
                             needs_paint = true;
                         }
                         Ok(VdomCommand::Message(msg)) => {
-                            process_dioxus_message(
-                                &mut document,
-                                msg,
-                                &waker,
-                            );
+                            process_dioxus_message(&mut document, msg, &waker);
                             needs_paint = true;
                         }
                         Err(_) => {
-                            debug!(
-                                "vdom-worker-{}: cmd channel closed",
-                                entity.index()
-                            );
+                            debug!("vdom-worker-{}: cmd channel closed", entity.index());
                             return;
                         }
                     }
@@ -294,23 +269,14 @@ impl VdomWorker {
 }
 
 /// Process a single dioxus message inside the worker.
-fn process_dioxus_message(
-    doc: &mut DioxusDocument,
-    msg: DioxusMessage,
-    waker: &std::task::Waker,
-) {
+fn process_dioxus_message(doc: &mut DioxusDocument, msg: DioxusMessage, waker: &std::task::Waker) {
     match msg {
         DioxusMessage::Devserver(devserver_msg) => match devserver_msg {
             DevserverMsg::HotReload(hotreload_message) => {
-                dioxus_devtools::apply_changes(
-                    &doc.vdom,
-                    &hotreload_message,
-                );
+                dioxus_devtools::apply_changes(&doc.vdom, &hotreload_message);
                 for asset_path in &hotreload_message.assets {
                     if let Some(url) = asset_path.to_str() {
-                        doc.inner
-                            .borrow_mut()
-                            .reload_resource_by_href(url);
+                        doc.inner.borrow_mut().reload_resource_by_href(url);
                     }
                 }
             }
@@ -318,22 +284,18 @@ fn process_dioxus_message(
             _ => {}
         },
         DioxusMessage::CreateHeadElement(el) => {
-            doc.create_head_element(
-                &el.name,
-                &el.attributes,
-                &el.contents,
-            );
+            doc.create_head_element(&el.name, &el.attributes, &el.contents);
             doc.poll(Some(std::task::Context::from_waker(waker)));
         }
         DioxusMessage::ResourceLoad(resource) => {
-            doc.inner.borrow_mut().load_resource(
-                blitz_dom::net::ResourceLoadResponse {
+            doc.inner
+                .borrow_mut()
+                .load_resource(blitz_dom::net::ResourceLoadResponse {
                     request_id: 0,
                     node_id: None,
                     resolved_url: None,
                     result: Ok(resource.clone()),
-                },
-            );
+                });
         }
     }
 }

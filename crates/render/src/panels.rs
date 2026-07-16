@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use bevy_dioxus_interop::DioxusMessage;
 use bevy_dioxus_tracing::{error, warn};
@@ -16,20 +16,22 @@ use dioxus_native::DioxusDocument;
 #[cfg(target_os = "linux")]
 use vello::peniko::Blob;
 
-use crate::{DioxusUiQuad, dioxus_ui};
 use crate::net_provider::{BevyNetProvider, DioxusDocumentProxy};
 use crate::worker::{VdomCommand, VdomResult, VdomThreadRegistry, VdomWorker};
+use crate::{DioxusUiQuad, dioxus_ui};
 
 /// panels inside of a dioxus window
 #[derive(Component, Clone)]
 #[require(DioxusUiQuad)]
 pub struct DioxusPanels {
-    pub panels: HashSet<fn() -> Element>, 
+    pub panels: HashSet<fn() -> Element>,
 }
 
 impl Default for DioxusPanels {
     fn default() -> Self {
-        Self { panels: Default::default() }
+        Self {
+            panels: Default::default(),
+        }
     }
 }
 
@@ -39,29 +41,24 @@ impl DioxusPanels {
         for panel in panels {
             map.insert(panel);
         }
-        Self {
-            panels: map
-        }
+        Self { panels: map }
     }
 }
 
-
 #[derive(Component)]
 pub struct DioxusPanelsSender {
-    sender: crossbeam_channel::Sender<DioxusPanels>
+    sender: crossbeam_channel::Sender<DioxusPanels>,
 }
 
 #[derive(Clone)]
 pub struct DioxusPanelsReceiver(pub crossbeam_channel::Receiver<DioxusPanels>);
 
-
 #[derive(Component)]
 pub struct InitializedVdom;
 
-
-/// On Linux, when blitz can't find a font, it will silently fail to render text. 
+/// On Linux, when blitz can't find a font, it will silently fail to render text.
 /// This work around forcibly includes the below workaround font.
-/// 
+///
 /// This work around also points blitz's default stylesheet fonts to this font.
 #[cfg(target_os = "linux")]
 fn setup_fallback_font() -> FontContext {
@@ -102,10 +99,8 @@ pub(crate) fn initialize_vdoms(
             continue;
         }
 
-        let (panel_sender, panel_receiver) =
-            crossbeam_channel::unbounded::<DioxusPanels>();
-        let (proxy_sender, proxy_receiver) =
-            crossbeam_channel::unbounded::<DioxusMessage>();
+        let (panel_sender, panel_receiver) = crossbeam_channel::unbounded::<DioxusPanels>();
+        let (proxy_sender, proxy_receiver) = crossbeam_channel::unbounded::<DioxusMessage>();
 
         let vdom = VirtualDom::new_with_props(dioxus_ui, ())
             .with_root_context(DioxusPanelsReceiver(panel_receiver))
@@ -117,9 +112,7 @@ pub(crate) fn initialize_vdoms(
             vdom,
             DocumentConfig {
                 font_ctx: Some(font_ctx),
-                ua_stylesheets: Some(vec![
-                    blitz_dom::DEFAULT_CSS.to_string(),
-                ]),
+                ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
                 ..default()
             },
         );
@@ -129,15 +122,11 @@ pub(crate) fn initialize_vdoms(
 
         let proxy = Rc::new(DioxusDocumentProxy::new(proxy_sender.clone()));
         dioxus_doc.vdom.in_scope(ScopeId::ROOT, move || {
-            provide_context(
-                proxy as Rc<dyn dioxus_document::Document>,
-            );
+            provide_context(proxy as Rc<dyn dioxus_document::Document>);
         });
 
         dioxus_devtools::connect(move |msg| {
-            proxy_sender
-                .send(DioxusMessage::Devserver(msg))
-                .unwrap()
+            proxy_sender.send(DioxusMessage::Devserver(msg)).unwrap()
         });
 
         dioxus_doc.initial_build();
@@ -167,9 +156,9 @@ pub(crate) fn initialize_vdoms(
         };
         registry.workers.insert(e, worker);
 
-        commands
-            .entity(e)
-            .insert(DioxusPanelsSender { sender: panel_sender });
+        commands.entity(e).insert(DioxusPanelsSender {
+            sender: panel_sender,
+        });
         commands.entity(e).insert(InitializedVdom);
     }
 }
@@ -179,8 +168,11 @@ pub(crate) fn sync_dioxus_ui_with_panels(
     // mut panels: Query<(&DioxusPanels, &DioxusPanelsSender)> Changed<DioxusPanels>>
     panels: Query<(&DioxusPanels, &DioxusPanelsSender), Changed<DioxusPanels>>,
 ) {
-    for (panels, sender)  in panels {
-        let _ = sender.sender.send(panels.clone()).inspect_err(|_err| error!("{_err}"));
+    for (panels, sender) in panels {
+        let _ = sender
+            .sender
+            .send(panels.clone())
+            .inspect_err(|_err| error!("{_err}"));
     }
 }
 

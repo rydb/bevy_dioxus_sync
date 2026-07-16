@@ -3,12 +3,10 @@ use std::time::Duration;
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel};
 use bevy_time::{Time, Virtual};
 
-
 /// Schedule for dioxus rendering systems
 
 #[derive(ScheduleLabel, Hash, Debug, Eq, PartialEq, Clone)]
 pub struct DioxusRenderSchedule;
-
 
 #[derive(Resource)]
 pub struct DioxusRenderScheduleTimestep {
@@ -23,25 +21,26 @@ impl DioxusRenderScheduleTimestep {
     }
 }
 
-
 #[derive(Resource, Default)]
 pub(crate) struct DioxusRenderScheduleAccumulator {
     /// The interval between successive runs of the Dioxus render schedules.
-    pub accumulated: Duration, 
+    pub accumulated: Duration,
 }
 
 pub(crate) struct DioxusRenderMain;
 
 impl DioxusRenderMain {
     pub fn run_dioxus_render_main(world: &mut World) {
-
-
         let delta = world.resource::<Time<Virtual>>().delta();
-        let timestep = world.resource_mut::<DioxusRenderScheduleTimestep>().timestep;
-        
+        let timestep = world
+            .resource_mut::<DioxusRenderScheduleTimestep>()
+            .timestep;
+
         {
             // set current time
-            world.resource_mut::<DioxusRenderScheduleAccumulator>().accumulated += delta;
+            world
+                .resource_mut::<DioxusRenderScheduleAccumulator>()
+                .accumulated += delta;
         }
 
         loop {
@@ -58,11 +57,9 @@ impl DioxusRenderMain {
 
             println!("running schedule");
 
-
             schedule_time.accumulated -= timestep;
 
             let _ = world.try_run_schedule(DioxusRenderSchedule);
         }
-
     }
 }

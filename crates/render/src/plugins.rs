@@ -5,7 +5,10 @@ use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
 use vello::RendererOptions;
 
 use crate::panels::{initialize_vdoms, sync_dioxus_ui_with_panels};
-use crate::schedule::{DioxusRenderMain, DioxusRenderSchedule, DioxusRenderScheduleAccumulator, DioxusRenderScheduleTimestep};
+use crate::schedule::{
+    DioxusRenderMain, DioxusRenderSchedule, DioxusRenderScheduleAccumulator,
+    DioxusRenderScheduleTimestep,
+};
 use crate::worker::VdomThreadRegistry;
 use crate::*;
 
@@ -22,24 +25,25 @@ impl Plugin for DioxusRenderPlugin {
         app.insert_non_send(VdomThreadRegistry::default());
         app.insert_resource(epoch);
 
-        app
-        .add_systems(Startup, setup_window_surface)
-        .add_systems(PreUpdate, initialize_vdoms)
-        .add_systems(DioxusRenderSchedule, (
-                cleanup_vdom_workers,
-                handle_window_resize,
-                sync_dioxus_ui_with_panels,
-                recompute_dioxus_ui_quad_surface,
-                recompute_blitz_render_surfaces,
-                initialize_textures_for_quads,
-                dispatch_vdom_polls,
-                collect_and_render_vdom_scenes,
-            ).chain()
-        );
+        app.add_systems(Startup, setup_window_surface)
+            .add_systems(PreUpdate, initialize_vdoms)
+            .add_systems(
+                DioxusRenderSchedule,
+                (
+                    cleanup_vdom_workers,
+                    handle_window_resize,
+                    sync_dioxus_ui_with_panels,
+                    recompute_dioxus_ui_quad_surface,
+                    recompute_blitz_render_surfaces,
+                    initialize_textures_for_quads,
+                    dispatch_vdom_polls,
+                    collect_and_render_vdom_scenes,
+                )
+                    .chain(),
+            );
         app.insert_resource(DioxusRenderScheduleAccumulator::default());
         app.insert_resource(DioxusRenderScheduleTimestep::from_fps(self.fps_cap));
-        app.add_systems(Update, DioxusRenderMain::run_dioxus_render_main)
-        ;
+        app.add_systems(Update, DioxusRenderMain::run_dioxus_render_main);
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer
@@ -57,7 +61,6 @@ impl Plugin for DioxusRenderPlugin {
         render_app.add_systems(bevy_render::ExtractSchedule, extract_texture_images);
         render_app.insert_resource(RenderWorldSender(s));
         render_app.insert_resource(ExtractedTextureImages::default());
-
 
         // Add a system to get the GPU texture after assets are prepared
         render_app.add_systems(

@@ -42,27 +42,24 @@ pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 /// Multiplier applied to mesh dimensions to determine UI render resolution.
 pub const RESOLUTION_SCALE: f32 = 500.0;
 
-pub mod plugins;
-pub mod panels;
 pub(crate) mod net_provider;
-pub mod worker;
+pub mod panels;
+pub mod plugins;
 pub(crate) mod schedule;
+pub mod worker;
 
 /// Extraction-side mirror of texture handles, keyed by the quad entity.
 #[derive(Resource, Default)]
 struct ExtractedTextureImages(pub HashMap<Entity, Handle<Image>>);
-
 
 /// root ui that all dioxus panels render inside of
 #[component]
 pub fn dioxus_ui() -> Element {
     let panel_receiver = use_context::<DioxusPanelsReceiver>();
     let mut panels = use_signal(|| DioxusPanels::default());
-    
 
     // recieve updates for panels
     use_future(move || {
-        {
         let value = panel_receiver.clone();
         async move {
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -70,7 +67,7 @@ pub fn dioxus_ui() -> Element {
             std::thread::spawn(move || {
                 while let Ok(updated_panels) = value.0.recv() {
                     if tx.send(updated_panels).is_err() {
-                        break; 
+                        break;
                     }
                 }
             });
@@ -82,7 +79,6 @@ pub fn dioxus_ui() -> Element {
                     }
                 }
             }
-        }
         }
     });
     rsx! {
@@ -114,13 +110,22 @@ pub struct DioxusUiQuad {
 
 impl Default for DioxusUiQuad {
     fn default() -> Self {
-        Self { handle: None, computed_wh: None, local_half_extents: None }
+        Self {
+            handle: None,
+            computed_wh: None,
+            local_half_extents: None,
+        }
     }
 }
 
 /// Recompute dioxus ui quad surface whenever the associated mesh for it edited
 fn recompute_dioxus_ui_quad_surface(
-    mut surfaces: Query<(Entity, &Mesh3d, &mut DioxusUiQuad, Option<&DioxusUiResolution>)>,
+    mut surfaces: Query<(
+        Entity,
+        &Mesh3d,
+        &mut DioxusUiQuad,
+        Option<&DioxusUiResolution>,
+    )>,
     meshes: Res<Assets<Mesh>>,
 ) {
     for (_e, surface, mut ui, resolution) in &mut surfaces {
@@ -130,18 +135,28 @@ fn recompute_dioxus_ui_quad_surface(
             continue;
         };
 
-        let Some(VertexAttributeValues::Float32x3(positions)) = surface.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        let Some(VertexAttributeValues::Float32x3(positions)) =
+            surface.attribute(Mesh::ATTRIBUTE_POSITION)
+        else {
             warn!("surface doesn't have Float32x3 positions? {}", id);
             continue;
         };
 
         let Some(points) = positions.get(0..4) else {
-            warn!("shape does not have 4 points. Point total for {}: {}", id, positions.len());
+            warn!(
+                "shape does not have 4 points. Point total for {}: {}",
+                id,
+                positions.len()
+            );
             continue;
         };
 
         if points.len() > 4 {
-            warn!("quads are computed from rectangles, not other shapes. Exiting early for performance. Expected 4 points for: {}, got: {}", id, positions.len());
+            warn!(
+                "quads are computed from rectangles, not other shapes. Exiting early for performance. Expected 4 points for: {}, got: {}",
+                id,
+                positions.len()
+            );
             continue;
         }
 
@@ -155,10 +170,18 @@ fn recompute_dioxus_ui_quad_surface(
         for point in points.iter().skip(1) {
             let x = point[0];
             let y = point[1];
-            if x > x_max { x_max = x; }
-            if x < x_min { x_min = x; }
-            if y > y_max { y_max = y; }
-            if y < y_min { y_min = y; }
+            if x > x_max {
+                x_max = x;
+            }
+            if x < x_min {
+                x_min = x;
+            }
+            if y > y_max {
+                y_max = y;
+            }
+            if y < y_min {
+                y_min = y;
+            }
         }
 
         let half_extents = Some(Vec2 {
@@ -169,9 +192,15 @@ fn recompute_dioxus_ui_quad_surface(
         let (width, height) = if let Some(res) = resolution {
             (res.0 as f32, res.1 as f32)
         } else {
-            ((x_max - x_min) * RESOLUTION_SCALE, (y_max - y_min) * RESOLUTION_SCALE)
+            (
+                (x_max - x_min) * RESOLUTION_SCALE,
+                (y_max - y_min) * RESOLUTION_SCALE,
+            )
         };
-        let new_wh = Some(Vec2 { x: width, y: height });
+        let new_wh = Some(Vec2 {
+            x: width,
+            y: height,
+        });
 
         // Only change the quad if the underlying value actually changed
         if ui.computed_wh == new_wh && ui.local_half_extents == half_extents {
@@ -197,10 +226,9 @@ fn recompute_blitz_render_surfaces(
         let Some(worker) = registry.workers.get(&e) else {
             continue;
         };
-        let _ = worker.cmd_tx.try_send(VdomCommand::Resize(
-            wh.x as u32,
-            wh.y as u32,
-        ));
+        let _ = worker
+            .cmd_tx
+            .try_send(VdomCommand::Resize(wh.x as u32, wh.y as u32));
         trace!(
             "sent resize command for {}: {}x{}",
             e, wh.x as u32, wh.y as u32
@@ -278,11 +306,14 @@ fn texture_getter_system(
 
     for (entity, image_handle) in &extracted_images.0 {
         if let Some(gpu_image) = gpu_images.get(image_handle) {
-            let _ = sender.send((*entity, RenderTexture {
-                texture_view: (*gpu_image.texture_view).clone(),
-                width: gpu_image.texture_descriptor.size.width,
-                height: gpu_image.texture_descriptor.size.height,
-            }));
+            let _ = sender.send((
+                *entity,
+                RenderTexture {
+                    texture_view: (*gpu_image.texture_view).clone(),
+                    width: gpu_image.texture_descriptor.size.width,
+                    height: gpu_image.texture_descriptor.size.height,
+                },
+            ));
             processed.push(*entity);
         }
     }
@@ -302,9 +333,7 @@ fn dispatch_vdom_polls(
 ) {
     let animation_time = animation_epoch.0.elapsed().as_secs_f64();
     for (_entity, worker) in &mut registry.workers {
-        let _ = worker
-            .cmd_tx
-            .try_send(VdomCommand::Poll { animation_time });
+        let _ = worker.cmd_tx.try_send(VdomCommand::Poll { animation_time });
     }
 }
 
@@ -319,11 +348,7 @@ fn collect_and_render_vdom_scenes(
     receiver: Res<MainWorldReceiver>,
     images: Res<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut quad_query: Query<(
-        Entity,
-        &mut MeshMaterial3d<StandardMaterial>,
-        &DioxusUiQuad,
-    )>,
+    mut quad_query: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>, &DioxusUiQuad)>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
 ) {
     let span = span!(Level::DEBUG, "total vdom(s) render time").entered();
@@ -341,10 +366,8 @@ fn collect_and_render_vdom_scenes(
             if let Some(img) = images.get(handle) {
                 let sz = img.texture_descriptor.size;
                 if texture.width == sz.width && texture.height == sz.height {
-                    materials
-                        .get_mut(&mut mat.0)
-                        .unwrap()
-                        .base_color_texture = Some(handle.clone());
+                    materials.get_mut(&mut mat.0).unwrap().base_color_texture =
+                        Some(handle.clone());
                 }
             }
         }
@@ -379,16 +402,12 @@ fn collect_and_render_vdom_scenes(
                         .expect("failed to render to texture");
                 }
                 VdomResult::ShutdownAck => {
-                    debug!(
-                        "vdom worker for {} acknowledged shutdown",
-                        entity
-                    );
+                    debug!("vdom worker for {} acknowledged shutdown", entity);
                 }
                 VdomResult::InputCaught => {}
             }
         }
         span.exit();
-
     }
 }
 
@@ -417,7 +436,6 @@ pub struct DioxusWindowUiQuad;
 #[derive(Component, Clone, Copy)]
 pub struct DioxusUiResolution(pub u32, pub u32);
 
-
 /// initialize textures for quads
 fn initialize_textures_for_quads(
     quads: Query<(Entity, &mut DioxusUiQuad), Without<MeshMaterial3d<StandardMaterial>>>,
@@ -427,21 +445,19 @@ fn initialize_textures_for_quads(
 ) {
     for (e, mut quad) in quads {
         // initialize texture after computed_wh is created
-        let Some(wh) = quad.computed_wh else {
-            continue
-        };
+        let Some(wh) = quad.computed_wh else { continue };
 
-        let image = create_ui_texture(wh.x as u32 , wh.y as u32);
+        let image = create_ui_texture(wh.x as u32, wh.y as u32);
 
         let handle = images.add(image);
-        commands.entity(e)
-        .insert(MeshMaterial3d(materials.add(StandardMaterial {
+        commands
+            .entity(e)
+            .insert(MeshMaterial3d(materials.add(StandardMaterial {
                 base_color_texture: Some(handle.clone()),
                 unlit: true,
                 alpha_mode: AlphaMode::Blend,
                 ..default()
-            }))
-        );
+            })));
         quad.handle = Some(handle);
         debug!("Initialized texture for: {}", e);
     }
@@ -457,10 +473,12 @@ fn setup_window_surface(
 ) {
     let Some((_e, window)) = windows.iter().next() else {
         warn!("no window found, skipping dioxus ui initialization");
-        return
+        return;
     };
     if windows.iter().len() > 1 {
-        warn!("window setup only implemented for one window. TODO: decide how to resolve multiple windows, for now. Skipping");
+        warn!(
+            "window setup only implemented for one window. TODO: decide how to resolve multiple windows, for now. Skipping"
+        );
         return;
     }
 
@@ -473,19 +491,21 @@ fn setup_window_surface(
     let visible_width = visible_height * aspect;
     let distance = visible_height / (2.0 * (fov / 2.0).tan());
 
-    let _ui_entity = commands.spawn((
-        Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        DioxusUiQuad {
-            handle: None,
-            computed_wh: None,
-            local_half_extents: None,
-        },
-        DioxusUiResolution(wh.x, wh.y),
-        DioxusPanels::default(),
-        DioxusWindowUiQuad,
-        WINDOW_UI_RENDER_LAYER,
-    )).id();
+    let _ui_entity = commands
+        .spawn((
+            Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            DioxusUiQuad {
+                handle: None,
+                computed_wh: None,
+                local_half_extents: None,
+            },
+            DioxusUiResolution(wh.x, wh.y),
+            DioxusPanels::default(),
+            DioxusWindowUiQuad,
+            WINDOW_UI_RENDER_LAYER,
+        ))
+        .id();
 
     let _camera = commands.spawn((
         Camera3d::default(),
@@ -505,7 +525,10 @@ fn handle_window_resize(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
-    mut window_quad: Query<(Entity, &mut DioxusUiResolution, &mut DioxusUiQuad), With<DioxusWindowUiQuad>>,
+    mut window_quad: Query<
+        (Entity, &mut DioxusUiResolution, &mut DioxusUiQuad),
+        With<DioxusWindowUiQuad>,
+    >,
     mut camera: Query<&mut Transform, With<DioxusUiCamera>>,
     window: Single<&Window>,
     mut last_size: Local<UVec2>,
@@ -528,7 +551,9 @@ fn handle_window_resize(
             *resolution = DioxusUiResolution(wh.x, wh.y);
             let new_image = create_ui_texture(wh.x, wh.y);
             quad.handle = Some(images.add(new_image));
-            commands.entity(entity).insert(Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))));
+            commands.entity(entity).insert(Mesh3d(
+                meshes.add(Rectangle::new(visible_width, visible_height)),
+            ));
         }
 
         for mut transform in &mut camera {

@@ -1,9 +1,9 @@
+use crate::backend::*;
+use crate::frontend::sign_ui::sign_ui;
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use bevy_dioxus_render::DioxusUiResolution;
 use bevy_dioxus_render::panels::DioxusPanels;
-use crate::backend::*;
-use crate::frontend::sign_ui::sign_ui;
 #[derive(Component)]
 pub struct OrbitCamera {
     pub distance: f32,
@@ -56,36 +56,35 @@ fn setup_sign(
     ));
 
     // Sign
-    commands.spawn((
-        Signpost,
-        Transform::from_xyz(1.0, -0.5, 2.0),
-    )).with_children(|parent| {
-        // // Stem
-        // parent.spawn((
-        //     Mesh3d(meshes.add(Cuboid::new(0.15, 1.2, 0.15))),
-        //     MeshMaterial3d(materials.add(StandardMaterial {
-        //         base_color: Color::Srgba(bevy::color::Srgba::new(0.4, 0.35, 0.3, 1.0)),
-        //         ..default()
-        //     })),
-        //     Transform::from_xyz(3.0, -0.2, -1.0),
-        // ));
-        // // Body
-        // parent.spawn((
-        //     Mesh3d(meshes.add(Cuboid::new(1.4, 0.5, 0.08))),
-        //     MeshMaterial3d(materials.add(StandardMaterial {
-        //         base_color: Color::Srgba(bevy::color::Srgba::new(0.25, 0.25, 0.3, 1.0)),
-        //         ..default()
-        //     })),
-        //     Transform::from_xyz(3.0, 0.45, -1.0),
-        // ));
-        // Front
-        parent.spawn((
-            Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
-            Transform::from_xyz(0.0, 0.45, -0.96),
-            DioxusPanels::new(vec![sign_ui]),
-            DioxusUiResolution(800, 450),
-        ));
-    });
+    commands
+        .spawn((Signpost, Transform::from_xyz(1.0, -0.5, 2.0)))
+        .with_children(|parent| {
+            // // Stem
+            // parent.spawn((
+            //     Mesh3d(meshes.add(Cuboid::new(0.15, 1.2, 0.15))),
+            //     MeshMaterial3d(materials.add(StandardMaterial {
+            //         base_color: Color::Srgba(bevy::color::Srgba::new(0.4, 0.35, 0.3, 1.0)),
+            //         ..default()
+            //     })),
+            //     Transform::from_xyz(3.0, -0.2, -1.0),
+            // ));
+            // // Body
+            // parent.spawn((
+            //     Mesh3d(meshes.add(Cuboid::new(1.4, 0.5, 0.08))),
+            //     MeshMaterial3d(materials.add(StandardMaterial {
+            //         base_color: Color::Srgba(bevy::color::Srgba::new(0.25, 0.25, 0.3, 1.0)),
+            //         ..default()
+            //     })),
+            //     Transform::from_xyz(3.0, 0.45, -1.0),
+            // ));
+            // Front
+            parent.spawn((
+                Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
+                Transform::from_xyz(0.0, 0.45, -0.96),
+                DioxusPanels::new(vec![sign_ui]),
+                DioxusUiResolution(800, 450),
+            ));
+        });
 }
 
 fn setup_scene(

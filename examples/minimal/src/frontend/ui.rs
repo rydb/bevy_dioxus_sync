@@ -32,7 +32,9 @@ pub fn app_ui() -> Element {
 
     #[allow(unused)]
     let _cube_dbg2 = use_memo(move || {
-        let r = cube.read_ok(|n| Ok(n.2.read().0.id())).unwrap_or_else(|err| Err(format!("{:?}", err)));
+        let r = cube
+            .read_ok(|n| Ok(n.2.read().0.id()))
+            .unwrap_or_else(|err| Err(format!("{:?}", err)));
         debug!("ui: color_handle={:?}", r);
     });
 

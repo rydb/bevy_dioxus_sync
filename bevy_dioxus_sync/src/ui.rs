@@ -1,14 +1,6 @@
-use std::collections::HashMap;
 
 // use crate::plugins::DioxusPluginProps;
 // use crate::panels::{DioxusPanel, PanelUpdateKind};
-use async_std::task::sleep;
-use bevy_dioxus_tracing::trace;
-use bevy_ecs::entity::Entity;
-use dioxus_core::Element;
-use dioxus_core_macro::rsx;
-use dioxus_hooks::{use_context_provider, use_future, use_signal};
-use dioxus_signals::*;
 
 // #[derive(Clone, Default)]
 // pub struct DioxusPanels(pub Signal<HashMap<Entity, DioxusPanel>>);
