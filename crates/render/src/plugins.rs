@@ -5,34 +5,41 @@ use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
 use vello::RendererOptions;
 
 use crate::panels::{initialize_vdoms, sync_dioxus_ui_with_panels};
+use crate::schedule::{DioxusRenderMain, DioxusRenderSchedule, DioxusRenderScheduleAccumulator, DioxusRenderScheduleTimestep};
 use crate::worker::VdomThreadRegistry;
 use crate::*;
 
-pub struct DioxusRenderPlugin;
+pub struct DioxusRenderPlugin {
+    pub fps_cap: u32,
+}
 
 impl Plugin for DioxusRenderPlugin {
     fn build(&self, app: &mut App) {
         let epoch = AnimationTime(Instant::now());
 
+        app.add_schedule(Schedule::new(DioxusRenderSchedule));
+
         app.insert_non_send(VdomThreadRegistry::default());
         app.insert_resource(epoch);
 
-        app.add_systems(Startup, setup_window_surface)
-            .add_systems(PreUpdate, initialize_vdoms)
-            .add_systems(
-                Update,
-                (
-                    cleanup_vdom_workers,
-                    handle_window_resize,
-                    sync_dioxus_ui_with_panels,
-                    recompute_dioxus_ui_quad_surface,
-                    recompute_blitz_render_surfaces,
-                    initialize_textures_for_quads,
-                    dispatch_vdom_polls,
-                    collect_and_render_vdom_scenes,
-                )
-                    .chain(),
-            );
+        app
+        .add_systems(Startup, setup_window_surface)
+        .add_systems(PreUpdate, initialize_vdoms)
+        .add_systems(DioxusRenderSchedule, (
+                cleanup_vdom_workers,
+                handle_window_resize,
+                sync_dioxus_ui_with_panels,
+                recompute_dioxus_ui_quad_surface,
+                recompute_blitz_render_surfaces,
+                initialize_textures_for_quads,
+                dispatch_vdom_polls,
+                collect_and_render_vdom_scenes,
+            ).chain()
+        );
+        app.insert_resource(DioxusRenderScheduleAccumulator::default());
+        app.insert_resource(DioxusRenderScheduleTimestep::from_fps(self.fps_cap));
+        app.add_systems(Update, DioxusRenderMain::run_dioxus_render_main)
+        ;
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer

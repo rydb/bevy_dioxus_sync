@@ -28,6 +28,7 @@ bevy_pbr = {workspace = true}
 bevy_material = {workspace = true}
 bevy_camera = {workspace = true}
 bevy_utils = {workspace = true}
+bevy_time = {workspace = true}
 
 rustc-hash = {workspace = true}
 crossbeam-channel = {workspace = true}

@@ -46,6 +46,7 @@ pub mod plugins;
 pub mod panels;
 pub(crate) mod net_provider;
 pub mod worker;
+pub(crate) mod schedule;
 
 /// Extraction-side mirror of texture handles, keyed by the quad entity.
 #[derive(Resource, Default)]
