@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Instant;
 
 use bevy_asset::{RenderAssetUsages, prelude::*};
@@ -23,8 +22,7 @@ use bevy_render::{
 use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
-use blitz_dom::Document;
-use blitz_traits::shell::{ColorScheme, Viewport};
+use blitz_traits::shell::ColorScheme;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_core::Element;
 use dioxus_core_macro::{component, rsx};
@@ -217,7 +215,7 @@ fn recompute_dioxus_ui_quad_surface(
 /// Sends resize commands to VDOM workers when the ui quad dimensions change.
 fn recompute_blitz_render_surfaces(
     quads: Query<(Entity, &DioxusUiQuad), Changed<DioxusUiQuad>>,
-    mut registry: NonSendMut<VdomThreadRegistry>,
+    registry: NonSend<VdomThreadRegistry>,
 ) {
     for (e, quad) in quads {
         let Some(wh) = quad.computed_wh else {
@@ -351,7 +349,7 @@ fn collect_and_render_vdom_scenes(
     mut quad_query: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>, &DioxusUiQuad)>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
 ) {
-    let span = span!(Level::DEBUG, "total vdom(s) render time").entered();
+    let _ = span!(Level::DEBUG, "total vdom(s) render time").entered();
     // Handle incoming GPU textures from the render world.
     cached_textures.retain(|entity, _| quad_query.contains(*entity));
 

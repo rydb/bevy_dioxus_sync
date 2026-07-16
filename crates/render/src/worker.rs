@@ -19,9 +19,6 @@ use vello::Scene;
 
 use crate::{COLOR_SCHEME, SCALE_FACTOR};
 
-/// Placeholder animation time for intra-frame re-polls from future wakeups.
-const ANIMATION_TIME_PLACEHOLDER: f64 = 0.0;
-
 /// Transfers ownership of a `!Send` value into a spawned thread.
 ///
 /// Wrap a value with [`SendToThread::new`], move the wrapper into a
@@ -251,11 +248,11 @@ impl VdomWorker {
                                 SCALE_FACTOR,
                                 COLOR_SCHEME,
                             ));
-                            needs_paint = true;
+                            // needs_paint = true;
                         }
                         Ok(VdomCommand::Message(msg)) => {
                             process_dioxus_message(&mut document, msg, &waker);
-                            needs_paint = true;
+                            // needs_paint = true;
                         }
                         Err(_) => {
                             debug!("vdom-worker-{}: cmd channel closed", entity.index());

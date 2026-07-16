@@ -17,7 +17,7 @@ use dioxus_native::DioxusDocument;
 use vello::peniko::Blob;
 
 use crate::net_provider::{BevyNetProvider, DioxusDocumentProxy};
-use crate::worker::{VdomCommand, VdomResult, VdomThreadRegistry, VdomWorker};
+use crate::worker::{VdomThreadRegistry, VdomWorker};
 use crate::{DioxusUiQuad, dioxus_ui};
 
 /// panels inside of a dioxus window
