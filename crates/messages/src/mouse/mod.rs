@@ -1,7 +1,5 @@
 use bevy_dioxus_render::worker::VdomThreadRegistry;
-use bevy_dioxus_render::{
-    DioxusUiQuad, DioxusWindowUiQuad, WindowOverlayCatchState,
-};
+use bevy_dioxus_render::{DioxusUiQuad, DioxusWindowUiQuad, WindowOverlayCatchState};
 use bevy_ecs::prelude::*;
 use bevy_input::{ButtonState, mouse::MouseButtonInput, prelude::*};
 use bevy_math::Vec2;
@@ -79,7 +77,7 @@ pub(crate) fn handle_mouse_messages(
     }
 
     // If the window overlay DOM consumed input last frame, suppress input this frame.
-    let mut should_catch_events = catch_state.caught_last_frame;
+    let should_catch_events = catch_state.caught_last_frame;
     let mouse_state = &mut last_mouse_state;
 
     let window_overlay_entities: std::collections::HashSet<Entity> =
@@ -266,7 +264,6 @@ pub(crate) fn handle_mouse_messages(
     }
 
     if should_catch_events {
-
         mouse_button_input_events.clear();
         mouse_buttons.reset_all();
     }

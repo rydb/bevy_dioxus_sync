@@ -1,4 +1,3 @@
-
 use bevy_dioxus_render::{DioxusWindowUiQuad, panels::DioxusPanels};
 use bevy_dioxus_tracing::error;
 use bevy_ecs::prelude::*;

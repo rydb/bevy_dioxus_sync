@@ -25,10 +25,10 @@ use bevy_window::prelude::*;
 use blitz_dom::local_name;
 use blitz_traits::shell::ColorScheme;
 use crossbeam_channel::{Receiver, Sender};
-use dioxus_native::DioxusDocument;
 use dioxus_core::Element;
 use dioxus_core_macro::{component, rsx};
 use dioxus_hooks::{use_context, use_future, use_signal};
+use dioxus_native::DioxusDocument;
 use dioxus_signals::{ReadableExt, WritableExt};
 use vello::{RenderParams, Renderer as VelloRenderer, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
@@ -117,7 +117,7 @@ pub fn dioxus_ui() -> Element {
 }
 
 /// Marks camera as dioxus window ui camera
-/// 
+///
 /// TODO: Add multi-window support
 #[derive(Component)]
 pub struct DioxusWindowUiCamera;
@@ -439,10 +439,9 @@ fn collect_and_render_vdom_scenes(
                 }
                 VdomResult::InputCaught => {}
                 VdomResult::HitTestResult { entity: _, caught } => {
-                    
                     if let Some(state) = catch_state_this_frame {
                         if state == true {
-                            continue
+                            continue;
                         }
                     }
                     catch_state_this_frame = Some(caught)
@@ -479,7 +478,7 @@ const WINDOW_UI_RENDER_LAYER: RenderLayers = RenderLayers::layer(1);
 pub struct DioxusWindowUiQuad;
 
 /// Sets the logical CSS viewport resolution for a dioxus UI quad.
-/// 
+///
 /// TODO: decide best practice on how to correlate this with dioxus ui quad surface
 #[derive(Component, Clone, Copy)]
 pub struct DioxusUiResolution(pub u32, pub u32);

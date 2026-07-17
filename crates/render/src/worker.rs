@@ -121,10 +121,7 @@ pub enum VdomResult {
     /// The entity identifies which document caught it.
     InputCaught,
     /// Hit-test result: whether a DOM element with catch-events was under the pointer.
-    HitTestResult {
-        entity: Entity,
-        caught: bool,
-    },
+    HitTestResult { entity: Entity, caught: bool },
     /// Worker confirms shutdown.
     ShutdownAck,
 }

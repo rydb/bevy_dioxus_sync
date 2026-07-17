@@ -21,7 +21,7 @@ use crate::worker::{VdomThreadRegistry, VdomWorker};
 use crate::{DioxusUiQuad, dioxus_ui};
 
 /// Panels on a dioxus ui quad surface
-/// 
+///
 /// TODO: support multiple panel orientations (left, right, bottom, top, etc..)
 #[derive(Component, Clone)]
 #[require(DioxusUiQuad)]

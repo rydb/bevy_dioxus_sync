@@ -16,17 +16,16 @@ pub struct DioxusEventSyncPlugin;
 
 impl Plugin for DioxusEventSyncPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app
-        .init_resource::<WorldSpacePickingState>()
-        .init_resource::<WindowOverlayCatchState>()
-        .add_systems(
-            PreUpdate,
-            (
-                update_world_space_picking.after(PickingSystems::Backend),
-                handle_mouse_messages.after(InputSystems),
-                handle_keyboard_messages.after(InputSystems),
-            )
-                .chain(),
-        );
+        app.init_resource::<WorldSpacePickingState>()
+            .init_resource::<WindowOverlayCatchState>()
+            .add_systems(
+                PreUpdate,
+                (
+                    update_world_space_picking.after(PickingSystems::Backend),
+                    handle_mouse_messages.after(InputSystems),
+                    handle_keyboard_messages.after(InputSystems),
+                )
+                    .chain(),
+            );
     }
 }

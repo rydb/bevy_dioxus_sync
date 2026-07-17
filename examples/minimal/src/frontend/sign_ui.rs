@@ -1,9 +1,7 @@
 use bevy_color::Color;
 use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
-// use bevy_dioxus_sync::panels::DioxusElementMarker;
 use dioxus::prelude::*;
-use dioxus_bevy_signals::macros::debug;
 use dioxus_bevy_signals::{
     asset::{AssetNoneState, use_bevy_asset},
     query::single::use_bevy_single,
