@@ -17,7 +17,7 @@ use dioxus_devtools::DevserverMsg;
 use dioxus_native::DioxusDocument;
 use vello::Scene;
 
-use crate::{CATCH_EVENTS_CLASS, COLOR_SCHEME, SCALE_FACTOR, does_catch_events};
+use crate::{COLOR_SCHEME, SCALE_FACTOR, does_catch_events};
 
 /// Extracts page coordinates from a UI event for hit-testing.
 fn extract_ui_event_coords(event: &UiEvent) -> (f32, f32) {

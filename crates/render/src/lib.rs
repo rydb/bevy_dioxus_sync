@@ -382,7 +382,7 @@ fn collect_and_render_vdom_scenes(
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
     mut catch_state: ResMut<WindowOverlayCatchState>,
 ) {
-    // let _ = span!(Level::DEBUG, "total vdom(s) render time").entered();
+    let _ = span!(Level::DEBUG, "total vdom(s) render time").entered();
 
     // Handle incoming GPU textures from the render world.
     cached_textures.retain(|entity, _| quad_query.contains(*entity));
@@ -408,7 +408,7 @@ fn collect_and_render_vdom_scenes(
     let mut catch_state_this_frame = None;
     // Collect painted scenes from all workers and render them.
     for (entity, worker) in &mut registry.workers {
-        // let span = span!(Level::DEBUG, "paint_scene collection", entity = %entity).entered();
+        let span = span!(Level::DEBUG, "paint_scene collection", entity = %entity).entered();
         while let Ok(result) = worker.result_rx.try_recv() {
             match result {
                 VdomResult::SceneReady {
@@ -448,7 +448,7 @@ fn collect_and_render_vdom_scenes(
                 }
             }
         }
-        // span.exit();
+        span.exit();
     }
     if let Some(result) = catch_state_this_frame {
         catch_state.caught_last_frame = result;
