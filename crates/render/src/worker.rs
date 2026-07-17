@@ -130,9 +130,6 @@ pub struct VdomWorker {
 }
 
 /// Registry of all active VDOM worker threads.
-///
-/// Replaces the previous single-threaded document map as the ECS resource
-/// that tracks VDOM state per entity.
 #[derive(Resource, Default, Debug)]
 pub struct VdomThreadRegistry {
     pub workers: HashMap<Entity, VdomWorker>,

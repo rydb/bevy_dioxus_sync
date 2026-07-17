@@ -1,3 +1,3 @@
 # bevy_dioxus_messages
 
-crate for syncronizing bevy messages with dioxus events
+crate for synchronizing bevy messages with dioxus events

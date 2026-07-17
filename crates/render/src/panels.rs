@@ -20,7 +20,9 @@ use crate::net_provider::{BevyNetProvider, DioxusDocumentProxy};
 use crate::worker::{VdomThreadRegistry, VdomWorker};
 use crate::{DioxusUiQuad, dioxus_ui};
 
-/// panels inside of a dioxus window
+/// Panels on a dioxus ui quad surface
+/// 
+/// TODO: support multiple panel orientations (left, right, bottom, top, etc..)
 #[derive(Component, Clone)]
 #[require(DioxusUiQuad)]
 pub struct DioxusPanels {
@@ -175,14 +177,3 @@ pub(crate) fn sync_dioxus_ui_with_panels(
             .inspect_err(|_err| error!("{_err}"));
     }
 }
-
-// /// systems for setting up support for panels in dioxus ui
-// pub struct DioxusUiPanelsPlugin;
-
-// impl Plugin for DioxusUiPanelsPlugin {
-//     fn build(&self, app: &mut bevy_app::App) {
-//         app
-//         .add_systems(PreUpdate, initialize_vdoms)
-//         ;
-//     }
-// }

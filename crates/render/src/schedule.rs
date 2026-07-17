@@ -55,8 +55,6 @@ impl DioxusRenderMain {
                 break;
             }
 
-            println!("running schedule");
-
             schedule_time.accumulated -= timestep;
 
             let _ = world.try_run_schedule(DioxusRenderSchedule);

@@ -6,6 +6,7 @@ use dioxus_core::Element;
 
 use crate::{InitialWindowPanel, setup_initial_window_ui};
 
+/// Plugin for Dioxus support in bevy. 
 pub struct DioxusPlugin {
     /// how many times per second does dioxus refresh info from bevy.
     pub bevy_info_refresh_fps: u32,

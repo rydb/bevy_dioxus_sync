@@ -56,7 +56,7 @@ pub fn dioxus_ui() -> Element {
     let panel_receiver = use_context::<DioxusPanelsReceiver>();
     let mut panels = use_signal(|| DioxusPanels::default());
 
-    // recieve updates for panels
+    // receive updates for panels
     use_future(move || {
         let value = panel_receiver.clone();
         async move {
@@ -86,9 +86,11 @@ pub fn dioxus_ui() -> Element {
     }
 }
 
-/// Marker for the camera that the dioxus UI should follow.
+/// Marks camera as dioxus window ui camera
+/// 
+/// TODO: Add multi-window support
 #[derive(Component)]
-pub struct DioxusUiCamera;
+pub struct DioxusWindowUiCamera;
 
 /// Marker for the main window entity that hosts the primary dioxus UI.
 #[derive(Component)]
@@ -427,10 +429,13 @@ fn cleanup_vdom_workers(
 
 const WINDOW_UI_RENDER_LAYER: RenderLayers = RenderLayers::layer(1);
 
+/// Marks an entity with ui quad as a window for window specific systems.
 #[derive(Component)]
 pub struct DioxusWindowUiQuad;
 
-/// Sets the logical CSS viewport resolution for a dioxus UI quad..
+/// Sets the logical CSS viewport resolution for a dioxus UI quad.
+/// 
+/// TODO: decide best practice on how to correlate this with dioxus ui quad surface
 #[derive(Component, Clone, Copy)]
 pub struct DioxusUiResolution(pub u32, pub u32);
 
@@ -514,7 +519,7 @@ fn setup_window_surface(
         },
         Transform::from_xyz(0.0, 0.0, distance),
         WINDOW_UI_RENDER_LAYER,
-        DioxusUiCamera,
+        DioxusWindowUiCamera,
     ));
 }
 
@@ -527,7 +532,7 @@ fn handle_window_resize(
         (Entity, &mut DioxusUiResolution, &mut DioxusUiQuad),
         With<DioxusWindowUiQuad>,
     >,
-    mut camera: Query<&mut Transform, With<DioxusUiCamera>>,
+    mut camera: Query<&mut Transform, With<DioxusWindowUiCamera>>,
     window: Single<&Window>,
     mut last_size: Local<UVec2>,
 ) {

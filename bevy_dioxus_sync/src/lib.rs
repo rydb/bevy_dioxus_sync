@@ -4,10 +4,7 @@ use bevy_dioxus_tracing::error;
 use bevy_ecs::prelude::*;
 use dioxus_core::Element;
 
-// pub(crate) mod net_provider;
-// pub mod panels;
 pub mod plugins;
-pub mod ui;
 
 #[derive(Resource)]
 pub struct InitialWindowPanel(pub Option<fn() -> Element>);
@@ -20,7 +17,7 @@ fn setup_initial_window_ui(
     let len = windows.iter().len();
     if !len == 1 {
         error!(
-            "window setup requires no more and no less then one window, but got {}. TODO: Decide how to handle multple windows",
+            "window setup requires no more and no less than one window, but got {}. TODO: Decide how to handle multple windows",
             len
         );
     }
