@@ -22,8 +22,10 @@ use bevy_render::{
 use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
+use blitz_dom::local_name;
 use blitz_traits::shell::ColorScheme;
 use crossbeam_channel::{Receiver, Sender};
+use dioxus_native::DioxusDocument;
 use dioxus_core::Element;
 use dioxus_core_macro::{component, rsx};
 use dioxus_hooks::{use_context, use_future, use_signal};
@@ -39,6 +41,34 @@ pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 
 /// Multiplier applied to mesh dimensions to determine UI render resolution.
 pub const RESOLUTION_SCALE: f32 = 500.0;
+
+/// CSS class name used to mark DOM elements that consume input events.
+pub const CATCH_EVENTS_CLASS: &str = "catch-events";
+
+/// Walks up the DOM from a node checking for the catch-events class.
+pub fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
+    if let Some(node) = dioxus_doc.inner.borrow().get_node(node_id) {
+        let class = node.attr(local_name!("class")).unwrap_or("");
+        if class
+            .split_whitespace()
+            .any(|word| word == CATCH_EVENTS_CLASS)
+        {
+            true
+        } else if let Some(parent) = node.parent {
+            does_catch_events(dioxus_doc, parent)
+        } else {
+            false
+        }
+    } else {
+        false
+    }
+}
+
+/// Tracks whether the window overlay DOM consumed input in the previous frame.
+#[derive(Resource, Default)]
+pub struct WindowOverlayCatchState {
+    pub caught_last_frame: bool,
+}
 
 pub(crate) mod net_provider;
 pub mod panels;
@@ -350,8 +380,10 @@ fn collect_and_render_vdom_scenes(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut quad_query: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>, &DioxusUiQuad)>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
+    mut catch_state: ResMut<WindowOverlayCatchState>,
 ) {
-    let _ = span!(Level::DEBUG, "total vdom(s) render time").entered();
+    // let _ = span!(Level::DEBUG, "total vdom(s) render time").entered();
+
     // Handle incoming GPU textures from the render world.
     cached_textures.retain(|entity, _| quad_query.contains(*entity));
 
@@ -373,9 +405,10 @@ fn collect_and_render_vdom_scenes(
         }
         cached_textures.insert(entity, texture);
     }
+    let mut catch_state_this_frame = None;
     // Collect painted scenes from all workers and render them.
     for (entity, worker) in &mut registry.workers {
-        let span = span!(Level::DEBUG, "paint_scene collection", entity = %entity).entered();
+        // let span = span!(Level::DEBUG, "paint_scene collection", entity = %entity).entered();
         while let Ok(result) = worker.result_rx.try_recv() {
             match result {
                 VdomResult::SceneReady {
@@ -405,9 +438,21 @@ fn collect_and_render_vdom_scenes(
                     debug!("vdom worker for {} acknowledged shutdown", entity);
                 }
                 VdomResult::InputCaught => {}
+                VdomResult::HitTestResult { entity: _, caught } => {
+                    
+                    if let Some(state) = catch_state_this_frame {
+                        if state == true {
+                            continue
+                        }
+                    }
+                    catch_state_this_frame = Some(caught)
+                }
             }
         }
-        span.exit();
+        // span.exit();
+    }
+    if let Some(result) = catch_state_this_frame {
+        catch_state.caught_last_frame = result;
     }
 }
 

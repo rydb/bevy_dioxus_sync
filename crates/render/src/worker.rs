@@ -17,7 +17,17 @@ use dioxus_devtools::DevserverMsg;
 use dioxus_native::DioxusDocument;
 use vello::Scene;
 
-use crate::{COLOR_SCHEME, SCALE_FACTOR};
+use crate::{CATCH_EVENTS_CLASS, COLOR_SCHEME, SCALE_FACTOR, does_catch_events};
+
+/// Extracts page coordinates from a UI event for hit-testing.
+fn extract_ui_event_coords(event: &UiEvent) -> (f32, f32) {
+    match event {
+        UiEvent::PointerMove(e) | UiEvent::PointerDown(e) | UiEvent::PointerUp(e) => {
+            (e.coords.page_x, e.coords.page_y)
+        }
+        _ => (0.0, 0.0),
+    }
+}
 
 /// Transfers ownership of a `!Send` value into a spawned thread.
 ///
@@ -110,6 +120,11 @@ pub enum VdomResult {
     /// The worker caught an input event this frame.
     /// The entity identifies which document caught it.
     InputCaught,
+    /// Hit-test result: whether a DOM element with catch-events was under the pointer.
+    HitTestResult {
+        entity: Entity,
+        caught: bool,
+    },
     /// Worker confirms shutdown.
     ShutdownAck,
 }
@@ -174,11 +189,20 @@ impl VdomWorker {
                     let mut needs_paint = false;
 
                     // Process input events before polling.
-                    while let Ok((_ev_entity, ui_event)) = input_rx.try_recv() {
+                    while let Ok((ev_entity, ui_event)) = input_rx.try_recv() {
+                        let (x, y) = extract_ui_event_coords(&ui_event);
+                        let caught = document
+                            .inner
+                            .borrow()
+                            .hit(x, y)
+                            .map(|hit| does_catch_events(&document, hit.node_id))
+                            .unwrap_or(false);
                         document.handle_ui_event(ui_event);
                         needs_paint = true;
-                        // Report that input was caught by this document.
-                        let _ = result_tx.try_send(VdomResult::InputCaught);
+                        let _ = result_tx.try_send(VdomResult::HitTestResult {
+                            entity: ev_entity,
+                            caught,
+                        });
                     }
 
                     while let Ok(msg) = messages_recv.try_recv() {

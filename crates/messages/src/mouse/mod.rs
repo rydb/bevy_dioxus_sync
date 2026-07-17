@@ -1,5 +1,7 @@
 use bevy_dioxus_render::worker::VdomThreadRegistry;
-use bevy_dioxus_render::{DioxusUiQuad, DioxusWindowUiQuad};
+use bevy_dioxus_render::{
+    DioxusUiQuad, DioxusWindowUiQuad, WindowOverlayCatchState,
+};
 use bevy_ecs::prelude::*;
 use bevy_input::{ButtonState, mouse::MouseButtonInput, prelude::*};
 use bevy_math::Vec2;
@@ -69,13 +71,15 @@ pub(crate) fn handle_mouse_messages(
     mut mouse_buttons: ResMut<ButtonInput<MouseButton>>,
     mut last_mouse_state: Local<MouseState>,
     picking_state: Res<WorldSpacePickingState>,
-    window_overlay_query: Query<Entity, With<DioxusWindowUiQuad>>,
+    catch_state: Res<WindowOverlayCatchState>,
+    window_overlay_query: Query<Entity, With<DioxusUiQuad>>,
 ) {
     if cursor_moved.is_empty() && mouse_button_input_events.is_empty() {
         return;
     }
 
-    let mut should_catch_events = false;
+    // If the window overlay DOM consumed input last frame, suppress input this frame.
+    let mut should_catch_events = catch_state.caught_last_frame;
     let mouse_state = &mut last_mouse_state;
 
     let window_overlay_entities: std::collections::HashSet<Entity> =
@@ -109,7 +113,6 @@ pub(crate) fn handle_mouse_messages(
             let _ = worker
                 .input_tx
                 .try_send((entity, UiEvent::PointerMove(pointer_event.clone())));
-            should_catch_events = true;
         }
 
         if let (Some(hit_entity), Some(local_coords)) =
@@ -135,7 +138,6 @@ pub(crate) fn handle_mouse_messages(
                 let _ = worker
                     .input_tx
                     .try_send((hit_entity, UiEvent::PointerMove(local_event)));
-                should_catch_events = true;
             }
         }
     }
@@ -184,7 +186,6 @@ pub(crate) fn handle_mouse_messages(
                     let _ = worker
                         .input_tx
                         .try_send((entity, UiEvent::PointerDown(pointer_event.clone())));
-                    should_catch_events = true;
                 }
 
                 if let (Some(hit_entity), Some(local_coords)) =
@@ -210,7 +211,6 @@ pub(crate) fn handle_mouse_messages(
                         let _ = worker
                             .input_tx
                             .try_send((hit_entity, UiEvent::PointerDown(local_event)));
-                        should_catch_events = true;
                     }
                 }
             }
@@ -234,7 +234,6 @@ pub(crate) fn handle_mouse_messages(
                     let _ = worker
                         .input_tx
                         .try_send((entity, UiEvent::PointerUp(pointer_event.clone())));
-                    should_catch_events = true;
                 }
 
                 if let (Some(hit_entity), Some(local_coords)) =
@@ -260,7 +259,6 @@ pub(crate) fn handle_mouse_messages(
                         let _ = worker
                             .input_tx
                             .try_send((hit_entity, UiEvent::PointerUp(local_event)));
-                        should_catch_events = true;
                     }
                 }
             }
@@ -268,6 +266,7 @@ pub(crate) fn handle_mouse_messages(
     }
 
     if should_catch_events {
+
         mouse_button_input_events.clear();
         mouse_buttons.reset_all();
     }

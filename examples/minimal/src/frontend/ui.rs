@@ -30,14 +30,6 @@ pub fn app_ui() -> Element {
         With<DynamicCube>,
     >();
 
-    #[allow(unused)]
-    let _cube_dbg2 = use_memo(move || {
-        let r = cube
-            .read_ok(|n| Ok(n.2.read().0.id()))
-            .unwrap_or_else(|err| Err(format!("{:?}", err)));
-        debug!("ui: color_handle={:?}", r);
-    });
-
     let cube_translation_str = use_memo(move || {
         cube.read_ok(|n| {
             let t = &n.1.read().translation;
@@ -48,7 +40,7 @@ pub fn app_ui() -> Element {
 
     let cube_color_handle = use_memo(move || {
         cube.read_ok(|n| Ok(n.2.read().0.id()))
-            .unwrap_or_else(|err| Err(AssetNoneState::Error(err.into())))
+            .unwrap_or_else(|_err| Err(AssetNoneState::Fetching))
     });
     let cube_color = use_bevy_asset(cube_color_handle);
 
