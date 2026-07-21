@@ -54,3 +54,7 @@ dioxus-asset-resolver = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_tracing = {workspace = true}
 dioxus_bevy_signals = {workspace = true}
+
+[features]
+trace = ["bevy_dioxus_tracing/trace"]
+trace_perf = ["bevy_dioxus_tracing/trace_perf"]

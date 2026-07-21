@@ -51,7 +51,7 @@ pub fn main() {
         .add_plugins(DioxusPlugin {
             bevy_info_refresh_fps: 30,
             main_window_ui: Some(app_ui),
-            dioxus_render_fps_cap: 30,
+            dioxus_render_fps_cap: 60,
         })
         .add_plugins(BevyScenePlugin)
         .run();

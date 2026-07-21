@@ -13,5 +13,7 @@ macro-v = {workspace = true}
 tracing = {workspace = true, optional = true}
 
 [features]
+# general tracing
 trace = ["dep:tracing"]
-default = ["trace"]
+# tracing for performance metrics (spans)
+trace_perf = ["dep:tracing"]

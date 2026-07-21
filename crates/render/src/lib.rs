@@ -6,7 +6,7 @@ use bevy_camera::visibility::RenderLayers;
 use bevy_camera::{Camera, Camera3d, ClearColorConfig};
 use bevy_derive::Deref;
 use bevy_dioxus_interop::DioxusMessage;
-use bevy_dioxus_tracing::{Level, debug, span, trace, warn};
+use bevy_dioxus_tracing::{debug, debug_span, trace, warn};
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_material::AlphaMode;
@@ -382,7 +382,7 @@ fn collect_and_render_vdom_scenes(
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
     mut catch_state: ResMut<WindowOverlayCatchState>,
 ) {
-    let _ = span!(Level::DEBUG, "total vdom(s) render time").entered();
+    let _ = debug_span!("total vdom(s) render time").entered();
 
     // Handle incoming GPU textures from the render world.
     cached_textures.retain(|entity, _| quad_query.contains(*entity));
@@ -408,7 +408,7 @@ fn collect_and_render_vdom_scenes(
     let mut catch_state_this_frame = None;
     // Collect painted scenes from all workers and render them.
     for (entity, worker) in &mut registry.workers {
-        let span = span!(Level::DEBUG, "paint_scene collection", entity = %entity).entered();
+        let span = debug_span!("paint_scene collection", entity = %entity).entered();
         while let Ok(result) = worker.result_rx.try_recv() {
             match result {
                 VdomResult::SceneReady {
