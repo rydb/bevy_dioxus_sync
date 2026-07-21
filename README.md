@@ -1,8 +1,9 @@
+
 # bevy_dioxus_sync
 
 A crate for bevy dioxus integration.
 
-[bevy_dioxus_sync_V1.webm](https://github.com/user-attachments/assets/7ab6ca08-9d26-4323-b19c-93bf57d8485c)
+https://github.com/user-attachments/assets/190d6342-17ec-4c9b-bd26-06cfa682a7f1
 
 ## Features
 
