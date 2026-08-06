@@ -31,6 +31,7 @@ bevy_utils = {workspace = true}
 bevy_time = {workspace = true}
 
 rustc-hash = {workspace = true}
+bitflags = {workspace = true}
 crossbeam-channel = {workspace = true}
 data-url = {workspace = true}
 bytes = {workspace = true}

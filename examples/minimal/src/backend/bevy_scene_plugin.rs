@@ -2,8 +2,13 @@ use crate::backend::*;
 use crate::frontend::sign_ui::sign_ui;
 use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
-use bevy_dioxus_render::DioxusUiResolution;
+use bevy_color::palettes::css::RED;
+use bevy_dioxus_messages::mouse::WorldSpacePickingState;
+use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusUiQuad, DioxusUiResolution};
 use bevy_dioxus_render::panels::DioxusPanels;
+use bevy_pbr::wireframe::Wireframe;
+use bevy_picking::prelude::Pickable;
+
 #[derive(Component)]
 pub struct OrbitCamera {
     pub distance: f32,
@@ -34,8 +39,16 @@ impl Plugin for BevyScenePlugin {
         app.insert_resource(FPS(0.0));
         app.insert_resource(CubeRotationSpeed::default());
         app.insert_resource(SignDistance::default());
+        app.insert_resource(UIWireframeEnabled(false));
         app.add_systems(Startup, (setup_scene, setup_sign).chain());
-        app.add_systems(Update, (sync_with_ui, animate, orbit_camera_system));
+        app.add_systems(
+            Update,
+            (sync_with_ui, animate, orbit_camera_system, toggle_ui_wireframes),
+        )
+        .add_systems(Startup, spawn_collision_marker)
+        .add_systems(Update, colision_mesh_on_mouse_pick_spot)
+        ;
+        
     }
 }
 
@@ -83,8 +96,78 @@ fn setup_sign(
                 Transform::from_xyz(0.0, 0.45, -0.96),
                 DioxusPanels::new(vec![sign_ui]),
                 DioxusUiResolution(800, 450),
+                
             ));
         });
+}
+
+#[derive(Resource)]
+pub struct UIWireframeEnabled(bool);
+
+/// toggle wireframes on uis
+fn toggle_ui_wireframes(
+    buttons: Res<ButtonInput<KeyCode>>,
+    uis: Query<Entity, With<DioxusUiQuad>>,
+    mut wire_mesh_enabled: ResMut<UIWireframeEnabled>,
+    mut commands: Commands,
+) {
+    if buttons.just_pressed(KeyCode::KeyQ) {
+        wire_mesh_enabled.0 ^= true;
+    
+        if wire_mesh_enabled.0 == true {
+            println!("enabling wireframes for uis");
+            for ui in uis {
+                commands.entity(ui).insert(Wireframe);
+            }
+        } else {
+            println!("disabling wireframes for uis");
+            for ui in uis {
+                commands.entity(ui).remove::<Wireframe>();
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct CollisionMarker;
+
+pub fn spawn_collision_marker(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets< StandardMaterial>>,
+) {
+    commands.spawn(
+        (
+            Mesh3d(meshes.add(Sphere::new(0.01))),
+            CollisionMarker,
+            Transform::from_xyz(0.0, 999.0, 0.0),
+            Visibility::Hidden,
+            MeshMaterial3d(materials.add(StandardMaterial::from_color(RED))),
+            Pickable::IGNORE,
+        )
+    );
+}
+
+/// follow collision location of mouse position on ui
+fn colision_mesh_on_mouse_pick_spot(
+    collision: ResMut<WorldSpacePickingState>,
+    // transforms: Query<&Transform, Without<CollisionMarker>>,
+    wireframe_enabled: Res<UIWireframeEnabled>,
+    mut collision_marker: Single<(&mut Transform, &mut Visibility), With<CollisionMarker>>,
+) {
+    if wireframe_enabled.0 == false {
+        *collision_marker.1 = Visibility::Hidden;
+        return
+    }
+    let Some(pick) = &collision.pick else {
+        *collision_marker.1 = Visibility::Hidden;
+        return
+    };
+    *collision_marker.1 = Visibility::Visible;
+
+    let new_pos = pick.world_cords.xyz();
+    println!("collision marker moving to: {}", new_pos);
+    collision_marker.0.translation = new_pos;
 }
 
 fn setup_scene(
@@ -156,7 +239,11 @@ fn orbit_camera_system(
     mut camera_query: Query<(&mut Transform, &mut OrbitCamera), With<Camera3d>>,
     mut mouse_motion_events: MessageReader<MouseMotion>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
+    pick_state: Res<DioxusUiPickState>,
 ) {
+    if pick_state.active != DioxusUiPickFilter::NONE {
+        return;
+    }
     for (mut transform, mut orbit_camera) in camera_query.iter_mut() {
         if mouse_button_input.pressed(MouseButton::Left) {
             for mouse_motion in mouse_motion_events.read() {

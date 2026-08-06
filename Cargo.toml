@@ -94,7 +94,7 @@ blitz-html = {version = "=0.3.0-alpha.4", default-features = false}
 vello = {version = "0.9"}
 linebender_resource_handle = "0.1"
 parley = "0.9"
-
+bitflags = "2"
 
 async-std = "1.13"
 crossbeam-channel = "0.5"

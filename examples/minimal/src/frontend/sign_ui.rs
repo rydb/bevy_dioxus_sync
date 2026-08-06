@@ -3,7 +3,6 @@ use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use dioxus::prelude::*;
 use dioxus_bevy_signals::{
-    asset::{AssetNoneState, use_bevy_asset},
     query::single::use_bevy_single,
     resource::use_bevy_resource,
 };
@@ -17,14 +16,10 @@ const DISTANCE_INCREMENT: f32 = 1.0;
 #[component]
 pub fn sign_ui() -> Element {
     let cube_distance = use_bevy_resource::<SignDistance>();
-    let cube =
+    let (_cube_entity, cube_color) =
         use_bevy_single::<(Entity, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
 
-    let cube_color_handle = use_memo(move || {
-        cube.read_ok(|n| n.1.read().0.id())
-            .map_err(|_err| AssetNoneState::Fetching)
-    });
-    let cube_color = use_bevy_asset(cube_color_handle);
+    let cube_color = cube_color.use_asset();
 
     let increment = move |_evt| {
         cube_distance.mutate(|n| n.0 += DISTANCE_INCREMENT);
@@ -59,7 +54,10 @@ pub fn sign_ui() -> Element {
                     button {
                         class: "stepper-btn",
                         onpointerdown: increment,
-                        "+"
+                        {
+                            println!("incrementing sign by one");
+                            "+"
+                        }
                     }
                 }
             }

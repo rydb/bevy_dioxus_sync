@@ -64,10 +64,25 @@ pub fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
     }
 }
 
-/// Tracks whether the window overlay DOM consumed input in the previous frame.
-#[derive(Resource, Default)]
-pub struct WindowOverlayCatchState {
-    pub caught_last_frame: bool,
+bitflags::bitflags! {
+    /// Bitmask indicating which dioxus UI space is currently being interacted with.
+    /// Mutually exclusive: only one space (or none) is active per frame.
+    #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+    pub struct DioxusUiPickFilter: u8 {
+        /// No dioxus UI space is being interacted with.
+        const NONE = 0;
+        /// The window overlay DOM has caught input.
+        const WINDOW_SPACE = 1 << 0;
+        /// A world-space UI quad has been picked.
+        const WORLD_SPACE = 1 << 1;
+    }
+}
+
+/// Tracks which dioxus UI space is actively being interacted with each frame.
+/// Downstream systems read this to decide whether to process their own input.
+#[derive(Resource, Default, Clone, Copy, Debug)]
+pub struct DioxusUiPickState {
+    pub active: DioxusUiPickFilter,
 }
 
 pub(crate) mod net_provider;
@@ -379,8 +394,10 @@ fn collect_and_render_vdom_scenes(
     images: Res<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut quad_query: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>, &DioxusUiQuad)>,
+    mut window_uis: Query<Entity, With<DioxusWindowUiQuad>>,
+    mut world_space_uis: Query<Entity, (With<DioxusUiQuad>, Without<DioxusWindowUiQuad>)>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
-    mut catch_state: ResMut<WindowOverlayCatchState>,
+    mut pick_state: ResMut<DioxusUiPickState>,
 ) {
     let _ = debug_span!("total vdom(s) render time").entered();
 
@@ -438,20 +455,30 @@ fn collect_and_render_vdom_scenes(
                     debug!("vdom worker for {} acknowledged shutdown", entity);
                 }
                 VdomResult::InputCaught => {}
-                VdomResult::HitTestResult { entity: _, caught } => {
-                    if let Some(state) = catch_state_this_frame {
+                VdomResult::HitTestResult { entity: e, caught } => {
+                    if let Some((_, state)) = catch_state_this_frame {
                         if state == true {
                             continue;
                         }
                     }
-                    catch_state_this_frame = Some(caught)
+                    catch_state_this_frame = Some((e, caught))
                 }
             }
         }
         span.exit();
     }
-    if let Some(result) = catch_state_this_frame {
-        catch_state.caught_last_frame = result;
+    if let Some((entity, caught)) = catch_state_this_frame {
+        if caught {
+            if window_uis.contains(entity) {
+                pick_state.active = DioxusUiPickFilter::WINDOW_SPACE
+            } 
+            if world_space_uis.contains(entity) {
+                pick_state.active = DioxusUiPickFilter::WORLD_SPACE
+            }
+        } else {
+            pick_state.active = DioxusUiPickFilter::NONE
+        }
+
     }
 }
 

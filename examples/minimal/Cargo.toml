@@ -9,7 +9,7 @@ bevy = { workspace = true, features = [
     "std", "bevy_render", "bevy_winit", "bevy_window", "bevy_pbr",
     "bevy_sprite", "bevy_sprite_render", "bevy_core_pipeline",
     "tonemapping_luts", "zstd_rust",
-    "png", "multi_threaded", "trace_tracy", "x11", "wayland",
+    "png", "multi_threaded", "trace_tracy", "x11", "wayland", "bevy_gizmos"
 ] }
 bevy_ecs = {workspace = true}
 bevy_app = {workspace = true}
@@ -27,7 +27,7 @@ blitz-dom = {workspace = true}
 dioxus-core = {workspace = true}
 dioxus-native = {workspace = true}
 dioxus_bevy_signals = {workspace = true}
-
+bevy_dioxus_messages = {workspace = true}
 dioxus = {workspace = true, features = ["html", "signals", "hooks", "macro", "asset", "document", "launch", "devtools"]}
 tracing-subscriber = "0.3"
 tracing-chrome = {workspace = true}

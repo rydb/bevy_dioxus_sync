@@ -1,12 +1,10 @@
 use crate::backend::*;
 use bevy_color::{Color, Srgba};
-// use bevy_dioxus_sync::panels::DioxusElementMarker;
 use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
 use dioxus_bevy_signals::{
-    asset::{AssetNoneState, use_bevy_asset},
     query::single::use_bevy_single,
     resource::use_bevy_resource,
 };
@@ -20,7 +18,7 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 pub fn app_ui() -> Element {
     let fps = use_bevy_resource::<FPS>();
 
-    let cube = use_bevy_single::<
+    let (_cube_entity, cube_transform, cube_color) = use_bevy_single::<
         (
             Entity,
             &mut Transform,
@@ -29,19 +27,10 @@ pub fn app_ui() -> Element {
         With<DynamicCube>,
     >();
 
-    let cube_translation_str = use_memo(move || {
-        cube.read_ok(|n| {
-            let t = &n.1.read().translation;
-            format!("{:>5.2} {:>5.2} {:>5.2}", t.x, t.y, t.z)
-        })
-        .unwrap_or_else(|err| err.into())
+    let cube_translation_str = cube_transform.use_display(|t| {
+        format!("{:>5.2} {:>5.2} {:>5.2}", t.translation.x, t.translation.y, t.translation.z)
     });
-
-    let cube_color_handle = use_memo(move || {
-        cube.read_ok(|n| Ok(n.2.read().0.id()))
-            .unwrap_or_else(|_err| Err(AssetNoneState::Fetching))
-    });
-    let cube_color = use_bevy_asset(cube_color_handle);
+    let cube_color = cube_color.use_asset();
 
     let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
     let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();

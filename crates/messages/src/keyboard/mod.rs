@@ -14,7 +14,7 @@ pub(crate) fn handle_keyboard_messages(
     mut registry: NonSendMut<VdomThreadRegistry>,
     mut keyboard_input_events: ResMut<Messages<KeyboardInput>>,
     mut keys: ResMut<ButtonInput<BevyKeyCode>>,
-    mut last_mouse_state: Local<MouseState>,
+    mut last_mouse_state: ResMut<MouseState>,
 ) {
     if keyboard_input_events.is_empty() {
         return;
@@ -77,8 +77,8 @@ pub(crate) fn handle_keyboard_messages(
         }
     }
     if should_catch_events {
-        keyboard_input_events.clear();
-        keys.reset_all();
+        // keyboard_input_events.clear();
+        // keys.reset_all();
     }
 }
 
