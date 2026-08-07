@@ -16,7 +16,7 @@ pub const QUAT_CHAR_INDEX: [&'static str; 4] = ["x", "y", "z", "w"];
 
 #[component]
 pub fn app_ui() -> Element {
-    let fps = use_bevy_resource::<FPS>();
+    let fps = use_bevy_resource::<FPS, _, _>(|n| n, |err| err);
 
     let (_cube_entity, cube_transform, cube_color) = use_bevy_single::<
         (
@@ -32,50 +32,17 @@ pub fn app_ui() -> Element {
     });
     let cube_color = cube_color.use_asset();
 
-    let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed>();
-    let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed>();
-
-    // prevents cursor jumping due to blitz dom rendering issues
-    let mut translation_edited = use_signal(|| false);
-    let mut rotation_edited = use_signal(|| false);
-    let mut edit_translation = use_signal(String::new);
-    let mut edit_rotation = use_signal(String::new);
-
-    // Memos recompute synchronously on every render, avoiding the race
-    // between use_effect and the initial bevy resource sync.
-    let translation_speed_str = use_memo(move || {
-        if *translation_edited.read() {
-            edit_translation.read().clone()
-        } else {
-            cube_translation_speed
-                .read_ok(|n| n.0.to_string())
-                .unwrap_or_else(|_| "???".to_string())
-        }
-    });
-    let rotation_speed_str = use_memo(move || {
-        if *rotation_edited.read() {
-            edit_rotation.read().clone()
-        } else {
-            cube_rotation_speed
-                .read_ok(|n| n.0.to_string())
-                .unwrap_or_else(|_| "???".to_string())
-        }
-    });
+    let cube_rotation_speed = use_bevy_resource::<CubeRotationSpeed, _, _>(|n| n, |err| err);
+    let cube_translation_speed = use_bevy_resource::<CubeTranslationSpeed, _, _>(|n| n, |err| err);
 
     let set_rotation_speed = move |evt: Event<FormData>| {
-        let val = evt.value();
-        rotation_edited.set(true);
-        edit_rotation.set(val.clone());
-        if let Ok(speed) = val.parse::<f32>() {
+        if let Ok(speed) = evt.value().parse::<f32>() {
             cube_rotation_speed.mutate(move |n| *n = CubeRotationSpeed(speed));
         }
     };
 
     let set_translation_speed = move |evt: Event<FormData>| {
-        let val = evt.value();
-        translation_edited.set(true);
-        edit_translation.set(val.clone());
-        if let Ok(speed) = val.parse::<f32>() {
+        if let Ok(speed) = evt.value().parse::<f32>() {
             cube_translation_speed.mutate(move |n| *n = CubeTranslationSpeed(speed));
         }
     };
@@ -161,7 +128,7 @@ pub fn app_ui() -> Element {
                     min: "0.0",
                     max: "10.0",
                     step: "0.1",
-                    value: translation_speed_str,
+                    value: cube_translation_speed,
                     oninput: set_translation_speed,
                 }
             }
@@ -173,7 +140,7 @@ pub fn app_ui() -> Element {
                     min: "0.0",
                     max: "10.0",
                     step: "0.1",
-                    value: rotation_speed_str,
+                    value: cube_rotation_speed,
                     oninput: set_rotation_speed,
                 }
             }

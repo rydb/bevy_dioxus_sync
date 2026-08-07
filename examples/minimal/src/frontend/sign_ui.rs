@@ -15,7 +15,7 @@ pub struct SignUi;
 const DISTANCE_INCREMENT: f32 = 1.0;
 #[component]
 pub fn sign_ui() -> Element {
-    let cube_distance = use_bevy_resource::<SignDistance>();
+    let cube_distance = use_bevy_resource::<SignDistance, _, _>(|n| n, |err| err);
     let (_cube_entity, cube_color) =
         use_bevy_single::<(Entity, &mut MeshMaterial3d<StandardMaterial>), With<DynamicCube>>();
 

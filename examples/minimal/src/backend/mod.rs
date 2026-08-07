@@ -8,10 +8,10 @@ use bevy_ecs::prelude::*;
 #[derive(Component, Clone)]
 pub struct DynamicCube;
 
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
+#[derive(Resource, Clone, Debug, Deref, DerefMut, PartialEq)]
 pub struct CubeTranslationSpeed(pub f32);
 
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, PartialEq)]
 pub struct FPS(pub f32);
 
 impl Display for FPS {
@@ -32,7 +32,7 @@ impl Display for CubeTranslationSpeed {
     }
 }
 
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
+#[derive(Resource, Clone, Debug, Deref, DerefMut, PartialEq)]
 pub struct CubeRotationSpeed(pub f32);
 
 impl Display for CubeRotationSpeed {
@@ -47,7 +47,7 @@ impl Default for CubeRotationSpeed {
     }
 }
 
-#[derive(Resource, Clone, Debug, Deref, DerefMut)]
+#[derive(Resource, Clone, Debug, Deref, DerefMut, PartialEq)]
 pub struct SignDistance(pub f32);
 
 impl Display for SignDistance {
