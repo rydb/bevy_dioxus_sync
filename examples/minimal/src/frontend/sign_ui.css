@@ -1,0 +1,116 @@
+/* === Base reset for the sign panel === */
+html, body, #main {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    color: white;
+    font-family: "JetBrains Mono Medium", "JetBrains Mono", monospace;
+}
+
+/* === Panel root === */
+.sign-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: clamp(4px, 2vw, 16px);
+    gap: clamp(2px, 1.5vh, 12px);
+    box-sizing: border-box;
+    background-color: rgba(192, 192, 192, 0.2);
+}
+
+/* === Title === */
+.sign-title {
+    font-size: clamp(10px, 3.5vw, 22px);
+    font-weight: 700;
+    margin: 0;
+    text-align: left;
+}
+
+/* === Section header === */
+.sign-section-header {
+    font-size: clamp(8px, 2vw, 14px);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+}
+
+/* === Control row: label + stepper === */
+.sign-control {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2px, 0.8vh, 8px);
+}
+
+.sign-control label {
+    font-size: clamp(9px, 2vw, 14px);
+    font-weight: 600;
+}
+
+/* === Stepper row === */
+.sign-stepper-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: clamp(2px, 1vw, 8px);
+}
+
+.sign-stepper-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(20px, 4vw, 32px);
+    height: clamp(20px, 4vw, 32px);
+    background: #555;
+    border: 2px solid #666;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: clamp(10px, 2.5vw, 18px);
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+}
+
+.sign-stepper-btn:hover {
+    border-color: #999;
+}
+
+.sign-stepper-btn:active {
+    border-color: #4a9eff;
+    background: #4a4a4a;
+}
+
+.sign-stepper-value {
+    font-size: clamp(12px, 3vw, 20px);
+    font-weight: bold;
+    min-width: 2.5em;
+    text-align: center;
+    color: #ffffff;
+}
+
+/* === Color button row === */
+.sign-color-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: clamp(3px, 1.5vw, 12px);
+}
+
+.sign-color-btn {
+    width: clamp(24px, 6vw, 50px);
+    height: clamp(24px, 6vw, 50px);
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+}
+
+.sign-color-btn:hover {
+    box-shadow: 0 0 0 1px #c1c1c1;
+}
+
+.sign-color-btn:active {
+    box-shadow: 0 0 0 3px #c1c1c1;
+}

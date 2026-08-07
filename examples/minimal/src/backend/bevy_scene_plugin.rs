@@ -4,7 +4,7 @@ use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use bevy_color::palettes::css::RED;
 use bevy_dioxus_messages::mouse::WorldSpacePickingState;
-use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusUiQuad, DioxusUiResolution};
+use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusUiQuad};
 use bevy_dioxus_render::panels::DioxusPanels;
 use bevy_pbr::wireframe::Wireframe;
 use bevy_picking::prelude::Pickable;
@@ -95,8 +95,6 @@ fn setup_sign(
                 Mesh3d(meshes.add(Rectangle::new(1.3, 0.45))),
                 Transform::from_xyz(0.0, 0.45, -0.96),
                 DioxusPanels::new(vec![sign_ui]),
-                DioxusUiResolution(800, 450),
-                
             ));
         });
 }

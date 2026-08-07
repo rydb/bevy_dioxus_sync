@@ -13,6 +13,7 @@ use crate::backend::{DynamicCube, SignDistance};
 pub struct SignUi;
 
 const DISTANCE_INCREMENT: f32 = 1.0;
+
 #[component]
 pub fn sign_ui() -> Element {
     let cube_distance = use_bevy_resource::<SignDistance, _, _>(|n| n, |err| err);
@@ -31,57 +32,54 @@ pub fn sign_ui() -> Element {
 
     rsx! {
         div {
-            id: "panel",
-            class: "catch-events",
-            document::Stylesheet { href: asset!("src/frontend/ui.css") },
+            class: "sign-panel catch-events",
+            document::Stylesheet { href: asset!("src/frontend/sign_ui.css") },
             h1 {
+                class: "sign-title",
                 "world space dom"
             }
             div {
-                id: "distance-control",
+                class: "sign-control",
                 label { "Cube Distance:" }
                 div {
-                    class: "stepper-row",
+                    class: "sign-stepper-row",
                     button {
-                        class: "stepper-btn",
+                        class: "sign-stepper-btn",
                         onpointerdown: decrement,
                         "-"
                     }
                     span {
-                        class: "stepper-value",
+                        class: "sign-stepper-value",
                         "{cube_distance}"
                     }
                     button {
-                        class: "stepper-btn",
+                        class: "sign-stepper-btn",
                         onpointerdown: increment,
-                        {
-                            println!("incrementing sign by one");
-                            "+"
-                        }
+                        "+"
                     }
                 }
             }
             h3 {
+                class: "sign-section-header",
                 "Alternate Cube Colors:"
             }
-           div {
-                id: "buttons",
+            div {
+                class: "sign-color-row",
                 button {
+                    class: "sign-color-btn",
                     background: "purple",
-                    class: "color-button",
                     onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(0.502, 0.0, 0.502, 1.0)))
                     },
                 }
                 button {
+                    class: "sign-color-btn",
                     background: "yellow",
-                    class: "color-button",
                     onpointerdown: move |_| {
                         cube_color.mutate(|color| *color = StandardMaterial::from_color(Color::srgba(1.0, 1.0, 0.0, 1.0)))
                     },
                 }
             }
         }
-
     }
 }
