@@ -6,7 +6,7 @@ use bevy_camera::visibility::RenderLayers;
 use bevy_camera::{Camera, Camera3d, ClearColorConfig};
 use bevy_derive::Deref;
 use bevy_dioxus_interop::DioxusMessage;
-use bevy_dioxus_tracing::{debug, debug_span, trace, warn};
+use bevy_dioxus_tracing::{debug, debug_span, error, trace, warn};
 use bevy_ecs::prelude::*;
 use bevy_image::prelude::*;
 use bevy_material::AlphaMode;
@@ -136,10 +136,6 @@ pub fn dioxus_ui() -> Element {
 /// TODO: Add multi-window support
 #[derive(Component)]
 pub struct DioxusWindowUiCamera;
-
-/// Marker for the main window entity that hosts the primary dioxus UI.
-#[derive(Component)]
-pub struct MainDioxusWindow;
 
 /// Marks an entity as a DOM-backed render surface.
 #[derive(Component)]
@@ -415,14 +411,18 @@ fn collect_and_render_vdom_scenes(
             if let Some(img) = images.get(handle) {
                 let sz = img.texture_descriptor.size;
                 if texture.width == sz.width && texture.height == sz.height {
-                    materials.get_mut(&mut mat.0).unwrap().base_color_texture =
-                        Some(handle.clone());
+                    let Some(mut material) = materials.get_mut(&mut mat.0) else {
+                        warn!("material missing for ui quad {}", quad_entity);
+                        continue;
+                    };
+                    material.base_color_texture = Some(handle.clone());
                 }
             }
         }
         cached_textures.insert(entity, texture);
     }
-    let mut catch_state_this_frame = None;
+    // Hit-test results reported by workers this frame.
+    let mut hit_results: Vec<(Entity, bool)> = Vec::new();
     // Collect painted scenes from all workers and render them.
     for (entity, worker) in &mut registry.workers {
         let span = debug_span!("paint_scene collection", entity = %entity).entered();
@@ -436,49 +436,47 @@ fn collect_and_render_vdom_scenes(
                     let Some(texture) = cached_textures.get(&entity) else {
                         continue;
                     };
-                    vello_renderer
-                        .render_to_texture(
-                            render_device.wgpu_device(),
-                            &render_queue.0,
-                            &scene,
-                            &texture.texture_view,
-                            &RenderParams {
-                                base_color: AlphaColor::TRANSPARENT,
-                                width,
-                                height,
-                                antialiasing_method: vello::AaConfig::Area,
-                            },
-                        )
-                        .expect("failed to render to texture");
+                    if let Err(err) = vello_renderer.render_to_texture(
+                        render_device.wgpu_device(),
+                        &render_queue.0,
+                        &scene,
+                        &texture.texture_view,
+                        &RenderParams {
+                            base_color: AlphaColor::TRANSPARENT,
+                            width,
+                            height,
+                            antialiasing_method: vello::AaConfig::Area,
+                        },
+                    ) {
+                        error!("failed to render ui for {} to texture: {}", entity, err);
+                    }
                 }
                 VdomResult::ShutdownAck => {
                     debug!("vdom worker for {} acknowledged shutdown", entity);
                 }
-                VdomResult::InputCaught => {}
                 VdomResult::HitTestResult { entity: e, caught } => {
-                    if let Some((_, state)) = catch_state_this_frame {
-                        if state == true {
-                            continue;
-                        }
-                    }
-                    catch_state_this_frame = Some((e, caught))
+                    hit_results.push((e, caught));
                 }
             }
         }
         span.exit();
     }
-    if let Some((entity, caught)) = catch_state_this_frame {
-        if caught {
-            if window_uis.contains(entity) {
-                pick_state.active = DioxusUiPickFilter::WINDOW_SPACE
-            } 
-            if world_space_uis.contains(entity) {
-                pick_state.active = DioxusUiPickFilter::WORLD_SPACE
-            }
+    // Resolve the active pick space once per frame. Window space takes
+    // precedence over world space when both caught input.
+    if !hit_results.is_empty() {
+        let window_caught = hit_results
+            .iter()
+            .any(|(e, caught)| *caught && window_uis.contains(*e));
+        let world_caught = hit_results
+            .iter()
+            .any(|(e, caught)| *caught && world_space_uis.contains(*e));
+        pick_state.active = if window_caught {
+            DioxusUiPickFilter::WINDOW_SPACE
+        } else if world_caught {
+            DioxusUiPickFilter::WORLD_SPACE
         } else {
-            pick_state.active = DioxusUiPickFilter::NONE
-        }
-
+            DioxusUiPickFilter::NONE
+        };
     }
 }
 
@@ -541,8 +539,6 @@ fn initialize_textures_for_quads(
 fn setup_window_surface(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    // mut materials: ResMut<Assets<StandardMaterial>>,
-    // mut images: ResMut<Assets<Image>>,
     windows: Query<(Entity, &Window)>,
 ) {
     let Some((_e, window)) = windows.iter().next() else {
@@ -600,7 +596,7 @@ fn handle_window_resize(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut window_quad: Query<
-        (Entity, &mut DioxusUiResolution, &mut DioxusUiQuad),
+        (Entity, &mut DioxusUiResolution, &mut DioxusUiQuad, &Mesh3d),
         With<DioxusWindowUiQuad>,
     >,
     mut camera: Query<&mut Transform, With<DioxusWindowUiCamera>>,
@@ -621,8 +617,13 @@ fn handle_window_resize(
 
         *last_size = wh;
 
-        for (entity, mut resolution, mut quad) in &mut window_quad {
+        for (entity, mut resolution, mut quad, mesh) in &mut window_quad {
             *resolution = DioxusUiResolution(wh.x, wh.y);
+            // cleanup old images
+            if let Some(old_handle) = quad.handle.take() {
+                images.remove(&old_handle);
+            }
+            meshes.remove(mesh.id());
             let new_image = create_ui_texture(wh.x, wh.y);
             quad.handle = Some(images.add(new_image));
             commands.entity(entity).insert(Mesh3d(

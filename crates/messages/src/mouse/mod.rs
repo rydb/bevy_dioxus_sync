@@ -1,5 +1,6 @@
 use bevy_dioxus_render::worker::VdomThreadRegistry;
 use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusUiQuad, DioxusWindowUiQuad};
+use bevy_dioxus_tracing::error;
 use bevy_ecs::prelude::*;
 use bevy_input::{ButtonState, mouse::MouseButtonInput, prelude::*};
 use bevy_math::prelude::*;
@@ -80,7 +81,7 @@ pub(crate) fn window_space_mouse_messages(
     mut mouse_state: ResMut<MouseState>,
     mut routing: ResMut<MouseMessageRouting>,
     pick_state: Res<DioxusUiPickState>,
-    window_ui: Single<Entity, With<DioxusWindowUiQuad>>,
+    window_ui: Query<Entity, With<DioxusWindowUiQuad>>,
 ) {
     routing.window_space_handled = pick_state.active.contains(DioxusUiPickFilter::WINDOW_SPACE);
 
@@ -88,6 +89,10 @@ pub(crate) fn window_space_mouse_messages(
         return;
     }
 
+    let Ok(window_ui) = window_ui.single() else {
+        error!("This system is only implemented for one window, not multiple. Exiting early. TODO: support more windows. ");
+        return;
+    };
 
     for cursor_event in cursor_moved.read() {
         mouse_state.x = cursor_event.position.x;
@@ -113,7 +118,7 @@ pub(crate) fn window_space_mouse_messages(
         if let Some(worker) = registry.workers.get(&window_ui) {
             let _ = worker
                 .input_tx
-            .try_send((*window_ui, UiEvent::PointerMove(pointer_event.clone())));
+                .try_send((window_ui, UiEvent::PointerMove(pointer_event.clone())));
         }
     }
 }
@@ -171,8 +176,7 @@ pub(crate) fn blitz_mouse_button_handling(
     mut mouse_state: ResMut<MouseState>,
     pick_state: Res<DioxusUiPickState>,
     picking_state: Res<WorldSpacePickingState>,
-    window_ui: Single<Entity, With<DioxusWindowUiQuad>>,
-
+    window_ui: Query<Entity, With<DioxusWindowUiQuad>>,
 ) {
     if mouse_button_input_events.is_empty() {
         return;
@@ -223,8 +227,10 @@ pub(crate) fn blitz_mouse_button_handling(
                     ButtonState::Pressed => UiEvent::PointerDown(pointer_event),
                     ButtonState::Released => UiEvent::PointerUp(pointer_event),
                 };
-                if let Some(worker ) = registry.workers.get(&window_ui) {
-                    let _ = worker.input_tx.try_send((*window_ui, ui_event));
+                if let Ok(window_ui) = window_ui.single() {
+                    if let Some(worker) = registry.workers.get(&window_ui) {
+                        let _ = worker.input_tx.try_send((window_ui, ui_event));
+                    }
                 }
             }
             DioxusUiPickFilter::WORLD_SPACE => {

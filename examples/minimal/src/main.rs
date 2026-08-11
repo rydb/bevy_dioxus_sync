@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_dioxus_sync::plugins::DioxusPlugin;
 use bevy_pbr::wireframe::WireframePlugin;
 use bevy_picking::{PickingPlugin, input::PointerInputPlugin, mesh_picking::MeshPickingPlugin};
+use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::{
     filter::filter_fn,
     fmt::{self, format::FmtSpan},
@@ -25,7 +26,7 @@ pub fn main() {
             || metadata.target().starts_with("minimal")
     });
 
-    // performance logs filter:
+    // // performance logs filter:
     // let chrome_filter = filter_fn(|_metadata| true);
     // let _ = std::fs::remove_file("./target/chrome_trace.json").inspect_err(|err| warn!("{err}"));
 

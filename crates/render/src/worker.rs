@@ -1,8 +1,6 @@
 use std::collections::HashMap;
-use std::mem::ManuallyDrop;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::ThreadId;
 
 use anyrender_vello::VelloScenePainter;
 use bevy_dioxus_interop::DioxusMessage;
@@ -33,29 +31,21 @@ fn extract_ui_event_coords(event: &UiEvent) -> (f32, f32) {
 ///
 /// Wrap a value with [`SendToThread::new`], move the wrapper into a
 /// [`std::thread::spawn`] closure, then call [`SendToThread::take`] to
-/// extract the value on the destination thread.
-///
-/// # Panics
-///
-/// Panics if [`take`](Self::take) is called more than once, or if the
-/// wrapper is dropped without [`take`](Self::take) being called.
+/// extract the value on the destination thread. If the value is never
+/// claimed, for example when thread spawn fails, it is dropped with the
+/// wrapper on the current thread.
 struct SendToThread<T> {
-    value: ManuallyDrop<T>,
-    owner: Option<ThreadId>,
+    value: Option<T>,
 }
 
 // SAFETY: SendToThread<T> can be sent between threads because the inner
-// value is never accessed until take() is called, and take() panics if
-// called from a thread other than the first one that calls it.
+// value is only accessed through take(), which moves it out exactly once.
 unsafe impl<T> Send for SendToThread<T> {}
 
 impl<T> SendToThread<T> {
     /// Wrap a value for transfer to another thread.
     fn new(value: T) -> Self {
-        SendToThread {
-            value: ManuallyDrop::new(value),
-            owner: None,
-        }
+        SendToThread { value: Some(value) }
     }
 
     /// Claim ownership on the current thread and extract the inner value.
@@ -64,32 +54,9 @@ impl<T> SendToThread<T> {
     ///
     /// Panics if called more than once.
     fn take(mut self) -> T {
-        assert!(
-            self.owner.is_none(),
-            "SendToThread::take() called more than once"
-        );
-        self.owner = Some(std::thread::current().id());
-        let value = unsafe { ManuallyDrop::take(&mut self.value) };
-        std::mem::forget(self);
-        value
-    }
-}
-
-impl<T> Drop for SendToThread<T> {
-    fn drop(&mut self) {
-        match self.owner {
-            Some(owner) => {
-                let current = std::thread::current().id();
-                assert_eq!(
-                    current, owner,
-                    "SendToThread dropped on thread {current:?}, expected {owner:?}"
-                );
-                unsafe { ManuallyDrop::drop(&mut self.value) };
-            }
-            None => {
-                panic!("SendToThread dropped without take() being called");
-            }
-        }
+        self.value
+            .take()
+            .expect("SendToThread::take() called more than once")
     }
 }
 
@@ -117,9 +84,6 @@ pub enum VdomResult {
         width: u32,
         height: u32,
     },
-    /// The worker caught an input event this frame.
-    /// The entity identifies which document caught it.
-    InputCaught,
     /// Hit-test result: whether a DOM element with catch-events was under the pointer.
     HitTestResult { entity: Entity, caught: bool },
     /// Worker confirms shutdown.

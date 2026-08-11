@@ -48,3 +48,15 @@ dioxus-hooks = {workspace = true}
 dioxus-core-macro = {workspace = true}
 dioxus-document = {workspace = true}
 dioxus_bevy_signals = {workspace = true}
+
+[features]
+trace = [
+    "bevy_dioxus_tracing/trace",
+    "bevy_dioxus_render/trace",
+    "bevy_dioxus_messages/trace",
+]
+trace_perf = [
+    "bevy_dioxus_tracing/trace_perf",
+    "bevy_dioxus_render/trace_perf",
+    "bevy_dioxus_messages/trace_perf",
+]

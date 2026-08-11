@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -23,27 +22,28 @@ use crate::{DioxusUiQuad, dioxus_ui};
 /// Panels on a dioxus ui quad surface
 ///
 /// TODO: support multiple panel orientations (left, right, bottom, top, etc..)
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 #[require(DioxusUiQuad)]
 pub struct DioxusPanels {
-    pub panels: HashSet<fn() -> Element>,
-}
-
-impl Default for DioxusPanels {
-    fn default() -> Self {
-        Self {
-            panels: Default::default(),
-        }
-    }
+    /// Panels in insertion order. 
+    pub panels: Vec<fn() -> Element>,
 }
 
 impl DioxusPanels {
     pub fn new(panels: Vec<fn() -> Element>) -> Self {
-        let mut map = HashSet::default();
+        let mut set = Self::default();
         for panel in panels {
-            map.insert(panel);
+            set.insert(panel);
         }
-        Self { panels: map }
+        set
+    }
+
+    pub fn insert(&mut self, panel: fn() -> Element) {
+        if !self.panels.contains(&panel) {
+            self.panels.push(panel);
+        } else {
+            warn!("attempted to push panel when one of the same kind already existed for: {:#?}", panel)
+        }
     }
 }
 
@@ -128,7 +128,9 @@ pub(crate) fn initialize_vdoms(
         });
 
         dioxus_devtools::connect(move |msg| {
-            proxy_sender.send(DioxusMessage::Devserver(msg)).unwrap()
+            if proxy_sender.send(DioxusMessage::Devserver(msg)).is_err() {
+                warn!("devtools message dropped, vdom worker channel closed");
+            }
         });
 
         dioxus_doc.initial_build();
@@ -167,7 +169,6 @@ pub(crate) fn initialize_vdoms(
 
 /// sync dioxus ui for a window with its latest panels
 pub(crate) fn sync_dioxus_ui_with_panels(
-    // mut panels: Query<(&DioxusPanels, &DioxusPanelsSender)> Changed<DioxusPanels>>
     panels: Query<(&DioxusPanels, &DioxusPanelsSender), Changed<DioxusPanels>>,
 ) {
     for (panels, sender) in panels {

@@ -164,7 +164,6 @@ fn colision_mesh_on_mouse_pick_spot(
     *collision_marker.1 = Visibility::Visible;
 
     let new_pos = pick.world_cords.xyz();
-    println!("collision marker moving to: {}", new_pos);
     collision_marker.0.translation = new_pos;
 }
 
@@ -213,8 +212,8 @@ fn setup_scene(
 }
 
 fn sync_with_ui(mut fps: ResMut<FPS>, time: Res<Time>) {
-    let new_fps = 1000.0 / time.delta().as_millis() as f32;
-    *fps = FPS(new_fps);
+    let delta = time.delta_secs();
+    *fps = FPS(if delta > 0.0 { 1.0 / delta } else { 0.0 });
 }
 
 fn animate(

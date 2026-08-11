@@ -29,3 +29,7 @@ bevy_picking = { workspace = true, features = ["mesh_picking"] }
 bevy_dioxus_render = {workspace = true}
 bevy_dioxus_interop = {workspace = true}
 bevy_dioxus_tracing = {workspace = true}
+
+[features]
+trace = ["bevy_dioxus_tracing/trace", "bevy_dioxus_render/trace"]
+trace_perf = ["bevy_dioxus_tracing/trace_perf", "bevy_dioxus_render/trace_perf"]

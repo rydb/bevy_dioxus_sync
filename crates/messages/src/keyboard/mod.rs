@@ -1,4 +1,5 @@
 use bevy_dioxus_render::worker::VdomThreadRegistry;
+use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusWindowUiQuad};
 use bevy_ecs::prelude::*;
 use bevy_input::{
     ButtonState,
@@ -8,18 +9,26 @@ use bevy_input::{
 use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
 use dioxus_html::*;
 
-use super::mouse::MouseState;
+use super::mouse::{MouseState, WorldSpacePickingState};
 
 pub(crate) fn handle_keyboard_messages(
     mut registry: NonSendMut<VdomThreadRegistry>,
     mut keyboard_input_events: ResMut<Messages<KeyboardInput>>,
-    mut keys: ResMut<ButtonInput<BevyKeyCode>>,
     mut last_mouse_state: ResMut<MouseState>,
+    pick_state: Res<DioxusUiPickState>,
+    picking_state: Res<WorldSpacePickingState>,
+    window_ui: Query<Entity, With<DioxusWindowUiQuad>>,
 ) {
     if keyboard_input_events.is_empty() {
         return;
     }
-    let mut should_catch_events = false;
+
+    // Route keys to the document the user is interacting with.
+    let target = match pick_state.active {
+        DioxusUiPickFilter::WINDOW_SPACE => window_ui.iter().next(),
+        DioxusUiPickFilter::WORLD_SPACE => picking_state.pick.as_ref().map(|pick| pick.hit_entity),
+        _ => None,
+    };
 
     for event in keyboard_input_events
         .get_cursor()
@@ -69,16 +78,11 @@ pub(crate) fn handle_keyboard_messages(
             KeyState::Released => UiEvent::KeyUp(blitz_key_event),
         };
 
-        // Forward to all workers. Each worker processes events for
-        // its own document.
-        for (&entity, worker) in &mut registry.workers {
-            let _ = worker.input_tx.try_send((entity, ui_event.clone()));
-            should_catch_events = true;
+        if let Some(entity) = target {
+            if let Some(worker) = registry.workers.get(&entity) {
+                let _ = worker.input_tx.try_send((entity, ui_event));
+            }
         }
-    }
-    if should_catch_events {
-        // keyboard_input_events.clear();
-        // keys.reset_all();
     }
 }
 
