@@ -66,7 +66,11 @@ pub(crate) fn update_world_space_picking(
                 let pixel_x = u * wh.x;
                 let pixel_y = (1.0 - v) * wh.y;
 
-                picking_state.pick = Some(UiPickState { hit_entity: *entity, local_cords: Vec2::new(pixel_x, pixel_y), world_cords: hit_data.position.unwrap() });
+                picking_state.pick = Some(UiPickState {
+                    hit_entity: *entity,
+                    local_cords: Vec2::new(pixel_x, pixel_y),
+                    world_cords: hit_data.position.unwrap(),
+                });
                 break;
             }
         }
@@ -76,7 +80,7 @@ pub(crate) fn update_world_space_picking(
 /// Sends cursor-move events to window overlay entities and records whether
 /// window space handled input this frame.
 pub(crate) fn window_space_mouse_messages(
-    mut registry: NonSendMut<VdomThreadRegistry>,
+    registry: NonSendMut<VdomThreadRegistry>,
     mut cursor_moved: MessageReader<CursorMoved>,
     mut mouse_state: ResMut<MouseState>,
     mut routing: ResMut<MouseMessageRouting>,
@@ -90,7 +94,9 @@ pub(crate) fn window_space_mouse_messages(
     }
 
     let Ok(window_ui) = window_ui.single() else {
-        error!("This system is only implemented for one window, not multiple. Exiting early. TODO: support more windows. ");
+        error!(
+            "This system is only implemented for one window, not multiple. Exiting early. TODO: support more windows. "
+        );
         return;
     };
 
@@ -114,7 +120,7 @@ pub(crate) fn window_space_mouse_messages(
             mods: mouse_state.mods,
             details: Default::default(),
         };
-        
+
         if let Some(worker) = registry.workers.get(&window_ui) {
             let _ = worker
                 .input_tx
@@ -256,9 +262,7 @@ pub(crate) fn blitz_mouse_button_handling(
                             ButtonState::Pressed => UiEvent::PointerDown(pointer_event),
                             ButtonState::Released => UiEvent::PointerUp(pointer_event),
                         };
-                        let _ = worker
-                            .input_tx
-                            .try_send((pick.hit_entity, ui_event));
+                        let _ = worker.input_tx.try_send((pick.hit_entity, ui_event));
                     }
                 }
             }

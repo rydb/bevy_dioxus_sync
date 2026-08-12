@@ -10,10 +10,8 @@ use crate::mouse::MouseState;
 use crate::mouse::WorldSpacePickingState;
 
 use super::{
-    keyboard::handle_keyboard_messages,
-    mouse::blitz_mouse_button_handling,
-    mouse::update_world_space_picking,
-    mouse::window_space_mouse_messages,
+    keyboard::handle_keyboard_messages, mouse::blitz_mouse_button_handling,
+    mouse::update_world_space_picking, mouse::window_space_mouse_messages,
     mouse::world_space_mouse_messages,
 };
 

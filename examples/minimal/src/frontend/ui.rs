@@ -4,10 +4,7 @@ use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use bevy_transform::components::Transform;
 use dioxus::prelude::*;
-use dioxus_bevy_signals::{
-    query::single::use_bevy_single,
-    resource::use_bevy_resource,
-};
+use dioxus_bevy_signals::{query::single::use_bevy_single, resource::use_bevy_resource};
 
 #[derive(Debug)]
 pub struct AppUi;
@@ -28,7 +25,10 @@ pub fn app_ui() -> Element {
     >();
 
     let cube_translation_str = cube_transform.use_display(|t| {
-        format!("{:>5.2} {:>5.2} {:>5.2}", t.translation.x, t.translation.y, t.translation.z)
+        format!(
+            "{:>5.2} {:>5.2} {:>5.2}",
+            t.translation.x, t.translation.y, t.translation.z
+        )
     });
     let cube_color = cube_color.use_asset();
 

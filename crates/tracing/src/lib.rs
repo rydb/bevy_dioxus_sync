@@ -9,7 +9,7 @@ pub use tracing::{debug, error, info, trace, warn};
 
 #[cfg(feature = "trace_perf")]
 #[allow(unused_imports)]
-pub use tracing::{trace_span, info_span, debug_span, warn_span, error_span};
+pub use tracing::{debug_span, error_span, info_span, trace_span, warn_span};
 
 /// No-op version of span. For actual documentation, enable related feature flag.
 pub struct NoOpSpan;
@@ -67,8 +67,6 @@ macro_rules! error_span {
         $crate::NoOpSpan
     };
 }
-
-
 
 #[cfg(not(feature = "trace"))]
 #[macro_v(pub)]

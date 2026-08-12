@@ -4,8 +4,8 @@ use bevy::input::mouse::{MouseButton, MouseMotion};
 use bevy::prelude::*;
 use bevy_color::palettes::css::RED;
 use bevy_dioxus_messages::mouse::WorldSpacePickingState;
-use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusUiQuad};
 use bevy_dioxus_render::panels::DioxusPanels;
+use bevy_dioxus_render::{DioxusUiPickFilter, DioxusUiPickState, DioxusUiQuad};
 use bevy_pbr::wireframe::Wireframe;
 use bevy_picking::prelude::Pickable;
 
@@ -43,12 +43,15 @@ impl Plugin for BevyScenePlugin {
         app.add_systems(Startup, (setup_scene, setup_sign).chain());
         app.add_systems(
             Update,
-            (sync_with_ui, animate, orbit_camera_system, toggle_ui_wireframes),
+            (
+                sync_with_ui,
+                animate,
+                orbit_camera_system,
+                toggle_ui_wireframes,
+            ),
         )
         .add_systems(Startup, spawn_collision_marker)
-        .add_systems(Update, colision_mesh_on_mouse_pick_spot)
-        ;
-        
+        .add_systems(Update, colision_mesh_on_mouse_pick_spot);
     }
 }
 
@@ -111,7 +114,7 @@ fn toggle_ui_wireframes(
 ) {
     if buttons.just_pressed(KeyCode::KeyQ) {
         wire_mesh_enabled.0 ^= true;
-    
+
         if wire_mesh_enabled.0 == true {
             println!("enabling wireframes for uis");
             for ui in uis {
@@ -132,18 +135,16 @@ pub struct CollisionMarker;
 pub fn spawn_collision_marker(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets< StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn(
-        (
-            Mesh3d(meshes.add(Sphere::new(0.01))),
-            CollisionMarker,
-            Transform::from_xyz(0.0, 999.0, 0.0),
-            Visibility::Hidden,
-            MeshMaterial3d(materials.add(StandardMaterial::from_color(RED))),
-            Pickable::IGNORE,
-        )
-    );
+    commands.spawn((
+        Mesh3d(meshes.add(Sphere::new(0.01))),
+        CollisionMarker,
+        Transform::from_xyz(0.0, 999.0, 0.0),
+        Visibility::Hidden,
+        MeshMaterial3d(materials.add(StandardMaterial::from_color(RED))),
+        Pickable::IGNORE,
+    ));
 }
 
 /// follow collision location of mouse position on ui
@@ -155,11 +156,11 @@ fn colision_mesh_on_mouse_pick_spot(
 ) {
     if wireframe_enabled.0 == false {
         *collision_marker.1 = Visibility::Hidden;
-        return
+        return;
     }
     let Some(pick) = &collision.pick else {
         *collision_marker.1 = Visibility::Hidden;
-        return
+        return;
     };
     *collision_marker.1 = Visibility::Visible;
 

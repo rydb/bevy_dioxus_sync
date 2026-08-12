@@ -25,7 +25,7 @@ use crate::{DioxusUiQuad, dioxus_ui};
 #[derive(Component, Clone, Default)]
 #[require(DioxusUiQuad)]
 pub struct DioxusPanels {
-    /// Panels in insertion order. 
+    /// Panels in insertion order.
     pub panels: Vec<fn() -> Element>,
 }
 
@@ -42,7 +42,10 @@ impl DioxusPanels {
         if !self.panels.contains(&panel) {
             self.panels.push(panel);
         } else {
-            warn!("attempted to push panel when one of the same kind already existed for: {:#?}", panel)
+            warn!(
+                "attempted to push panel when one of the same kind already existed for: {:#?}",
+                panel
+            )
         }
     }
 }

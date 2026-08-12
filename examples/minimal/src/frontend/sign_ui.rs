@@ -2,10 +2,7 @@ use bevy_color::Color;
 use bevy_ecs::{entity::Entity, query::With};
 use bevy_pbr::{MeshMaterial3d, StandardMaterial};
 use dioxus::prelude::*;
-use dioxus_bevy_signals::{
-    query::single::use_bevy_single,
-    resource::use_bevy_resource,
-};
+use dioxus_bevy_signals::{query::single::use_bevy_single, resource::use_bevy_resource};
 
 use crate::backend::{DynamicCube, SignDistance};
 

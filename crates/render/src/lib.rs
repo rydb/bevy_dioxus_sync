@@ -390,8 +390,8 @@ fn collect_and_render_vdom_scenes(
     images: Res<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut quad_query: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>, &DioxusUiQuad)>,
-    mut window_uis: Query<Entity, With<DioxusWindowUiQuad>>,
-    mut world_space_uis: Query<Entity, (With<DioxusUiQuad>, Without<DioxusWindowUiQuad>)>,
+    window_uis: Query<Entity, With<DioxusWindowUiQuad>>,
+    world_space_uis: Query<Entity, (With<DioxusUiQuad>, Without<DioxusWindowUiQuad>)>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
     mut pick_state: ResMut<DioxusUiPickState>,
 ) {
@@ -436,7 +436,7 @@ fn collect_and_render_vdom_scenes(
                     let Some(texture) = cached_textures.get(&entity) else {
                         continue;
                     };
-                    if let Err(err) = vello_renderer.render_to_texture(
+                    if let Err(_err) = vello_renderer.render_to_texture(
                         render_device.wgpu_device(),
                         &render_queue.0,
                         &scene,
@@ -448,7 +448,7 @@ fn collect_and_render_vdom_scenes(
                             antialiasing_method: vello::AaConfig::Area,
                         },
                     ) {
-                        error!("failed to render ui for {} to texture: {}", entity, err);
+                        error!("failed to render ui for {} to texture: {}", entity, _err);
                     }
                 }
                 VdomResult::ShutdownAck => {

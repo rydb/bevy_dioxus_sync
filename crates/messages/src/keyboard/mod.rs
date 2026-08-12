@@ -4,7 +4,6 @@ use bevy_ecs::prelude::*;
 use bevy_input::{
     ButtonState,
     keyboard::{Key as BevyKey, KeyCode as BevyKeyCode, KeyboardInput},
-    prelude::*,
 };
 use blitz_traits::events::{BlitzKeyEvent, KeyState, UiEvent};
 use dioxus_html::*;
@@ -12,8 +11,8 @@ use dioxus_html::*;
 use super::mouse::{MouseState, WorldSpacePickingState};
 
 pub(crate) fn handle_keyboard_messages(
-    mut registry: NonSendMut<VdomThreadRegistry>,
-    mut keyboard_input_events: ResMut<Messages<KeyboardInput>>,
+    registry: NonSendMut<VdomThreadRegistry>,
+    keyboard_input_events: ResMut<Messages<KeyboardInput>>,
     mut last_mouse_state: ResMut<MouseState>,
     pick_state: Res<DioxusUiPickState>,
     picking_state: Res<WorldSpacePickingState>,
