@@ -48,7 +48,7 @@ pub fn app_ui() -> Element {
     };
 
     let rgba_css = use_memo(move || {
-        let rgba = match &**cube_color.read() {
+        let rgba = match &*cube_color.read() {
             Ok(value) => &value.base_color.to_srgba(),
             Err(_) => &Srgba::default(),
         };

@@ -120,6 +120,7 @@ pub fn dioxus_ui() -> Element {
                     Some(updated_panels) = rx.recv() => {
                         *panels.write() = updated_panels;
                     }
+                    else => break,
                 }
             }
         }
@@ -299,6 +300,13 @@ pub fn create_ui_texture(width: u32, height: u32) -> Image {
     image.texture_descriptor.usage = wgpu::TextureUsages::COPY_DST
         | wgpu::TextureUsages::STORAGE_BINDING
         | wgpu::TextureUsages::TEXTURE_BINDING;
+    // Vello stores sRGB bytes, so sampling uses an sRGB view restricted to texture binding.
+    image.texture_descriptor.view_formats = &[TextureFormat::Rgba8UnormSrgb];
+    image.texture_view_descriptor = Some(wgpu::TextureViewDescriptor {
+        format: Some(TextureFormat::Rgba8UnormSrgb),
+        usage: Some(wgpu::TextureUsages::TEXTURE_BINDING),
+        ..wgpu::TextureViewDescriptor::default()
+    });
     image
 }
 
@@ -347,10 +355,12 @@ fn texture_getter_system(
 
     for (entity, image_handle) in &extracted_images.0 {
         if let Some(gpu_image) = gpu_images.get(image_handle) {
+            let write_view =
+                (&*gpu_image.texture).create_view(&wgpu::TextureViewDescriptor::default());
             let _ = sender.send((
                 *entity,
                 RenderTexture {
-                    texture_view: (*gpu_image.texture_view).clone(),
+                    texture_view: write_view,
                     width: gpu_image.texture_descriptor.size.width,
                     height: gpu_image.texture_descriptor.size.height,
                 },
