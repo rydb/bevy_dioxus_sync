@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_camera::visibility::RenderLayers;
@@ -19,10 +19,13 @@ use bevy_render::{
     renderer::{RenderDevice, RenderQueue},
     texture::GpuImage,
 };
+use bevy_shape::Rectangle;
+use bevy_time::{Time, Virtual};
 use bevy_transform::components::Transform;
 use bevy_utils::default;
 use bevy_window::prelude::*;
 use blitz_dom::local_name;
+use blitz_traits::node_id::NodeId;
 use blitz_traits::shell::ColorScheme;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_core::Element;
@@ -30,10 +33,11 @@ use dioxus_core_macro::{component, rsx};
 use dioxus_hooks::{use_context, use_future, use_signal};
 use dioxus_native::DioxusDocument;
 use dioxus_signals::{ReadableExt, WritableExt};
-use vello::{RenderParams, Renderer as VelloRenderer, peniko::color::AlphaColor};
+use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
 use crate::panels::{DioxusPanels, DioxusPanelsReceiver};
+use crate::schedule::{EchoEnabled, EchoPending};
 use crate::worker::{VdomCommand, VdomResult, VdomThreadRegistry};
 
 pub const SCALE_FACTOR: f32 = 1.0;
@@ -42,11 +46,19 @@ pub const COLOR_SCHEME: ColorScheme = ColorScheme::Light;
 /// Multiplier applied to mesh dimensions to determine UI render resolution.
 pub const RESOLUTION_SCALE: f32 = 500.0;
 
+/// Longest a worker waits for a mirrored value before rendering anyway.
+const ECHO_STALL_TIMEOUT: Duration = Duration::from_millis(250);
+
 /// CSS class name used to mark DOM elements that consume input events.
 pub const CATCH_EVENTS_CLASS: &str = "catch-events";
 
+/// Decides whether a document owns a pointer at a node.
+pub fn document_owns_point(dioxus_doc: &DioxusDocument, node_id: NodeId) -> bool {
+    does_catch_events(dioxus_doc, node_id)
+}
+
 /// Walks up the DOM from a node checking for the catch-events class.
-pub fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
+pub fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: NodeId) -> bool {
     if let Some(node) = dioxus_doc.inner.borrow().get_node(node_id) {
         let class = node.attr(local_name!("class")).unwrap_or("");
         if class
@@ -78,17 +90,94 @@ bitflags::bitflags! {
     }
 }
 
-/// Tracks which dioxus UI space is actively being interacted with each frame.
-/// Downstream systems read this to decide whether to process their own input.
+/// Tracks which dioxus UI space owns pointer input this frame.
 #[derive(Resource, Default, Clone, Copy, Debug)]
 pub struct DioxusUiPickState {
     pub active: DioxusUiPickFilter,
 }
 
+/// Last hit test outcome reported by each dioxus document.
+#[derive(Resource, Default, Clone, Copy, Debug)]
+pub struct DioxusUiHitState {
+    pub window_space_caught: bool,
+    pub world_space_caught: bool,
+}
+
+/// Ordered before any system that dispatches input to a document.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DioxusInputRouting;
+
+/// Painted scene waiting for the next render tick.
+pub struct PaintedScene {
+    pub entity: Entity,
+    pub scene: Scene,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// Scenes painted by workers since the last render tick.
+#[derive(Resource, Default)]
+pub struct PendingScenes {
+    pub scenes: Vec<PaintedScene>,
+}
+
+/// Drains worker results every frame so hit tests do not wait for a render tick.
+pub fn drain_worker_results(
+    mut registry: NonSendMut<VdomThreadRegistry>,
+    window_uis: Query<Entity, With<DioxusWindowUiQuad>>,
+    world_space_uis: Query<Entity, (With<DioxusUiQuad>, Without<DioxusWindowUiQuad>)>,
+    mut hit_state: ResMut<DioxusUiHitState>,
+    mut pending: ResMut<PendingScenes>,
+    echo_enabled: Res<EchoEnabled>,
+    mut echo_pending: ResMut<EchoPending>,
+    time: Res<Time<Virtual>>,
+) {
+    let now = time.elapsed();
+
+    for (entity, worker) in &mut registry.workers {
+        while let Ok(result) = worker.result_rx.try_recv() {
+            match result {
+                VdomResult::SceneReady {
+                    scene,
+                    width,
+                    height,
+                } => {
+                    pending.scenes.push(PaintedScene {
+                        entity: *entity,
+                        scene,
+                        width,
+                        height,
+                    });
+                }
+                VdomResult::HitTestResult { entity: e, caught } => {
+                    if window_uis.contains(e) {
+                        hit_state.window_space_caught = caught;
+                    } else if world_space_uis.contains(e) {
+                        hit_state.world_space_caught = caught;
+                    }
+                }
+                VdomResult::NeedsEcho { .. } => {
+                    if echo_enabled.0 {
+                        echo_pending.0.push((*entity, now));
+                    } else {
+                        let _ = worker.cmd_tx.try_send(VdomCommand::Echoed);
+                    }
+                }
+                VdomResult::ShutdownAck => {
+                    debug!("vdom worker for {} acknowledged shutdown", entity);
+                }
+            }
+        }
+    }
+}
+
+pub mod draft_value;
 pub(crate) mod net_provider;
 pub mod panels;
 pub mod plugins;
 pub(crate) mod schedule;
+pub mod select_all_on_focus;
+pub mod text_input;
 pub mod worker;
 
 /// Extraction-side mirror of texture handles, keyed by the quad entity.
@@ -381,18 +470,31 @@ struct AnimationTime(Instant);
 fn dispatch_vdom_polls(
     mut registry: NonSendMut<VdomThreadRegistry>,
     animation_epoch: Res<AnimationTime>,
+    time: Res<Time<Virtual>>,
+    mut echo_pending: ResMut<EchoPending>,
 ) {
     let animation_time = animation_epoch.0.elapsed().as_secs_f64();
+    let now = time.elapsed();
+
+    // Never leave a worker waiting when the sync stops answering echoes.
+    echo_pending.0.retain(|(entity, since)| {
+        if now.saturating_sub(*since) > ECHO_STALL_TIMEOUT {
+            if let Some(worker) = registry.workers.get(entity) {
+                let _ = worker.cmd_tx.try_send(VdomCommand::Echoed);
+            }
+            false
+        } else {
+            true
+        }
+    });
+
     for (_entity, worker) in &mut registry.workers {
         let _ = worker.cmd_tx.try_send(VdomCommand::Poll { animation_time });
     }
 }
 
-/// Collects painted scenes from all VDOM workers and renders them to GPU
-/// textures. Combines scene collection and rendering into one system to
-/// avoid an intermediate resource for passing scenes.
+/// Renders scenes painted since the last render tick to GPU textures.
 fn collect_and_render_vdom_scenes(
-    mut registry: NonSendMut<VdomThreadRegistry>,
     mut vello_renderer: NonSendMut<VelloRenderer>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
@@ -400,10 +502,8 @@ fn collect_and_render_vdom_scenes(
     images: Res<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut quad_query: Query<(Entity, &mut MeshMaterial3d<StandardMaterial>, &DioxusUiQuad)>,
-    window_uis: Query<Entity, With<DioxusWindowUiQuad>>,
-    world_space_uis: Query<Entity, (With<DioxusUiQuad>, Without<DioxusWindowUiQuad>)>,
     mut cached_textures: Local<HashMap<Entity, RenderTexture>>,
-    mut pick_state: ResMut<DioxusUiPickState>,
+    mut pending: ResMut<PendingScenes>,
 ) {
     let _ = debug_span!("total vdom(s) render time").entered();
 
@@ -431,62 +531,30 @@ fn collect_and_render_vdom_scenes(
         }
         cached_textures.insert(entity, texture);
     }
-    // Hit-test results reported by workers this frame.
-    let mut hit_results: Vec<(Entity, bool)> = Vec::new();
-    // Collect painted scenes from all workers and render them.
-    for (entity, worker) in &mut registry.workers {
-        let span = debug_span!("paint_scene collection", entity = %entity).entered();
-        while let Ok(result) = worker.result_rx.try_recv() {
-            match result {
-                VdomResult::SceneReady {
-                    scene,
-                    width,
-                    height,
-                } => {
-                    let Some(texture) = cached_textures.get(&entity) else {
-                        continue;
-                    };
-                    if let Err(_err) = vello_renderer.render_to_texture(
-                        render_device.wgpu_device(),
-                        &render_queue.0,
-                        &scene,
-                        &texture.texture_view,
-                        &RenderParams {
-                            base_color: AlphaColor::TRANSPARENT,
-                            width,
-                            height,
-                            antialiasing_method: vello::AaConfig::Area,
-                        },
-                    ) {
-                        error!("failed to render ui for {} to texture: {}", entity, _err);
-                    }
-                }
-                VdomResult::ShutdownAck => {
-                    debug!("vdom worker for {} acknowledged shutdown", entity);
-                }
-                VdomResult::HitTestResult { entity: e, caught } => {
-                    hit_results.push((e, caught));
-                }
-            }
+
+    for scene in pending.scenes.drain(..) {
+        let Some(texture) = cached_textures.get(&scene.entity) else {
+            continue;
+        };
+        let span = debug_span!("paint_scene collection", entity = %scene.entity).entered();
+        if let Err(_err) = vello_renderer.render_to_texture(
+            render_device.wgpu_device(),
+            &render_queue,
+            &scene.scene,
+            &texture.texture_view,
+            &RenderParams {
+                base_color: AlphaColor::TRANSPARENT,
+                width: scene.width,
+                height: scene.height,
+                antialiasing_method: vello::AaConfig::Area,
+            },
+        ) {
+            error!(
+                "failed to render ui for {} to texture: {}",
+                scene.entity, _err
+            );
         }
         span.exit();
-    }
-    // Resolve the active pick space once per frame. Window space takes
-    // precedence over world space when both caught input.
-    if !hit_results.is_empty() {
-        let window_caught = hit_results
-            .iter()
-            .any(|(e, caught)| *caught && window_uis.contains(*e));
-        let world_caught = hit_results
-            .iter()
-            .any(|(e, caught)| *caught && world_space_uis.contains(*e));
-        pick_state.active = if window_caught {
-            DioxusUiPickFilter::WINDOW_SPACE
-        } else if world_caught {
-            DioxusUiPickFilter::WORLD_SPACE
-        } else {
-            DioxusUiPickFilter::NONE
-        };
     }
 }
 

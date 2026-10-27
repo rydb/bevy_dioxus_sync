@@ -4,7 +4,6 @@ use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy_dioxus_sync::plugins::DioxusPlugin;
 use bevy_pbr::wireframe::WireframePlugin;
-use bevy_picking::{PickingPlugin, input::PointerInputPlugin, mesh_picking::MeshPickingPlugin};
 use tracing_subscriber::{
     filter::filter_fn,
     fmt::{self, format::FmtSpan},
@@ -48,7 +47,6 @@ pub fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
-        .add_plugins((PointerInputPlugin, PickingPlugin, MeshPickingPlugin))
         .add_plugins(WireframePlugin::default())
         .add_plugins(DioxusPlugin {
             bevy_info_refresh_fps: 30,

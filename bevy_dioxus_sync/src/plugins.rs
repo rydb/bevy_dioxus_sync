@@ -1,6 +1,7 @@
 use bevy_app::prelude::*;
 use bevy_dioxus_messages::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
+use bevy_picking::mesh_picking::MeshPickingPlugin;
 use dioxus_bevy_signals::DioxusBevyMirrorPlugin;
 use dioxus_core::Element;
 
@@ -17,6 +18,11 @@ pub struct DioxusPlugin {
 
 impl Plugin for DioxusPlugin {
     fn build(&self, app: &mut App) {
+        // required to click world space meshes.
+        if !app.is_plugin_added::<MeshPickingPlugin>() {
+            app.add_plugins(MeshPickingPlugin);
+        }
+
         app.insert_resource(InitialWindowPanel(self.main_window_ui));
 
         let dioxus_signals_mirror_plugin = DioxusBevyMirrorPlugin {

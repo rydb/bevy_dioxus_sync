@@ -117,7 +117,9 @@ pub(crate) fn initialize_vdoms(
             vdom,
             DocumentConfig {
                 font_ctx: Some(font_ctx),
-                ua_stylesheets: Some(vec![blitz_dom::DEFAULT_CSS.to_string()]),
+                ua_stylesheets: vec![blitz_dom::UserAgentStylesheet::parse(
+                    blitz_dom::DEFAULT_CSS,
+                )],
                 ..default()
             },
         );

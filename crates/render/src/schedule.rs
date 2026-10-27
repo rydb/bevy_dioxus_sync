@@ -3,6 +3,8 @@ use std::time::Duration;
 use bevy_ecs::{prelude::*, schedule::ScheduleLabel};
 use bevy_time::{Time, Virtual};
 
+use crate::worker::{VdomCommand, VdomThreadRegistry};
+
 /// Schedule for dioxus rendering systems
 
 #[derive(ScheduleLabel, Hash, Debug, Eq, PartialEq, Clone)]
@@ -25,6 +27,26 @@ impl DioxusRenderScheduleTimestep {
 pub(crate) struct DioxusRenderScheduleAccumulator {
     /// The interval between successive runs of the Dioxus render schedules.
     pub accumulated: Duration,
+}
+
+/// Worker edits waiting for a sync tick to publish their mirrored values.
+#[derive(Resource, Default)]
+pub struct EchoPending(pub Vec<(Entity, Duration)>);
+
+/// Whether the sync schedules answer echo requests.
+#[derive(Resource, Default)]
+pub struct EchoEnabled(pub bool);
+
+/// Answers pending echo requests after mirrored values are published.
+pub fn complete_input_echoes(
+    mut pending: ResMut<EchoPending>,
+    registry: NonSend<VdomThreadRegistry>,
+) {
+    for (entity, _) in pending.0.drain(..) {
+        if let Some(worker) = registry.workers.get(&entity) {
+            let _ = worker.cmd_tx.try_send(VdomCommand::Echoed);
+        }
+    }
 }
 
 pub(crate) struct DioxusRenderMain;

@@ -2,12 +2,13 @@ use std::time::Instant;
 
 use bevy_app::prelude::*;
 use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
+use dioxus_bevy_signals::schedules::DioxusSyncLast;
 use vello::RendererOptions;
 
 use crate::panels::{initialize_vdoms, sync_dioxus_ui_with_panels};
 use crate::schedule::{
     DioxusRenderMain, DioxusRenderSchedule, DioxusRenderScheduleAccumulator,
-    DioxusRenderScheduleTimestep,
+    DioxusRenderScheduleTimestep, EchoEnabled, EchoPending, complete_input_echoes,
 };
 use crate::worker::VdomThreadRegistry;
 use crate::*;
@@ -24,9 +25,15 @@ impl Plugin for DioxusRenderPlugin {
 
         app.insert_non_send(VdomThreadRegistry::default());
         app.insert_resource(epoch);
+        app.init_resource::<EchoPending>();
+        app.init_resource::<EchoEnabled>();
+        app.init_resource::<DioxusUiPickState>();
+        app.init_resource::<DioxusUiHitState>();
+        app.init_resource::<PendingScenes>();
 
         app.add_systems(Startup, setup_window_surface)
-            .add_systems(PreUpdate, initialize_vdoms)
+            .add_systems(PreUpdate, drain_worker_results.in_set(DioxusInputRouting))
+            .add_systems(PreUpdate, initialize_vdoms.before(DioxusInputRouting))
             .add_systems(
                 DioxusRenderSchedule,
                 (
@@ -44,6 +51,12 @@ impl Plugin for DioxusRenderPlugin {
         app.insert_resource(DioxusRenderScheduleAccumulator::default());
         app.insert_resource(DioxusRenderScheduleTimestep::from_fps(self.fps_cap));
         app.add_systems(Update, DioxusRenderMain::run_dioxus_render_main);
+
+        // Without a mirror there is nothing to echo, so workers never wait.
+        if app.get_schedule(DioxusSyncLast).is_some() {
+            app.insert_resource(EchoEnabled(true))
+                .add_systems(DioxusSyncLast, complete_input_echoes);
+        }
     }
     fn finish(&self, app: &mut App) {
         // Add the UI rendrer

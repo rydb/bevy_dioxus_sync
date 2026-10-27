@@ -22,11 +22,9 @@ target
 
 
 # Added by cargo
-
 /target
-Cargo.lock
 
+# Added by nix direnv
+/.direnv
 
-
-
-
+/.vscode

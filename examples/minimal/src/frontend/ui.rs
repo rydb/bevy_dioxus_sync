@@ -120,14 +120,18 @@ pub fn app_ui() -> Element {
                 class: "section-header",
                 "Controls"
             }
+            // TODO: fields with the draft-value class report on Enter or blur, so
+            // the value does not follow typing. Live typing needs a cancelable
+            // beforeinput event that carries the proposed value, so a rejected
+            // edit never reaches oninput.
             div {
                 id: "translation-speed-control",
                 label { "Translation Speed:" }
                 input {
                     r#type: "number",
                     min: "0.0",
-                    max: "10.0",
                     step: "0.1",
+                    class: "select-all-on-focus draft-value",
                     value: cube_translation_speed,
                     oninput: set_translation_speed,
                 }
@@ -138,8 +142,8 @@ pub fn app_ui() -> Element {
                 input {
                     r#type: "number",
                     min: "0.0",
-                    max: "10.0",
                     step: "0.1",
+                    class: "select-all-on-focus draft-value",
                     value: cube_rotation_speed,
                     oninput: set_rotation_speed,
                 }

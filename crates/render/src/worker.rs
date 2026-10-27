@@ -8,14 +8,20 @@ use bevy_dioxus_tracing::{debug, error, warn};
 use bevy_ecs::prelude::*;
 use blitz_dom::Document;
 use blitz_paint::paint_scene;
-use blitz_traits::events::UiEvent;
+use blitz_traits::events::{DomEvent, DomEventData, UiEvent};
+use blitz_traits::node_id::NodeId;
 use blitz_traits::shell::Viewport;
 use crossbeam_channel::{Receiver, Sender};
 use dioxus_devtools::DevserverMsg;
 use dioxus_native::DioxusDocument;
 use vello::Scene;
 
-use crate::{COLOR_SCHEME, SCALE_FACTOR, does_catch_events};
+use keyboard_types::{Key, NamedKey};
+
+use crate::draft_value::{self, Draft};
+use crate::select_all_on_focus::select_all_on_focus;
+use crate::text_input::select_all_text;
+use crate::{COLOR_SCHEME, SCALE_FACTOR, document_owns_point};
 
 /// Extracts page coordinates from a UI event for hit-testing.
 fn extract_ui_event_coords(event: &UiEvent) -> (f32, f32) {
@@ -25,6 +31,24 @@ fn extract_ui_event_coords(event: &UiEvent) -> (f32, f32) {
         }
         _ => (0.0, 0.0),
     }
+}
+
+/// Turns an event into one that edits a draft input without telling the app.
+///
+/// The event is returned unchanged when it does not edit a draft input.
+fn quiet_event(dioxus_doc: &DioxusDocument, event: UiEvent) -> Result<(NodeId, DomEvent), UiEvent> {
+    let Some(node_id) = draft_value::quiet_target(dioxus_doc) else {
+        return Err(event);
+    };
+
+    let data = match event {
+        UiEvent::KeyDown(event) if draft_value::edits_text(&event) => DomEventData::KeyDown(event),
+        UiEvent::Ime(event) => DomEventData::Ime(event),
+        UiEvent::AppleStandardKeybinding(command) => DomEventData::AppleStandardKeybinding(command),
+        other => return Err(other),
+    };
+
+    Ok((node_id, DomEvent::new(node_id, data)))
 }
 
 /// Transfers ownership of a `!Send` value into a spawned thread.
@@ -68,6 +92,8 @@ pub enum VdomCommand {
         /// Frame timestamp used for animation resolution.
         animation_time: f64,
     },
+    /// Mirrored values that include the worker's last edit are published.
+    Echoed,
     /// Forward a dioxus message received on the main thread.
     Message(DioxusMessage),
     /// Update the viewport dimensions.
@@ -86,6 +112,8 @@ pub enum VdomResult {
     },
     /// Hit-test result: whether a DOM element with catch-events was under the pointer.
     HitTestResult { entity: Entity, caught: bool },
+    /// The worker edited its document and needs a sync tick before rendering.
+    NeedsEcho { entity: Entity },
     /// Worker confirms shutdown.
     ShutdownAck,
 }
@@ -144,102 +172,167 @@ impl VdomWorker {
                 }));
 
                 let mut scene = Scene::new();
+                // Text kept across renders for an input being edited.
+                let mut draft: Option<Draft> = None;
+                // Field whose value stays selected until the next interaction.
+                let mut pending_selection: Option<NodeId> = None;
+                // Repaint request carried across command iterations.
+                let mut needs_paint = false;
+                // Timestamp of the most recent poll, reused by the next paint.
+                let mut animation_time = 0.0;
+                // Edits wait for their mirrored values before the VDOM renders.
+                let mut await_echo = false;
 
                 loop {
-                    // Don't re-paint if nothing changed
-                    let mut needs_paint = false;
-
-                    // Process input events before polling.
-                    while let Ok((ev_entity, ui_event)) = input_rx.try_recv() {
-                        let (x, y) = extract_ui_event_coords(&ui_event);
-                        let caught = document
-                            .inner
-                            .borrow()
-                            .hit(x, y)
-                            .map(|hit| does_catch_events(&document, hit.node_id))
-                            .unwrap_or(false);
-                        document.handle_ui_event(ui_event);
-                        needs_paint = true;
-                        let _ = result_tx.try_send(VdomResult::HitTestResult {
-                            entity: ev_entity,
-                            caught,
-                        });
-                    }
-
-                    while let Ok(msg) = messages_recv.try_recv() {
-                        process_dioxus_message(&mut document, msg, &waker);
-                        needs_paint = true;
-                    }
-
-                    while let Ok(cmd) = cmd_rx.try_recv() {
-                        match cmd {
-                            VdomCommand::Shutdown => {
-                                let _ = result_tx.send(VdomResult::ShutdownAck);
-                                return;
-                            }
-                            VdomCommand::Resize(w, h) => {
-                                document.inner.borrow_mut().set_viewport(Viewport::new(
-                                    w,
-                                    h,
-                                    SCALE_FACTOR,
-                                    COLOR_SCHEME,
-                                ));
-                                needs_paint = true;
-                            }
-                            VdomCommand::Message(msg) => {
-                                process_dioxus_message(&mut document, msg, &waker);
-                                needs_paint = true;
-                            }
-                            VdomCommand::Poll { animation_time } => {
-                                let fresh = run_poll_and_paint(
-                                    &mut document,
-                                    &waker,
-                                    &waker_flag,
-                                    animation_time,
-                                    scene,
-                                    &result_tx,
-                                    needs_paint,
-                                );
-                                scene = fresh;
-                                needs_paint = false;
-                            }
+                    let cmd = match cmd_rx.recv() {
+                        Ok(cmd) => cmd,
+                        Err(_) => {
+                            debug!("vdom-worker-{}: cmd channel closed", entity.index());
+                            return;
                         }
-                    }
+                    };
 
-                    match cmd_rx.recv() {
-                        Ok(VdomCommand::Shutdown) => {
+                    let mut should_paint = false;
+
+                    match cmd {
+                        VdomCommand::Shutdown => {
                             let _ = result_tx.send(VdomResult::ShutdownAck);
                             return;
                         }
-                        Ok(VdomCommand::Poll { animation_time }) => {
-                            let fresh = run_poll_and_paint(
-                                &mut document,
-                                &waker,
-                                &waker_flag,
-                                animation_time,
-                                scene,
-                                &result_tx,
-                                needs_paint,
-                            );
-                            scene = fresh;
-                        }
-                        Ok(VdomCommand::Resize(w, h)) => {
+                        VdomCommand::Resize(w, h) => {
                             document.inner.borrow_mut().set_viewport(Viewport::new(
                                 w,
                                 h,
                                 SCALE_FACTOR,
                                 COLOR_SCHEME,
                             ));
-                            // needs_paint = true;
+                            needs_paint = true;
                         }
-                        Ok(VdomCommand::Message(msg)) => {
+                        VdomCommand::Message(msg) => {
                             process_dioxus_message(&mut document, msg, &waker);
-                            // needs_paint = true;
+                            needs_paint = true;
                         }
-                        Err(_) => {
-                            debug!("vdom-worker-{}: cmd channel closed", entity.index());
-                            return;
+                        VdomCommand::Poll { animation_time: t } => {
+                            animation_time = t;
+
+                            if await_echo {
+                                needs_paint = true;
+                            } else {
+                                if run_poll(&mut document, &waker, &waker_flag) {
+                                    needs_paint = true;
+                                }
+
+                                // A render can write the mirrored value over the
+                                // text being edited, so the draft is put back.
+                                if draft_value::restore(&mut document, &draft) {
+                                    needs_paint = true;
+                                }
+
+                                // A render can also drop the initial selection,
+                                // which is put back until the next interaction.
+                                if let Some(node) = pending_selection {
+                                    if document.inner.borrow().get_focussed_node_id() == Some(node)
+                                    {
+                                        select_all_text(&mut document, node);
+                                    } else {
+                                        pending_selection = None;
+                                    }
+                                }
+                            }
+
+                            should_paint = true;
                         }
+                        VdomCommand::Echoed => {
+                            await_echo = false;
+                        }
+                    }
+
+                    // Input is handled after polling so the VDOM cannot write a
+                    // mirrored value back over an edit the main thread has not
+                    // applied yet.
+                    let mut edited = false;
+                    let mut submitted = false;
+
+                    while let Ok((ev_entity, ui_event)) = input_rx.try_recv() {
+                        let (x, y) = extract_ui_event_coords(&ui_event);
+                        let caught = document
+                            .inner
+                            .borrow()
+                            .hit(x, y)
+                            .map(|hit| document_owns_point(&document, hit.node_id))
+                            .unwrap_or(false);
+                        let opens_input = matches!(&ui_event, UiEvent::PointerDown(_));
+                        let submits = matches!(
+                            &ui_event,
+                            UiEvent::KeyDown(event) if event.key == Key::Named(NamedKey::Enter)
+                        );
+
+                        // Anything that can move the caret ends the initial
+                        // selection, which is only meant to last until then.
+                        if matches!(
+                            &ui_event,
+                            UiEvent::PointerDown(_)
+                                | UiEvent::KeyDown(_)
+                                | UiEvent::Ime(_)
+                                | UiEvent::AppleStandardKeybinding(_)
+                        ) {
+                            pending_selection = None;
+                        }
+
+                        let focus_before = document.inner.borrow().get_focussed_node_id();
+
+                        // A draft input applies its edits without telling the app,
+                        // which hears the kept value once the field is committed.
+                        match quiet_event(&document, ui_event) {
+                            Ok((_, mut event)) => {
+                                document
+                                    .inner
+                                    .borrow_mut()
+                                    .handle_dom_event(&mut event, |_| {});
+                            }
+                            Err(ui_event) => {
+                                document.handle_ui_event(ui_event);
+                                edited = true;
+                            }
+                        }
+
+                        // A pointer press grants focus in its default action, so
+                        // the value is selected once the event has been handled.
+                        if opens_input
+                            && document.inner.borrow().get_focussed_node_id() != focus_before
+                        {
+                            pending_selection = select_all_on_focus(&mut document);
+                        }
+
+                        needs_paint = true;
+                        should_paint = true;
+                        submitted |= submits;
+                        let _ = result_tx.try_send(VdomResult::HitTestResult {
+                            entity: ev_entity,
+                            caught,
+                        });
+                    }
+
+                    draft_value::track(&mut document, &mut draft);
+
+                    if submitted {
+                        draft_value::finish(&mut document, &mut draft);
+                    }
+
+                    if edited {
+                        await_echo = true;
+                        let _ = result_tx.try_send(VdomResult::NeedsEcho { entity });
+                    }
+
+                    while let Ok(msg) = messages_recv.try_recv() {
+                        process_dioxus_message(&mut document, msg, &waker);
+                        needs_paint = true;
+                        should_paint = true;
+                    }
+
+                    if should_paint && needs_paint {
+                        scene = paint(&mut document, animation_time, scene, &result_tx);
+                        needs_paint = false;
                     }
                 }
             })
@@ -279,28 +372,30 @@ fn process_dioxus_message(doc: &mut DioxusDocument, msg: DioxusMessage, waker: &
     }
 }
 
-/// Poll the VDOM until no more futures are ready, resolve animations,
-/// paint the scene, and send it to the main thread.
-fn run_poll_and_paint(
-    doc: &mut DioxusDocument,
-    waker: &std::task::Waker,
-    waker_flag: &AtomicBool,
-    animation_time: f64,
-    mut scene: Scene,
-    result_tx: &Sender<VdomResult>,
-    mut needs_paint: bool,
-) -> Scene {
+/// Polls the VDOM until no more futures are ready.
+fn run_poll(doc: &mut DioxusDocument, waker: &std::task::Waker, waker_flag: &AtomicBool) -> bool {
+    let mut had_work = false;
+
     loop {
         waker_flag.store(false, Ordering::SeqCst);
-        let had_work = doc.poll(Some(std::task::Context::from_waker(waker)));
-        if had_work {
-            needs_paint = true;
+        if doc.poll(Some(std::task::Context::from_waker(waker))) {
+            had_work = true;
         }
         if !waker_flag.load(Ordering::SeqCst) {
             break;
         }
     }
 
+    had_work
+}
+
+/// Resolves animations and paints the document into `scene`.
+fn paint(
+    doc: &mut DioxusDocument,
+    animation_time: f64,
+    mut scene: Scene,
+    result_tx: &Sender<VdomResult>,
+) -> Scene {
     doc.inner.borrow_mut().resolve(animation_time);
 
     let (width, height) = {
@@ -311,10 +406,6 @@ fn run_poll_and_paint(
 
     if width == 0 || height == 0 {
         warn!("vdom worker: zero-size viewport, skipping paint");
-        return scene;
-    }
-
-    if !needs_paint {
         return scene;
     }
 

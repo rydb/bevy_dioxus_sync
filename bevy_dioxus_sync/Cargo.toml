@@ -17,6 +17,7 @@ dioxus-asset-resolver = {workspace = true}
 dioxus-devtools = {workspace = true}
 
 bevy_input = {workspace = true}
+bevy_picking = {workspace = true, features = ["mesh_picking"]}
 bevy_time = {workspace = true}
 bevy_app = {workspace = true}
 bevy_ecs = {workspace = true}
