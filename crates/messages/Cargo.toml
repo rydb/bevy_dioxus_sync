@@ -10,9 +10,11 @@ categories = ["game-development", "gui"]
 
 [dependencies]
 bevy_app = {workspace = true}
+bevy_camera = {workspace = true}
 bevy_ecs = {workspace = true}
 bevy_input = {workspace = true}
 bevy_math = {workspace = true}
+bevy_shape = {workspace = true}
 bevy_sprite = {workspace = true}
 bevy_transform = {workspace = true}
 bevy_window = {workspace = true}

@@ -3,9 +3,10 @@ use bevy_dioxus_messages::plugins::DioxusEventSyncPlugin;
 use bevy_dioxus_render::plugins::DioxusRenderPlugin;
 use bevy_picking::mesh_picking::MeshPickingPlugin;
 use dioxus_bevy_signals::DioxusBevyMirrorPlugin;
-use dioxus_core::Element;
 
-use crate::{InitialWindowPanel, setup_initial_window_ui};
+use crate::{InitialWindowLayout, setup_initial_window_ui};
+
+pub use bevy_dioxus_render::layout::LayoutSystem;
 
 /// Plugin for Dioxus support in bevy.
 pub struct DioxusPlugin {
@@ -13,7 +14,7 @@ pub struct DioxusPlugin {
     pub bevy_info_refresh_fps: u32,
     /// max fps that dioxus uis should be rendered at.
     pub dioxus_render_fps_cap: u32,
-    pub main_window_ui: Option<fn() -> Element>,
+    pub main_window_ui: Option<LayoutSystem>,
 }
 
 impl Plugin for DioxusPlugin {
@@ -23,7 +24,7 @@ impl Plugin for DioxusPlugin {
             app.add_plugins(MeshPickingPlugin);
         }
 
-        app.insert_resource(InitialWindowPanel(self.main_window_ui));
+        app.insert_resource(InitialWindowLayout(self.main_window_ui.clone()));
 
         let dioxus_signals_mirror_plugin = DioxusBevyMirrorPlugin {
             dioxus_sync_fps: self.bevy_info_refresh_fps,

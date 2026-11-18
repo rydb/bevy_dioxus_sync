@@ -1,0 +1,23 @@
+[package]
+name = "slots_test"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Engine features are listed explicitly because the workspace disables default features.
+bevy = { workspace = true, features = [
+    "std", "multi_threaded", "png", "zstd_rust", "tonemapping_luts",
+    "x11", "wayland", "trace_tracy",
+    "bevy_render", "bevy_winit", "bevy_window", "bevy_log", "bevy_asset",
+    "bevy_image", "bevy_mesh", "bevy_shader", "bevy_material", "bevy_camera",
+    "bevy_light", "bevy_pbr", "bevy_core_pipeline", "bevy_post_process",
+    "bevy_sprite", "bevy_sprite_render", "bevy_gizmos", "bevy_gizmos_render",
+    "bevy_text", "bevy_picking", "hdr"
+] }
+bevy_dioxus_sync = {workspace = true}
+bevy_dioxus_render = {workspace = true}
+dioxus = {workspace = true, features = ["html", "signals", "hooks", "macro"]}
+
+[features]
+# Renderer feature the CLI toggles, the surface paints its own content.
+native = []

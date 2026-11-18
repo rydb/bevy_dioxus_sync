@@ -6,7 +6,7 @@ use anyrender_vello::VelloScenePainter;
 use bevy_dioxus_interop::DioxusMessage;
 use bevy_dioxus_tracing::{debug, error, warn};
 use bevy_ecs::prelude::*;
-use blitz_dom::Document;
+use blitz_dom::{Document, LocalName};
 use blitz_paint::paint_scene;
 use blitz_traits::events::{DomEvent, DomEventData, UiEvent};
 use blitz_traits::node_id::NodeId;
@@ -21,6 +21,7 @@ use keyboard_types::{Key, NamedKey};
 use crate::draft_value::{self, Draft};
 use crate::select_all_on_focus::select_all_on_focus;
 use crate::text_input::select_all_text;
+use crate::ui_cursor::UiCursor;
 use crate::{COLOR_SCHEME, SCALE_FACTOR, document_owns_point};
 
 /// Extracts page coordinates from a UI event for hit-testing.
@@ -29,6 +30,7 @@ fn extract_ui_event_coords(event: &UiEvent) -> (f32, f32) {
         UiEvent::PointerMove(e) | UiEvent::PointerDown(e) | UiEvent::PointerUp(e) => {
             (e.coords.page_x, e.coords.page_y)
         }
+        UiEvent::Wheel(e) => (e.coords.page_x, e.coords.page_y),
         _ => (0.0, 0.0),
     }
 }
@@ -112,6 +114,11 @@ pub enum VdomResult {
     },
     /// Hit-test result: whether a DOM element with catch-events was under the pointer.
     HitTestResult { entity: Entity, caught: bool },
+    /// Cursor hint for the element under the pointer.
+    Cursor {
+        entity: Entity,
+        cursor: Option<UiCursor>,
+    },
     /// The worker edited its document and needs a sync tick before rendering.
     NeedsEcho { entity: Entity },
     /// Worker confirms shutdown.
@@ -150,6 +157,7 @@ impl VdomWorker {
         cmd_rx: Receiver<VdomCommand>,
         result_tx: Sender<VdomResult>,
         input_rx: Receiver<(Entity, UiEvent)>,
+        viewport_tx: Sender<(u32, u32)>,
         waker_flag: Arc<AtomicBool>,
     ) -> std::thread::JoinHandle<()> {
         let sendable = SendToThread::new(document);
@@ -180,6 +188,8 @@ impl VdomWorker {
                 let mut needs_paint = false;
                 // Timestamp of the most recent poll, reused by the next paint.
                 let mut animation_time = 0.0;
+                // Cursor hint last reported for this document.
+                let mut last_cursor: Option<UiCursor> = None;
                 // Edits wait for their mirrored values before the VDOM renders.
                 let mut await_echo = false;
 
@@ -206,6 +216,7 @@ impl VdomWorker {
                                 SCALE_FACTOR,
                                 COLOR_SCHEME,
                             ));
+                            let _ = viewport_tx.try_send((w, h));
                             needs_paint = true;
                         }
                         VdomCommand::Message(msg) => {
@@ -252,6 +263,13 @@ impl VdomWorker {
                     // applied yet.
                     let mut edited = false;
                     let mut submitted = false;
+                    let mut cursor_dirty = false;
+
+                    // Hit tests read the paint tree, so pending layout changes
+                    // are resolved before any input event is routed.
+                    if needs_paint {
+                        document.inner.borrow_mut().resolve(animation_time);
+                    }
 
                     while let Ok((ev_entity, ui_event)) = input_rx.try_recv() {
                         let (x, y) = extract_ui_event_coords(&ui_event);
@@ -307,10 +325,19 @@ impl VdomWorker {
                         needs_paint = true;
                         should_paint = true;
                         submitted |= submits;
+                        cursor_dirty = true;
                         let _ = result_tx.try_send(VdomResult::HitTestResult {
                             entity: ev_entity,
                             caught,
                         });
+                    }
+
+                    if cursor_dirty {
+                        let cursor = hover_cursor(&document);
+                        if cursor != last_cursor {
+                            last_cursor = cursor;
+                            let _ = result_tx.try_send(VdomResult::Cursor { entity, cursor });
+                        }
                     }
 
                     draft_value::track(&mut document, &mut draft);
@@ -370,6 +397,46 @@ fn process_dioxus_message(doc: &mut DioxusDocument, msg: DioxusMessage, waker: &
                 });
         }
     }
+}
+
+/// Finds the cursor hint on the hovered element or its nearest ancestor.
+fn hover_cursor(doc: &DioxusDocument) -> Option<UiCursor> {
+    let inner = doc.inner.borrow();
+    let Some(hovered) = inner.get_hover_node_id() else {
+        return None;
+    };
+
+    // An active drag keeps its cursor even when the pointer leaves the handle.
+    let mut current = Some(hovered);
+    while let Some(node_id) = current {
+        let Some(node) = inner.get_node(node_id) else {
+            break;
+        };
+        if let Some(token) = node.attr(LocalName::from("data-drag-cursor"))
+            && let Some(cursor) = UiCursor::from_token(token)
+        {
+            return Some(cursor);
+        }
+        current = node.parent;
+    }
+
+    let mut current = Some(hovered);
+    while let Some(node_id) = current {
+        let Some(node) = inner.get_node(node_id) else {
+            break;
+        };
+        if let Some(token) = node.attr(LocalName::from("data-cursor")) {
+            return Some(UiCursor::from_token(token).unwrap_or_default());
+        }
+        if node
+            .element_data()
+            .is_some_and(|element| element.text_input_data().is_some())
+        {
+            return Some(UiCursor::Text);
+        }
+        current = node.parent;
+    }
+    None
 }
 
 /// Polls the VDOM until no more futures are ready.

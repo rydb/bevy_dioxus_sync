@@ -1,0 +1,26 @@
+/* Selectors every slot theme must implement. */
+.slot-surface {}
+.slot-panel {}
+.slot-float {}
+.slot-title {}
+.slot-body {}
+.slot-tab {}
+.slot-tab:hover {}
+.slot-tab-active {}
+.slot-op {}
+.slot-op:hover {}
+.slot-grip {}
+.slot-grip:hover {}
+.slot-grip-active {}
+.slot-slot-handle {}
+.slot-minimized-bar {}
+.slot-minimized-entry {}
+.slot-minimized-entry:hover {}
+button {}
+button:hover {}
+button:active {}
+input {}
+select {}
+textarea {}
+a {}
+code {}

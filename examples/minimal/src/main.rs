@@ -2,7 +2,7 @@
 
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
-use bevy_dioxus_sync::plugins::DioxusPlugin;
+use bevy_dioxus_sync::plugins::{DioxusPlugin, LayoutSystem};
 use bevy_pbr::wireframe::WireframePlugin;
 use tracing_subscriber::{
     filter::filter_fn,
@@ -50,7 +50,7 @@ pub fn main() {
         .add_plugins(WireframePlugin::default())
         .add_plugins(DioxusPlugin {
             bevy_info_refresh_fps: 30,
-            main_window_ui: Some(app_ui),
+            main_window_ui: Some(LayoutSystem::Raw(app_ui)),
             dioxus_render_fps_cap: 60,
         })
         .add_plugins(BevyScenePlugin)

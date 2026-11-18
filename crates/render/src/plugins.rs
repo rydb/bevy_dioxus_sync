@@ -5,7 +5,7 @@ use bevy_render::{Render, RenderApp, RenderSystems, renderer::RenderDevice};
 use dioxus_bevy_signals::schedules::DioxusSyncLast;
 use vello::RendererOptions;
 
-use crate::panels::{initialize_vdoms, sync_dioxus_ui_with_panels};
+use crate::layout::{initialize_vdoms, sync_dioxus_ui_with_layouts};
 use crate::schedule::{
     DioxusRenderMain, DioxusRenderSchedule, DioxusRenderScheduleAccumulator,
     DioxusRenderScheduleTimestep, EchoEnabled, EchoPending, complete_input_echoes,
@@ -23,23 +23,35 @@ impl Plugin for DioxusRenderPlugin {
 
         app.add_schedule(Schedule::new(DioxusRenderSchedule));
 
+        let (cursor_tx, cursor_rx) = crossbeam_channel::unbounded();
         app.insert_non_send(VdomThreadRegistry::default());
         app.insert_resource(epoch);
         app.init_resource::<EchoPending>();
         app.init_resource::<EchoEnabled>();
         app.init_resource::<DioxusUiPickState>();
         app.init_resource::<DioxusUiHitState>();
+        app.init_resource::<DioxusUiCursors>();
+        app.init_resource::<DioxusUiCursorOverride>();
+        app.insert_resource(SurfaceCursorHint(cursor_tx));
+        app.insert_resource(CursorOverrideReceiver(cursor_rx));
         app.init_resource::<PendingScenes>();
 
         app.add_systems(Startup, setup_window_surface)
             .add_systems(PreUpdate, drain_worker_results.in_set(DioxusInputRouting))
+            .add_systems(
+                PreUpdate,
+                apply_cursor_override
+                    .after(DioxusInputRouting)
+                    .before(apply_ui_cursor),
+            )
+            .add_systems(PreUpdate, apply_ui_cursor.after(DioxusInputRouting))
             .add_systems(PreUpdate, initialize_vdoms.before(DioxusInputRouting))
             .add_systems(
                 DioxusRenderSchedule,
                 (
                     cleanup_vdom_workers,
                     handle_window_resize,
-                    sync_dioxus_ui_with_panels,
+                    sync_dioxus_ui_with_layouts,
                     recompute_dioxus_ui_quad_surface,
                     recompute_blitz_render_surfaces,
                     initialize_textures_for_quads,

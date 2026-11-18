@@ -16,48 +16,83 @@ use dioxus_native::DioxusDocument;
 use vello::peniko::Blob;
 
 use crate::net_provider::{BevyNetProvider, DioxusDocumentProxy};
+use crate::slots::{CapturedPointer, FiveSlots};
 use crate::worker::{VdomThreadRegistry, VdomWorker};
-use crate::{DioxusUiQuad, dioxus_ui};
+use crate::{DioxusUiQuad, SurfaceCursorHint, dioxus_ui, dioxus_uiProps};
 
-/// Panels on a dioxus ui quad surface
-///
-/// TODO: support multiple panel orientations (left, right, bottom, top, etc..)
+/// Root layout drawn on a dioxus ui surface.
+#[derive(Clone)]
+pub enum LayoutSystem {
+    /// A raw UI component as is.
+    Raw(fn() -> Element),
+    /// A [`FiveSlots`] ui layout.
+    FiveSlots(FiveSlots),
+}
+
+impl PartialEq for LayoutSystem {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Raw(a), Self::Raw(b)) => std::ptr::fn_addr_eq(*a, *b),
+            (Self::FiveSlots(a), Self::FiveSlots(b)) => a == b,
+            (Self::Raw(_), Self::FiveSlots(_)) | (Self::FiveSlots(_), Self::Raw(_)) => false,
+        }
+    }
+}
+
+impl std::fmt::Debug for LayoutSystem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Raw(_) => f.write_str("Raw"),
+            Self::FiveSlots(slots) => f.debug_tuple("FiveSlots").field(slots).finish(),
+        }
+    }
+}
+
+/// Ui for a given entity's surface
 #[derive(Component, Clone, Default)]
 #[require(DioxusUiQuad)]
-pub struct DioxusPanels {
-    /// Panels in insertion order.
-    pub panels: Vec<fn() -> Element>,
+pub struct DioxusUi {
+    /// Layout drawn on the surface.
+    pub layout: Option<LayoutSystem>,
 }
 
-impl DioxusPanels {
-    pub fn new(panels: Vec<fn() -> Element>) -> Self {
-        let mut set = Self::default();
-        for panel in panels {
-            set.insert(panel);
-        }
-        set
-    }
-
-    pub fn insert(&mut self, panel: fn() -> Element) {
-        if !self.panels.contains(&panel) {
-            self.panels.push(panel);
-        } else {
-            warn!(
-                "attempted to push panel when one of the same kind already existed for: {:#?}",
-                panel
-            )
-        }
-    }
-}
-
+/// Sends layout updates to a worker.
 #[derive(Component)]
-pub struct DioxusPanelsSender {
-    sender: crossbeam_channel::Sender<DioxusPanels>,
+pub struct DioxusUiSender {
+    sender: crossbeam_channel::Sender<Option<LayoutSystem>>,
 }
 
+/// Receives layout updates inside a worker.
 #[derive(Clone)]
-pub struct DioxusPanelsReceiver(pub crossbeam_channel::Receiver<DioxusPanels>);
+pub struct DioxusUiReceiver(pub crossbeam_channel::Receiver<Option<LayoutSystem>>);
 
+/// Sends captured pointer messages to a worker.
+#[derive(Component)]
+pub struct DioxusPointerSender {
+    sender: crossbeam_channel::Sender<CapturedPointer>,
+}
+
+impl DioxusPointerSender {
+    /// Builds a sender for one document.
+    pub fn new(sender: crossbeam_channel::Sender<CapturedPointer>) -> Self {
+        Self { sender }
+    }
+
+    /// Sends one captured pointer message.
+    pub fn send(&self, message: CapturedPointer) {
+        let _ = self.sender.send(message);
+    }
+}
+
+/// Receives captured pointer messages inside a worker.
+#[derive(Clone)]
+pub struct DioxusPointerReceiver(pub crossbeam_channel::Receiver<CapturedPointer>);
+
+/// Receives the live pixel size of one dioxus ui surface.
+#[derive(Clone)]
+pub struct DioxusViewportReceiver(pub crossbeam_channel::Receiver<(u32, u32)>);
+
+/// Marks a quad whose worker has started.
 #[derive(Component)]
 pub struct InitializedVdom;
 
@@ -93,9 +128,10 @@ pub(crate) fn initialize_vdoms(
     quads: Query<(Entity, &DioxusUiQuad), Without<InitializedVdom>>,
     mut registry: NonSendMut<VdomThreadRegistry>,
     command_queue_sender: Res<CommandQueueSender>,
+    cursor_hint: Res<SurfaceCursorHint>,
     mut commands: Commands,
 ) {
-    for (e, _quad) in quads {
+    for (e, quad) in quads {
         if registry.workers.contains_key(&e) {
             warn!(
                 "document initialization requested for {} but worker already exists",
@@ -104,12 +140,22 @@ pub(crate) fn initialize_vdoms(
             continue;
         }
 
-        let (panel_sender, panel_receiver) = crossbeam_channel::unbounded::<DioxusPanels>();
+        let (layout_sender, layout_receiver) =
+            crossbeam_channel::unbounded::<Option<LayoutSystem>>();
+        let (viewport_tx, viewport_rx) = crossbeam_channel::unbounded::<(u32, u32)>();
+        let (pointer_tx, pointer_rx) = crossbeam_channel::unbounded::<CapturedPointer>();
         let (proxy_sender, proxy_receiver) = crossbeam_channel::unbounded::<DioxusMessage>();
 
-        let vdom = VirtualDom::new_with_props(dioxus_ui, ())
-            .with_root_context(DioxusPanelsReceiver(panel_receiver))
-            .with_root_context(command_queue_sender.clone());
+        if let Some(size) = quad.computed_wh {
+            let _ = viewport_tx.try_send((size.x as u32, size.y as u32));
+        }
+
+        let vdom = VirtualDom::new_with_props(dioxus_ui, dioxus_uiProps { entity: e })
+            .with_root_context(DioxusUiReceiver(layout_receiver))
+            .with_root_context(DioxusViewportReceiver(viewport_rx))
+            .with_root_context(DioxusPointerReceiver(pointer_rx))
+            .with_root_context(command_queue_sender.clone())
+            .with_root_context(cursor_hint.clone());
 
         let font_ctx = setup_fallback_font();
 
@@ -153,6 +199,7 @@ pub(crate) fn initialize_vdoms(
             cmd_rx,
             result_tx,
             input_rx,
+            viewport_tx,
             waker_flag.clone(),
         );
 
@@ -165,21 +212,24 @@ pub(crate) fn initialize_vdoms(
         };
         registry.workers.insert(e, worker);
 
-        commands.entity(e).insert(DioxusPanelsSender {
-            sender: panel_sender,
+        commands.entity(e).insert(DioxusUiSender {
+            sender: layout_sender,
         });
+        commands
+            .entity(e)
+            .insert(DioxusPointerSender::new(pointer_tx));
         commands.entity(e).insert(InitializedVdom);
     }
 }
 
-/// sync dioxus ui for a window with its latest panels
-pub(crate) fn sync_dioxus_ui_with_panels(
-    panels: Query<(&DioxusPanels, &DioxusPanelsSender), Changed<DioxusPanels>>,
+/// Sync dioxus ui for a window with its latest layout.
+pub(crate) fn sync_dioxus_ui_with_layouts(
+    uis: Query<(&DioxusUi, &DioxusUiSender), Changed<DioxusUi>>,
 ) {
-    for (panels, sender) in panels {
+    for (ui, sender) in uis {
         let _ = sender
             .sender
-            .send(panels.clone())
+            .send(ui.layout.clone())
             .inspect_err(|_err| error!("{_err}"));
     }
 }

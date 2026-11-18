@@ -1,0 +1,14 @@
+[package]
+name = "project_tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+dioxus = {workspace = true}
+dioxus-core = {workspace = true}
+derive-name = {workspace = true}
+bevy_dioxus_render = {workspace = true}
+
+[lib]
+path = "lib.rs"

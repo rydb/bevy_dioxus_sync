@@ -1,6 +1,9 @@
+extern crate self as bevy_dioxus_render;
+
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use crate::ui_cursor::UiCursor;
 use bevy_asset::{RenderAssetUsages, prelude::*};
 use bevy_camera::visibility::RenderLayers;
 use bevy_camera::{Camera, Camera3d, ClearColorConfig};
@@ -23,21 +26,26 @@ use bevy_shape::Rectangle;
 use bevy_time::{Time, Virtual};
 use bevy_transform::components::Transform;
 use bevy_utils::default;
-use bevy_window::prelude::*;
+use bevy_window::{CursorIcon, prelude::*};
 use blitz_dom::local_name;
 use blitz_traits::node_id::NodeId;
 use blitz_traits::shell::ColorScheme;
 use crossbeam_channel::{Receiver, Sender};
+use dioxus::html::elements::*;
+use dioxus::html::style::style;
+use dioxus_bevy_signals::query::single::use_bevy_single;
+use dioxus_bevy_signals::query::use_bevy_query;
 use dioxus_core::Element;
-use dioxus_core_macro::{component, rsx};
-use dioxus_hooks::{use_context, use_future, use_signal};
+use dioxus_core_macro::{Props, component, rsx};
+use dioxus_hooks::{use_context, use_context_provider, use_future, use_memo, use_signal};
 use dioxus_native::DioxusDocument;
 use dioxus_signals::{ReadableExt, WritableExt};
 use vello::{RenderParams, Renderer as VelloRenderer, Scene, peniko::color::AlphaColor};
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-use crate::panels::{DioxusPanels, DioxusPanelsReceiver};
+use crate::layout::{DioxusUi, DioxusUiReceiver, DioxusViewportReceiver, LayoutSystem};
 use crate::schedule::{EchoEnabled, EchoPending};
+use crate::slots::{FiveSlots, Viewport, slots_surface};
 use crate::worker::{VdomCommand, VdomResult, VdomThreadRegistry};
 
 pub const SCALE_FACTOR: f32 = 1.0;
@@ -121,6 +129,34 @@ pub struct PendingScenes {
     pub scenes: Vec<PaintedScene>,
 }
 
+/// Cursor hints reported by dioxus ui workers.
+#[derive(Resource, Default)]
+pub struct DioxusUiCursors(pub HashMap<Entity, UiCursor>);
+
+/// Cursor forced while a drag owns the pointer.
+#[derive(Resource, Default)]
+pub struct DioxusUiCursorOverride(pub Option<bevy_window::SystemCursorIcon>);
+
+/// Sends cursor hints from a surface to bevy.
+#[derive(Resource, Clone)]
+pub struct SurfaceCursorHint(pub crossbeam_channel::Sender<Option<bevy_window::SystemCursorIcon>>);
+
+/// Receives cursor hints from surfaces.
+#[derive(Resource)]
+pub struct CursorOverrideReceiver(
+    pub crossbeam_channel::Receiver<Option<bevy_window::SystemCursorIcon>>,
+);
+
+/// Drains the latest cursor hint.
+pub fn apply_cursor_override(
+    receiver: Res<CursorOverrideReceiver>,
+    mut forced: ResMut<DioxusUiCursorOverride>,
+) {
+    while let Ok(cursor) = receiver.0.try_recv() {
+        forced.0 = cursor;
+    }
+}
+
 /// Drains worker results every frame so hit tests do not wait for a render tick.
 pub fn drain_worker_results(
     mut registry: NonSendMut<VdomThreadRegistry>,
@@ -130,6 +166,7 @@ pub fn drain_worker_results(
     mut pending: ResMut<PendingScenes>,
     echo_enabled: Res<EchoEnabled>,
     mut echo_pending: ResMut<EchoPending>,
+    mut cursors: ResMut<DioxusUiCursors>,
     time: Res<Time<Virtual>>,
 ) {
     let now = time.elapsed();
@@ -156,6 +193,14 @@ pub fn drain_worker_results(
                         hit_state.world_space_caught = caught;
                     }
                 }
+                VdomResult::Cursor { entity: e, cursor } => match cursor {
+                    Some(cursor) => {
+                        cursors.0.insert(e, cursor);
+                    }
+                    None => {
+                        cursors.0.remove(&e);
+                    }
+                },
                 VdomResult::NeedsEcho { .. } => {
                     if echo_enabled.0 {
                         echo_pending.0.push((*entity, now));
@@ -171,34 +216,70 @@ pub fn drain_worker_results(
     }
 }
 
+/// Applies the cursor requested by the dioxus ui under the pointer.
+pub fn apply_ui_cursor(
+    cursors: Res<DioxusUiCursors>,
+    forced: Res<DioxusUiCursorOverride>,
+    window_uis: Query<Entity, With<DioxusWindowUiQuad>>,
+    world_uis: Query<Entity, (With<DioxusUiQuad>, Without<DioxusWindowUiQuad>)>,
+    windows: Query<(Entity, Option<&CursorIcon>), With<Window>>,
+    mut commands: Commands,
+) {
+    let window_cursor = window_uis
+        .iter()
+        .find_map(|entity| cursors.0.get(&entity).copied());
+    let world_cursor = world_uis
+        .iter()
+        .find_map(|entity| cursors.0.get(&entity).copied())
+        .filter(|cursor| *cursor != UiCursor::Default);
+    let desired = forced
+        .0
+        .or_else(|| {
+            world_cursor
+                .or(window_cursor)
+                .map(|cursor| cursor.system_icon())
+        })
+        .unwrap_or(bevy_window::SystemCursorIcon::Default);
+    let icon = CursorIcon::System(desired);
+    for (entity, current) in &windows {
+        if current != Some(&icon) {
+            commands.entity(entity).insert(icon.clone());
+        }
+    }
+}
+
 pub mod draft_value;
+pub mod layout;
 pub(crate) mod net_provider;
-pub mod panels;
 pub mod plugins;
 pub(crate) mod schedule;
 pub mod select_all_on_focus;
+pub mod slots;
 pub mod text_input;
+pub mod ui_cursor;
 pub mod worker;
 
 /// Extraction-side mirror of texture handles, keyed by the quad entity.
 #[derive(Resource, Default)]
 struct ExtractedTextureImages(pub HashMap<Entity, Handle<Image>>);
 
-/// root ui that all dioxus panels render inside of
+/// Root ui that hosts the surface layout.
 #[component]
-pub fn dioxus_ui() -> Element {
-    let panel_receiver = use_context::<DioxusPanelsReceiver>();
-    let mut panels = use_signal(|| DioxusPanels::default());
+pub fn dioxus_ui(entity: Entity) -> Element {
+    let layout_receiver = use_context::<DioxusUiReceiver>();
+    let viewport_receiver = use_context::<DioxusViewportReceiver>();
+    let mut layout = use_signal(|| Option::<LayoutSystem>::None);
+    let viewport_size = use_signal(|| Option::<(u32, u32)>::None);
 
-    // receive updates for panels
     use_future(move || {
-        let value = panel_receiver.clone();
+        let value = viewport_receiver.clone();
         async move {
+            let mut viewport_size = viewport_size;
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
             std::thread::spawn(move || {
-                while let Ok(updated_panels) = value.0.recv() {
-                    if tx.send(updated_panels).is_err() {
+                while let Ok(size) = value.0.recv() {
+                    if tx.send(size).is_err() {
                         break;
                     }
                 }
@@ -206,8 +287,34 @@ pub fn dioxus_ui() -> Element {
 
             loop {
                 tokio::select! {
-                    Some(updated_panels) = rx.recv() => {
-                        *panels.write() = updated_panels;
+                    Some(size) = rx.recv() => {
+                        viewport_size.set(Some(size));
+                    }
+                    else => break,
+                }
+            }
+        }
+    });
+    use_context_provider(|| viewport_size);
+
+    // receive layout updates
+    use_future(move || {
+        let value = layout_receiver.clone();
+        async move {
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+            std::thread::spawn(move || {
+                while let Ok(updated_layout) = value.0.recv() {
+                    if tx.send(updated_layout).is_err() {
+                        break;
+                    }
+                }
+            });
+
+            loop {
+                tokio::select! {
+                    Some(updated_layout) = rx.recv() => {
+                        layout.set(updated_layout);
                     }
                     else => break,
                 }
@@ -215,8 +322,82 @@ pub fn dioxus_ui() -> Element {
         }
     });
     rsx! {
-        for panel in panels.read().cloned().panels {
-            {panel()}
+        if let Some(layout) = layout.read().as_ref() {
+            layout_system { entity, layout: layout.clone() }
+        }
+    }
+}
+
+/// Renders the layout requested for a surface.
+#[component]
+fn layout_system(entity: Entity, layout: LayoutSystem) -> Element {
+    match layout {
+        LayoutSystem::Raw(render) => rsx! {
+            raw_layout { render: RawLayout(render) }
+        },
+        LayoutSystem::FiveSlots(slots) => rsx! {
+            five_slots_layout { entity, slots }
+        },
+    }
+}
+
+/// Renderer for a raw layout.
+#[derive(Clone, Copy, Debug)]
+struct RawLayout(fn() -> Element);
+
+impl PartialEq for RawLayout {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::fn_addr_eq(self.0, other.0)
+    }
+}
+
+/// Hosts a raw layout so its hooks keep their own scope.
+#[component]
+fn raw_layout(render: RawLayout) -> Element {
+    (render.0)()
+}
+
+/// Hosts the five slot surface and its window viewport.
+#[component]
+fn five_slots_layout(entity: Entity, slots: FiveSlots) -> Element {
+    let entity = use_signal(|| entity);
+    let slots = use_signal(|| slots);
+    let ui = use_bevy_query::<(Entity, &mut DioxusUi), ()>();
+    let theme = use_memo(move || {
+        ui.get(*entity.read())
+            .and_then(|(_, handle)| {
+                let layout = handle.read();
+                match &layout.layout {
+                    Some(LayoutSystem::FiveSlots(slots)) => Some(slots.theme),
+                    _ => None,
+                }
+            })
+            .unwrap_or_default()
+    });
+    let (_window, resolution) =
+        use_bevy_single::<(Entity, &mut DioxusUiResolution), With<DioxusWindowUiQuad>>();
+    let viewport = use_memo(move || {
+        let size = resolution.read_ok(|resolution| *resolution.read()).ok();
+        match size {
+            Some(DioxusUiResolution(width, height)) if width > 0 && height > 0 => Some(Viewport {
+                width_px: width,
+                height_px: height,
+            }),
+            _ => None,
+        }
+    });
+    let slot_display = use_memo(move || {
+        (*viewport.read()).map(|viewport| {
+            rsx! {
+                slots_surface { slots, viewport }
+            }
+        })
+    });
+
+    rsx! {
+        style { key: "{theme.read().id}", "{theme.read().css}" }
+        for element in slot_display.read().iter() {
+            {element}
         }
     }
 }
@@ -643,13 +824,8 @@ fn setup_window_surface(
         .spawn((
             Mesh3d(meshes.add(Rectangle::new(visible_width, visible_height))),
             Transform::from_xyz(0.0, 0.0, 0.0),
-            DioxusUiQuad {
-                handle: None,
-                computed_wh: None,
-                local_half_extents: None,
-            },
+            DioxusUi::default(),
             DioxusUiResolution(wh.x, wh.y),
-            DioxusPanels::default(),
             DioxusWindowUiQuad,
             WINDOW_UI_RENDER_LAYER,
         ))

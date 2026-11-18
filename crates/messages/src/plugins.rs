@@ -13,8 +13,9 @@ use crate::mouse::WorldSpacePickingState;
 
 use super::{
     keyboard::handle_keyboard_messages, mouse::blitz_mouse_button_handling,
-    mouse::resolve_pick_space, mouse::update_world_space_picking,
-    mouse::window_space_mouse_messages, mouse::world_space_mouse_messages,
+    mouse::blitz_mouse_wheel_handling, mouse::captured_pointer_moves, mouse::resolve_pick_space,
+    mouse::update_world_space_picking, mouse::window_space_mouse_messages,
+    mouse::world_space_mouse_messages,
 };
 
 pub struct DioxusEventSyncPlugin;
@@ -38,7 +39,13 @@ impl Plugin for DioxusEventSyncPlugin {
                         .after(InputSystems)
                         .after(DioxusInputRouting),
                     world_space_mouse_messages.after(window_space_mouse_messages),
-                    blitz_mouse_button_handling.after(world_space_mouse_messages),
+                    // A latched gesture gets the only move of the frame.
+                    captured_pointer_moves
+                        .after(world_space_mouse_messages)
+                        .after(update_world_space_picking)
+                        .after(InputSystems),
+                    blitz_mouse_button_handling.after(captured_pointer_moves),
+                    blitz_mouse_wheel_handling.after(blitz_mouse_button_handling),
                     handle_keyboard_messages.after(blitz_mouse_button_handling),
                 ),
             );

@@ -1,0 +1,149 @@
+.slot-surface {
+    color: #8c8c8c;
+}
+
+.slot-panel {
+    background: #1b1b1b;
+    border: 1px solid #3c3c3c;
+}
+
+.slot-float {
+    box-shadow: 10px 20px 15px rgba(0, 0, 0, 0.376);
+}
+
+.slot-title {
+    background: #3c3c3c;
+    color: #b4b4b4;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.slot-body {
+    background: #1b1b1b;
+    color: #8c8c8c;
+}
+
+.slot-tab {
+    background: #3c3c3c;
+    color: #b4b4b4;
+    border: none;
+    border-radius: 2px;
+    padding: 2px 6px;
+}
+
+.slot-tab:hover {
+    background: #464646;
+    color: #f0f0f0;
+    border: 1px solid #969696;
+}
+
+.slot-tab-active {
+    background: #005c80;
+    color: #c0deff;
+    border: none;
+    border-radius: 2px;
+    padding: 2px 6px;
+}
+
+.slot-op {
+    background: transparent;
+    color: #b4b4b4;
+    border: none;
+    border-radius: 2px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.slot-op:hover {
+    background: #464646;
+    color: #f0f0f0;
+}
+
+.slot-grip {
+    color: #8c8c8c;
+    background: transparent;
+}
+
+.slot-grip:hover {
+    background: #464646;
+}
+
+.slot-grip-active {
+    background: #373737;
+}
+
+.slot-slot-handle {
+    background: #3c3c3c;
+    color: #b4b4b4;
+}
+
+.slot-minimized-bar {
+    background: #1b1b1b;
+    color: #8c8c8c;
+    padding: 4px;
+    font-size: 12px;
+}
+
+.slot-minimized-entry {
+    background: #3c3c3c;
+    color: #b4b4b4;
+    border: none;
+    border-radius: 2px;
+    padding: 2px 6px;
+}
+
+.slot-minimized-entry:hover {
+    background: #464646;
+    color: #f0f0f0;
+}
+
+button {
+    background: #3c3c3c;
+    color: #b4b4b4;
+    border: none;
+    border-radius: 2px;
+    padding: 4px 8px;
+}
+
+button:hover {
+    background: #464646;
+    color: #f0f0f0;
+    border: 1px solid #969696;
+}
+
+button:active {
+    background: #373737;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+}
+
+input,
+textarea {
+    background: #0a0a0a;
+    color: #8c8c8c;
+    border: 1px solid #3c3c3c;
+    border-radius: 2px;
+    padding: 4px 6px;
+}
+
+select {
+    background: #3c3c3c;
+    color: #b4b4b4;
+    border: none;
+    border-radius: 2px;
+    padding: 4px 6px;
+}
+
+a {
+    color: #5aaaff;
+}
+
+code {
+    background: #404040;
+    color: #8c8c8c;
+    padding: 1px 4px;
+    border-radius: 2px;
+}

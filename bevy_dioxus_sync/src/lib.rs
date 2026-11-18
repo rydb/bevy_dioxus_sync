@@ -1,17 +1,19 @@
-use bevy_dioxus_render::{DioxusWindowUiQuad, panels::DioxusPanels};
+use bevy_dioxus_render::DioxusWindowUiQuad;
+use bevy_dioxus_render::layout::DioxusUi;
 use bevy_dioxus_tracing::{error, trace};
 use bevy_ecs::prelude::*;
-use dioxus_core::Element;
+
+use crate::plugins::LayoutSystem;
 
 pub mod plugins;
 
 #[derive(Resource)]
-pub struct InitialWindowPanel(pub Option<fn() -> Element>);
+pub struct InitialWindowLayout(pub Option<LayoutSystem>);
 
 /// Setup initial ui requested by plugin
 fn setup_initial_window_ui(
-    mut windows: Query<&mut DioxusPanels, With<DioxusWindowUiQuad>>,
-    initial_panel: Res<InitialWindowPanel>,
+    mut windows: Query<&mut DioxusUi, With<DioxusWindowUiQuad>>,
+    initial_layout: Res<InitialWindowLayout>,
 ) {
     let len = windows.iter().len();
     if len != 1 {
@@ -21,10 +23,8 @@ fn setup_initial_window_ui(
         );
     }
     let Some(mut window) = windows.iter_mut().next() else {
-        trace!("no window detected, skippining initial panel setup");
+        trace!("no window detected, skipping initial layout setup");
         return;
     };
-    if let Some(panel) = initial_panel.0 {
-        window.panels.push(panel);
-    }
+    window.layout = initial_layout.0.clone();
 }
